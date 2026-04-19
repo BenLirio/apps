@@ -64,6 +64,7 @@ main {
   background: var(--card-bg);
   border: 2px solid var(--card-border);
   transition: transform .08s linear, border-color .08s linear, background .08s linear;
+  position: relative;
 }
 
 .card:hover,
@@ -84,9 +85,17 @@ main {
 }
 
 .card p {
-  margin: 0;
+  margin: 0 0 10px;
   font-size: 18px;
   color: var(--muted);
+}
+
+.card .created {
+  display: block;
+  font-size: 14px;
+  letter-spacing: .08em;
+  color: var(--accent);
+  opacity: .75;
 }
 
 footer {
