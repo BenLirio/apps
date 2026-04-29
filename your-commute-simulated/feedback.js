@@ -3,9 +3,8 @@
 
   function detectSlug() {
     var seg = location.pathname.split('/').filter(Boolean);
-    // Handle both /apps/{slug}/ (new monorepo) and /{slug}/ (old structure)
-    var slug = seg[0] === 'apps' ? seg[1] : seg[0];
-    return (slug || 'unknown').toLowerCase();
+    if (seg[0] === 'apps' && seg[1]) return seg[1].toLowerCase();
+    return (seg[0] || 'unknown').toLowerCase();
   }
 
   var CSS = ''
