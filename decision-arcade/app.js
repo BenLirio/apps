@@ -1,4 +1,4 @@
-// Decision Arcade — 10 lightning-fast binary dilemmas, 3 seconds each
+// Decision Arcade — 10 lightning-fast binary dilemmas with an adaptive timer
 // Axes: practical(0) | adventurous, selfish(1) | altruist, logic(2) | feeling, bold(3) | cautious, present(4) | future
 
 const SCENARIOS = [
@@ -73,12 +73,7 @@ const AXIS_LABELS = [
   ["Present", "Future"]
 ];
 
-// Each axis: left choice = side 0, right choice = side 1
-// score per axis: 0-2 questions per axis, value 0 = full left, 1 = right
-// We track count of "right side" choices per axis
-
 // Archetypes: defined by combinations of dominant axes
-// Format: { name, desc, flavor, match: fn(scores) } where scores[i] = 0..1 fraction of right-side picks
 const ARCHETYPES = [
   {
     name: "THE CALCULATED HEDONIST",
@@ -164,20 +159,29 @@ const COMPUTING_MSGS = [
   "summoning your archetype from the void..."
 ];
 
+// ── Adaptive timer config ──────────────────────────────────────────────
+// Start generous, then recalibrate based on actual response speed.
+// Floor and ceiling keep it from going absurd in either direction.
+const TIMER_BASE_MS    = 4500;   // first question — gives slow readers a chance
+const TIMER_FLOOR_MS   = 2200;   // never faster than this, even for snappy users
+const TIMER_CEILING_MS = 7000;   // never slower than this, even for very slow users
+const TIMER_BLEND      = 0.6;    // each round, blend new estimate this much toward measured pace
+const TIMER_HEADROOM   = 1.45;   // give users ~45% margin above their measured median
+
 // Game state
 let currentQ = 0;
-let choices = []; // array of 'left'|'right'|'hesitate' per question
-let axisScores = [0, 0, 0, 0, 0]; // count of right-side picks per axis
-let axisCounts = [0, 0, 0, 0, 0]; // total questions per axis
+let choices = []; // array of {side, hesitated, axis, emoji, responseMs}
+let axisScores = [0, 0, 0, 0, 0];
+let axisCounts = [0, 0, 0, 0, 0];
 let timerInterval = null;
 let timerStart = null;
-const TIMER_DURATION = 3000;
+let currentTimerMs = TIMER_BASE_MS;
+let recalibrated = false;
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   el.classList.add('active');
-  // Scroll to top on mobile
   window.scrollTo(0, 0);
 }
 
@@ -186,6 +190,9 @@ function startGame() {
   choices = [];
   axisScores = [0, 0, 0, 0, 0];
   axisCounts = [0, 0, 0, 0, 0];
+  currentTimerMs = TIMER_BASE_MS;
+  recalibrated = false;
+  updatePaceTag();
   showScreen('screen-game');
   loadQuestion(0);
 }
@@ -194,7 +201,7 @@ function loadQuestion(idx) {
   const q = SCENARIOS[idx];
   document.getElementById('q-current').textContent = idx + 1;
   document.getElementById('axis-label').textContent =
-    AXIS_LABELS[q.axis][0].toUpperCase() + ' vs ' + AXIS_LABELS[q.axis][1].toUpperCase();
+    AXIS_LABELS[q.axis][0].toUpperCase() + ' / ' + AXIS_LABELS[q.axis][1].toUpperCase();
   document.getElementById('scenario-text').textContent = q.text;
   document.getElementById('emoji-left').textContent = q.left.emoji;
   document.getElementById('label-left').textContent = q.left.label;
@@ -212,26 +219,30 @@ function loadQuestion(idx) {
 
 function startTimer() {
   const bar = document.getElementById('timer-bar');
+  const seconds = (currentTimerMs / 1000).toFixed(1);
+  document.getElementById('timer-seconds').textContent = seconds + 's';
+
   bar.classList.remove('danger');
   bar.style.transition = 'none';
   bar.style.width = '100%';
 
-  // Force reflow
+  // Force reflow so the transition restarts cleanly
   bar.getBoundingClientRect();
 
   timerStart = Date.now();
 
-  bar.style.transition = `width ${TIMER_DURATION}ms linear`;
+  bar.style.transition = `width ${currentTimerMs}ms linear`;
   bar.style.width = '0%';
 
-  // Add danger color at ~1 second remaining
+  // Add danger color when ~1 second remains (or 30% of the duration, whichever is larger)
+  const dangerOffset = Math.max(currentTimerMs - 1000, currentTimerMs * 0.7);
   setTimeout(() => {
     bar.classList.add('danger');
-  }, TIMER_DURATION - 1000);
+  }, dangerOffset);
 
   timerInterval = setTimeout(() => {
     hesitate();
-  }, TIMER_DURATION);
+  }, currentTimerMs);
 }
 
 function clearTimer() {
@@ -239,39 +250,113 @@ function clearTimer() {
   timerInterval = null;
 }
 
+function recalibrateTimer() {
+  // Use median of actual response times (excluding hesitations) so far.
+  const actuals = choices
+    .filter(c => !c.hesitated && typeof c.responseMs === 'number')
+    .map(c => c.responseMs)
+    .sort((a, b) => a - b);
+
+  if (actuals.length === 0) return;
+
+  const median = actuals.length % 2 === 1
+    ? actuals[(actuals.length - 1) / 2]
+    : (actuals[actuals.length / 2 - 1] + actuals[actuals.length / 2]) / 2;
+
+  // Target = headroom * median, blended with current to avoid wild swings.
+  const target = median * TIMER_HEADROOM;
+  let next = currentTimerMs * (1 - TIMER_BLEND) + target * TIMER_BLEND;
+  next = Math.max(TIMER_FLOOR_MS, Math.min(TIMER_CEILING_MS, next));
+
+  // Only flag a recalibration to the user if the shift is meaningful (>= 400ms).
+  const meaningful = Math.abs(next - currentTimerMs) >= 400;
+  currentTimerMs = next;
+  if (meaningful) {
+    recalibrated = true;
+    flashRecalibration();
+  }
+  updatePaceTag();
+}
+
+function flashRecalibration() {
+  const tag = document.getElementById('pace-tag');
+  if (!tag) return;
+  tag.classList.remove('flash');
+  // Force reflow to restart animation
+  void tag.offsetWidth;
+  tag.classList.add('flash');
+}
+
+function updatePaceTag() {
+  const tag = document.getElementById('pace-tag');
+  if (!tag) return;
+  const seconds = (currentTimerMs / 1000).toFixed(1);
+  if (recalibrated) {
+    tag.textContent = `↻ pace tuned to you · ${seconds}s`;
+  } else {
+    tag.textContent = `clock: ${seconds}s · adapts to your pace`;
+  }
+}
+
 function choose(side) {
+  if (timerInterval === null) return; // guard against double-tap after timeout
   clearTimer();
 
+  const responseMs = Date.now() - timerStart;
   const q = SCENARIOS[currentQ];
   const choiceData = side === 'left' ? q.left : q.right;
 
-  choices.push({ side, hesitated: false, axis: q.axis, emoji: choiceData.emoji });
+  choices.push({
+    side,
+    hesitated: false,
+    axis: q.axis,
+    emoji: choiceData.emoji,
+    responseMs
+  });
 
-  // Track axis scores
   axisCounts[q.axis]++;
-  if (choiceData.side === 1) {
-    axisScores[q.axis]++;
-  }
+  if (choiceData.side === 1) axisScores[q.axis]++;
 
-  // Highlight chosen button
   document.getElementById('btn-' + side).classList.add('selected');
   document.getElementById('btn-left').disabled = true;
   document.getElementById('btn-right').disabled = true;
+
+  // Recalibrate after Q2, Q4, and Q6 — early enough to help, but with a real sample.
+  if (currentQ === 1 || currentQ === 3 || currentQ === 5) {
+    recalibrateTimer();
+  }
 
   setTimeout(() => advance(), 350);
 }
 
 function hesitate() {
+  // Mark timer as cleared so a stray late tap can't fire choose().
+  timerInterval = null;
+
   const q = SCENARIOS[currentQ];
-  choices.push({ side: 'hesitate', hesitated: true, axis: q.axis, emoji: '⏳' });
+  choices.push({
+    side: 'hesitate',
+    hesitated: true,
+    axis: q.axis,
+    emoji: '⏳',
+    responseMs: currentTimerMs
+  });
   axisCounts[q.axis]++;
-  // Hesitation counts as neither side — no score increment
 
   const flash = document.getElementById('hesitate-flash');
   flash.classList.add('show');
 
   document.getElementById('btn-left').disabled = true;
   document.getElementById('btn-right').disabled = true;
+
+  // If the user is hesitating, our timer is too tight — push it up.
+  if (currentQ === 1 || currentQ === 3 || currentQ === 5) {
+    // bias upward on hesitation
+    currentTimerMs = Math.min(TIMER_CEILING_MS, currentTimerMs * 1.25);
+    recalibrated = true;
+    flashRecalibration();
+    updatePaceTag();
+  }
 
   setTimeout(() => advance(), 700);
 }
@@ -286,12 +371,10 @@ function advance() {
 }
 
 function showResult() {
-  // Normalize scores to 0..1
   const normalized = axisScores.map((s, i) =>
     axisCounts[i] > 0 ? s / axisCounts[i] : 0.5
   );
 
-  // Find archetype
   const archetype = ARCHETYPES.find(a => a.match(normalized)) || ARCHETYPES[ARCHETYPES.length - 1];
 
   // Build emoji grid for share
@@ -324,12 +407,23 @@ function showResult() {
   document.getElementById('archetype-name').textContent = archetype.name;
   document.getElementById('archetype-desc').textContent = archetype.desc;
 
-  // Count hesitations for flavor
+  // Compose flavor with hesitation count and pace insight
   const hesitations = choices.filter(c => c.hesitated).length;
+  const decided = choices.filter(c => !c.hesitated);
+  const avgMs = decided.length
+    ? Math.round(decided.reduce((a, c) => a + c.responseMs, 0) / decided.length)
+    : 0;
+
   let flavor = archetype.flavor;
+  const tail = [];
   if (hesitations >= 3) {
-    flavor += ' (You hesitated ' + hesitations + ' times — your gut has strong opinions it won\'t commit to.)';
+    tail.push(`hesitated ${hesitations}× — your gut has opinions it won't commit to`);
   }
+  if (avgMs > 0) {
+    const avgSec = (avgMs / 1000).toFixed(1);
+    tail.push(`average decision: ${avgSec}s`);
+  }
+  if (tail.length) flavor += ' (' + tail.join(' · ') + ')';
   document.getElementById('result-flavor').textContent = flavor;
 
   // Computing interstitial
@@ -372,8 +466,9 @@ document.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - touchStartX;
   touchStartX = null;
 
-  if (Math.abs(dx) < 60) return; // too small
+  if (Math.abs(dx) < 60) return;
 
+  // Swipe left → choose left button; swipe right → choose right button.
   if (dx < 0 && !document.getElementById('btn-left').disabled) {
     choose('left');
   } else if (dx > 0 && !document.getElementById('btn-right').disabled) {
