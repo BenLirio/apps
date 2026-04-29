@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ecosystem Collapse Diorama</title>
-  <meta property="og:title" content="Ecosystem Collapse Diorama">
-  <meta property="og:description" content="A tiny procedural ecosystem lives in your browser — watch herbivores graze, predators hunt, plants grow, and weather shift. Introduce your own custom organisms and watch chaos unfold.">
+  <title>Critter Cauldron — Build a Tiny World</title>
+  <meta property="og:title" content="Critter Cauldron — Build a Tiny World">
+  <meta property="og:description" content="Pick whimsical creatures, twist the universe knobs, and watch a tiny made-up ecosystem bubble away in your browser.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/ecosystem-collapse-diorama/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
   <script src="feedback.js" defer></script>
@@ -19,11 +19,11 @@
   <div id="app">
     <header id="hud">
       <div id="hud-left">
-        <span id="clock">00:00</span>
-        <span id="weather-label">☀ Clear</span>
+        <span id="clock">DAY 1</span>
+        <span id="weather-label">SUN</span>
       </div>
       <div id="hud-center">
-        <span id="app-title">ECOSYSTEM COLLAPSE DIORAMA</span>
+        <span id="app-title">CRITTER CAULDRON</span>
       </div>
       <div id="hud-right">
         <span id="pop-counts"></span>
@@ -32,53 +32,95 @@
 
     <div id="canvas-wrap">
       <canvas id="world"></canvas>
+
+      <button id="open-builder" title="Open the world builder">★ Build a World</button>
+
       <div id="report-overlay" style="display:none">
         <div id="report-card">
-          <div id="report-stamp">FIELD REPORT</div>
+          <div id="report-stamp">FIELD GAZETTE</div>
           <div id="report-time"></div>
           <div id="report-title"></div>
           <div id="report-body"></div>
-          <button id="report-dismiss">continue observing →</button>
+          <button id="report-dismiss">keep watching →</button>
+        </div>
+      </div>
+
+      <!-- Builder panel -->
+      <div id="builder-overlay">
+        <div id="builder-panel" role="dialog" aria-labelledby="builder-title">
+          <div id="builder-stamp">★ WORLD BUILDER ★</div>
+          <h2 id="builder-title">Mix your own ecosystem</h2>
+          <p class="builder-hint">Pick which critters to release, then twist the universe knobs.</p>
+
+          <div class="builder-section">
+            <div class="builder-label">Critters in this world</div>
+            <div id="critter-catalog"></div>
+          </div>
+
+          <div class="builder-section">
+            <div class="builder-label">Universe knobs</div>
+            <div id="universe-knobs">
+              <label class="knob">
+                <span class="knob-name">Plant abundance</span>
+                <input type="range" id="knob-plants" min="0.3" max="2.5" step="0.1" value="1">
+                <span class="knob-val" id="knob-plants-val">1.0×</span>
+              </label>
+              <label class="knob">
+                <span class="knob-name">Day/Night speed</span>
+                <input type="range" id="knob-day" min="0.3" max="3" step="0.1" value="1">
+                <span class="knob-val" id="knob-day-val">1.0×</span>
+              </label>
+              <label class="knob">
+                <span class="knob-name">Weather chaos</span>
+                <input type="range" id="knob-weather" min="0" max="2" step="0.1" value="1">
+                <span class="knob-val" id="knob-weather-val">1.0×</span>
+              </label>
+              <label class="knob">
+                <span class="knob-name">Metabolism</span>
+                <input type="range" id="knob-metabolism" min="0.4" max="1.8" step="0.1" value="1">
+                <span class="knob-val" id="knob-metabolism-val">1.0×</span>
+              </label>
+              <label class="knob">
+                <span class="knob-name">Fertility</span>
+                <input type="range" id="knob-fertility" min="0.4" max="2" step="0.1" value="1">
+                <span class="knob-val" id="knob-fertility-val">1.0×</span>
+              </label>
+              <label class="knob">
+                <span class="knob-name">World vibe</span>
+                <select id="knob-vibe">
+                  <option value="meadow">Sun Meadow</option>
+                  <option value="reef">Coral Reef</option>
+                  <option value="dusk">Neon Dusk</option>
+                  <option value="frost">Frost Garden</option>
+                  <option value="lava">Ember Lands</option>
+                  <option value="dream">Dream Static</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div id="builder-actions">
+            <button id="builder-randomize">🎲 Surprise Me</button>
+            <button id="builder-cancel">Close</button>
+            <button id="builder-launch" class="primary">★ Launch World ★</button>
+          </div>
         </div>
       </div>
     </div>
 
     <footer id="controls">
-      <button id="btn-reset" title="Reset ecosystem">↺ Reset</button>
+      <button id="btn-builder" title="Open world builder">★ Build</button>
+      <button id="btn-reset" title="Restart with current world">↺ Restart</button>
       <label id="speed-wrap">
-        Speed
+        <span>Speed</span>
         <input type="range" id="speed-slider" min="0.5" max="3" step="0.5" value="1">
         <span id="speed-val">1×</span>
       </label>
-      <button id="btn-add-organism" title="Introduce a new organism">+ Organism</button>
-      <button id="btn-snapshot" title="Save nature report as image">📷 Snapshot</button>
+      <button id="btn-snapshot" title="Save snapshot">📷 Snap</button>
     </footer>
 
-    <!-- Add Organism Modal -->
-    <div id="add-organism-overlay">
-      <div id="add-organism-modal" role="dialog" aria-labelledby="org-modal-title">
-        <div id="org-stamp">NEW SPECIES</div>
-        <h2 id="org-modal-title">Introduce an Organism</h2>
-        <p class="org-hint">Describe it in plain language. The ecosystem will interpret your rules.</p>
-
-        <label class="org-label" for="org-name-input">Name</label>
-        <input id="org-name-input" type="text" maxlength="24" placeholder="e.g. Gloom Stalker" autocomplete="off">
-
-        <label class="org-label" for="org-desc-input">Description &amp; Rules</label>
-        <textarea id="org-desc-input" maxlength="400" placeholder="e.g. A giant slow blue predator that hunts herbivores. Rare, solitary, efficient metabolism."></textarea>
-
-        <div id="org-gen-result"></div>
-
-        <div id="org-actions">
-          <button id="org-cancel">Cancel</button>
-          <button id="org-preview">Preview Rules</button>
-          <button id="org-release" class="primary">Release into Ecosystem</button>
-        </div>
-      </div>
-    </div>
-
     <div id="share" style="display:none">
-      <button onclick="share()">Share your result!</button>
+      <button onclick="share()">Share!</button>
     </div>
   </div>
 </body>
