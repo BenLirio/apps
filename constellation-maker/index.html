@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Constellation Maker</title>
+  <meta property="og:title" content="Constellation Maker">
+  <meta property="og:description" content="Draw your constellation. Name it. Share it.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/constellation-maker/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.3/lib/p5.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="intro-text">tap to scatter your stars. connect them. name what you made.</div>
+
+  <div id="controls">
+    <button id="mode-toggle" onclick="toggleMode()">connect stars</button>
+    <button id="name-btn" onclick="nameit()">Name It</button>
+    <button id="clear-btn" onclick="clearAll()">clear</button>
+  </div>
+
+  <div id="loading-overlay" style="display:none">
+    <div id="loading-text">reading the stars...</div>
+  </div>
+
+  <div id="result-overlay" style="display:none">
+    <div id="result-card">
+      <div id="constellation-name"></div>
+      <div id="star-count-line"></div>
+      <div id="myth-text"></div>
+      <div id="result-actions">
+        <button onclick="saveConstellation()">Save My Constellation</button>
+        <button onclick="closeResult()">keep drawing</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="error-msg" style="display:none">place at least 3 stars first — the void can't name itself</div>
+
+  <div id="share" style="display:none">
+    <button onclick="share()">Share your result!</button>
+  </div>
+</body>
+</html>

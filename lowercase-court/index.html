@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lowercase Court — Judge six anonymous texts</title>
+  <meta name="description" content="Read six anonymous texts. Deliver a verdict. Receive your judicial archetype.">
+  <meta property="og:title" content="Lowercase Court">
+  <meta property="og:description" content="Read six anonymous texts. Deliver a verdict. Receive your judicial archetype.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/lowercase-court/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Old+Standard+TT:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+
+    <!-- Intro screen -->
+    <section id="intro" class="screen">
+      <p class="court-seal">★ lowercase court ★</p>
+      <p class="docket-line">docket no. <span id="docket-no">0000-0000</span></p>
+      <h1 class="title">The People<br>v.<br>These Texts</h1>
+      <p class="lede">Six anonymous texts. You are the judge. Deliver a verdict on each — <em>guilty</em>, <em>not guilty</em>, or <em>mistrial</em> — and assign a punishment. The court will, in turn, diagnose your judicial archetype.</p>
+      <ul class="oath">
+        <li>You will not be nice.</li>
+        <li>You will not be consistent.</li>
+        <li>You will be ruthless, or you will be dismissed.</li>
+      </ul>
+      <button id="start-btn" class="gavel-btn">Convene the Court →</button>
+      <p class="fine-print">This is a shareable court of public opinion. Your rulings are saved to the URL; your friends get the same six cases.</p>
+    </section>
+
+    <!-- Trial screen -->
+    <section id="trial" class="screen hidden">
+      <div class="case-header">
+        <p class="case-label">Case <span id="case-num">1</span> of 6</p>
+        <p class="case-caption" id="case-caption">The matter of the unsolicited 2am text</p>
+      </div>
+
+      <div class="evidence">
+        <p class="exhibit-label">Exhibit A — text message, entered into evidence:</p>
+        <blockquote class="text-exhibit" id="text-exhibit"></blockquote>
+        <p class="sender-meta" id="sender-meta"></p>
+      </div>
+
+      <p class="verdict-prompt">Your verdict?</p>
+      <div class="verdict-row">
+        <button class="verdict-btn guilty" data-verdict="guilty">guilty</button>
+        <button class="verdict-btn notguilty" data-verdict="not guilty">not guilty</button>
+        <button class="verdict-btn mistrial" data-verdict="mistrial">mistrial</button>
+      </div>
+
+      <div id="punishment-panel" class="punishment-panel hidden">
+        <p class="punishment-prompt">Assign a punishment chip:</p>
+        <div class="chip-row" id="chip-row"></div>
+      </div>
+    </section>
+
+    <!-- Deliberating -->
+    <section id="deliberating" class="screen hidden">
+      <p class="gavel-swing">⚖</p>
+      <p class="deliberating-copy" id="deliberating-copy">the court is deliberating…</p>
+    </section>
+
+    <!-- Verdict / docket result -->
+    <section id="result" class="screen hidden">
+      <article class="docket" id="docket">
+        <header class="docket-head">
+          <p class="docket-top">IN THE LOWERCASE COURT</p>
+          <p class="docket-sub">for the district of the group chat</p>
+          <p class="docket-no-line">docket no. <span id="result-docket-no"></span></p>
+        </header>
+
+        <div class="archetype-block">
+          <p class="archetype-eyebrow">The Honorable</p>
+          <h2 class="archetype-name" id="archetype-name"></h2>
+          <p class="archetype-tag" id="archetype-tag"></p>
+        </div>
+
+        <hr class="rule-line">
+
+        <p class="ruling-intro">Findings of fact, entered this day:</p>
+        <ol class="rulings" id="rulings"></ol>
+
+        <hr class="rule-line">
+
+        <p class="so-ordered" id="so-ordered"></p>
+        <p class="signature">— the bench</p>
+        <p class="court-footer">lowercase-court · benlirio.com</p>
+      </article>
+
+      <div id="share" class="actions">
+        <button onclick="share()" class="gavel-btn">Share your docket</button>
+        <button id="retry-btn" class="ghost-btn">Re-try the six cases</button>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

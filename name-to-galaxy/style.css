@@ -1,0 +1,285 @@
+/* Aesthetic: Deep Space Terminal — near-black void bg, Space Mono monospace, star-map palette with warm/cool nebula accents */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #050510;
+  --bg-mid: #0a0a1e;
+  --text-primary: #e8e8f0;
+  --text-dim: #8888aa;
+  --text-accent: #c8d8ff;
+  --star-cream: #fff8e7;
+  --input-border: #2a2a4a;
+  --input-focus: #5555aa;
+  --btn-bg: #1a1a3a;
+  --btn-border: #4444aa;
+  --btn-hover: #2a2a5a;
+  --error: #ff6677;
+  --font: 'Space Mono', 'Courier New', monospace;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  /* subtle star-field noise via gradient */
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(20,10,50,0.6) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(10,20,40,0.5) 0%, transparent 55%);
+}
+
+#app {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+/* ── Pre-state header ── */
+#pre-state {
+  text-align: center;
+}
+
+.headline {
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  font-weight: 700;
+  color: var(--star-cream);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.subline {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ── Input section ── */
+#input-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#name-input {
+  width: 100%;
+  background: var(--bg-mid);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 1.2rem;
+  padding: 16px 20px;
+  text-align: center;
+  outline: none;
+  border-radius: 0;
+  transition: border-color 0.2s;
+  letter-spacing: 0.04em;
+}
+
+#name-input::placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+#name-input:focus {
+  border-color: var(--input-focus);
+}
+
+#generate-btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text-accent);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 14px 36px;
+  min-height: 48px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border-radius: 0;
+}
+
+#generate-btn:hover,
+#generate-btn:focus-visible {
+  background: var(--btn-hover);
+  border-color: #8888cc;
+  outline: none;
+}
+
+.error-msg {
+  font-size: 0.82rem;
+  color: var(--error);
+  letter-spacing: 0.04em;
+  min-height: 1.2em;
+  font-style: italic;
+}
+
+/* ── Loading ── */
+#loading-section {
+  text-align: center;
+}
+
+.loading-text {
+  font-size: 1rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  line-height: 1.8;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.loading-sub {
+  font-size: 0.78rem;
+  color: #555577;
+  display: block;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ── Result ── */
+#result-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.galaxy-label {
+  font-size: clamp(0.85rem, 3.5vw, 1.05rem);
+  color: var(--text-accent);
+  letter-spacing: 0.08em;
+  text-align: center;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+#galaxy-canvas {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  display: block;
+  border: 1px solid #1a1a3a;
+  image-rendering: auto;
+}
+
+.galaxy-fact {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.7;
+  max-width: 440px;
+  letter-spacing: 0.03em;
+  font-style: italic;
+  border-top: 1px solid #1a1a3a;
+  padding-top: 12px;
+  width: 100%;
+}
+
+/* ── Actions ── */
+.result-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.action-btn {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  color: var(--text-accent);
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 13px 24px;
+  min-height: 48px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border-radius: 0;
+  flex: 1;
+  min-width: 140px;
+}
+
+.action-btn:hover,
+.action-btn:focus-visible {
+  background: var(--btn-hover);
+  border-color: #8888cc;
+  outline: none;
+}
+
+.action-btn.secondary {
+  border-color: #333355;
+  color: var(--text-dim);
+}
+
+.action-btn.secondary:hover,
+.action-btn.secondary:focus-visible {
+  border-color: #5555aa;
+  color: var(--text-accent);
+}
+
+.reset-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--font);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 8px 16px;
+  min-height: 44px;
+  transition: color 0.15s;
+}
+
+.reset-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ── Share section (from skill template, hidden by default) ── */
+#share {
+  display: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .headline {
+    font-size: 1.9rem;
+  }
+
+  .result-actions {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    flex: none;
+    width: 100%;
+  }
+}

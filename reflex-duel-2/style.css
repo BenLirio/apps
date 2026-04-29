@@ -1,0 +1,454 @@
+/* Aesthetic: high-contrast black/yellow arena — bold, industrial, neon. Bebas Neue display, Share Tech Mono data. */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --yellow: #FFE600;
+  --black: #0A0A0A;
+  --dark-gray: #111111;
+  --mid-gray: #1E1E1E;
+  --light-gray: #333333;
+  --white: #F0F0F0;
+  --red: #FF2D00;
+  --green: #00FF88;
+}
+
+html, body {
+  height: 100%;
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Share Tech Mono', monospace;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── LANDING ────────────────────────────────────────────────── */
+
+#screen-landing {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.landing-inner {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.game-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 20vw, 120px);
+  line-height: 0.9;
+  text-align: center;
+  color: var(--yellow);
+  letter-spacing: 0.04em;
+  text-shadow: 4px 4px 0 rgba(255,230,0,0.2);
+}
+
+.game-title .two {
+  color: var(--red);
+  text-shadow: 4px 4px 0 rgba(255,45,0,0.25);
+}
+
+.tagline {
+  font-size: 14px;
+  text-align: center;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1.5;
+}
+
+input {
+  width: 100%;
+  background: var(--mid-gray);
+  border: 2px solid var(--light-gray);
+  color: var(--white);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 16px;
+  padding: 14px 16px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input:focus { border-color: var(--yellow); }
+
+input::placeholder {
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-primary {
+  width: 100%;
+  background: var(--yellow);
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.1em;
+  border: none;
+  padding: 16px 0;
+  cursor: pointer;
+  transition: transform 0.08s, background 0.08s;
+  min-height: 56px;
+}
+
+.btn-primary:active { transform: scale(0.97); background: #e6cf00; }
+
+.btn-secondary {
+  width: 100%;
+  background: transparent;
+  color: var(--yellow);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.1em;
+  border: 2px solid var(--yellow);
+  padding: 14px 0;
+  cursor: pointer;
+  transition: background 0.1s;
+  min-height: 52px;
+}
+
+.btn-secondary:active { background: rgba(255,230,0,0.1); }
+
+.divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #444;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #333;
+}
+
+#join-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#join-code {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 20px;
+  text-align: center;
+  font-family: 'Bebas Neue', sans-serif;
+}
+
+.error-msg {
+  color: var(--red);
+  font-size: 13px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+/* ─── WAITING ────────────────────────────────────────────────── */
+
+#screen-waiting {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.waiting-inner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.waiting-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #666;
+}
+
+.room-code {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(56px, 16vw, 88px);
+  color: var(--yellow);
+  letter-spacing: 0.3em;
+  line-height: 1;
+}
+
+.waiting-copy {
+  font-size: 14px;
+  color: #777;
+  letter-spacing: 0.1em;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.waiting-hint {
+  font-size: 11px;
+  color: #444;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ─── GAME ───────────────────────────────────────────────────── */
+
+#screen-game {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--dark-gray);
+  border-bottom: 2px solid var(--yellow);
+  flex-shrink: 0;
+}
+
+.player-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.score-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: #aaa;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 48px;
+  line-height: 1;
+  color: var(--yellow);
+}
+
+.vs-divider {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.15em;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.round-counter {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: #666;
+  letter-spacing: 0.1em;
+}
+
+#arena {
+  flex: 1;
+  position: relative;
+  background: var(--dark-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.arena-message {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 8vw, 48px);
+  letter-spacing: 0.1em;
+  color: #333;
+  text-align: center;
+  pointer-events: none;
+  padding: 0 16px;
+}
+
+.arena-message.active { color: #888; }
+.arena-message.focus { color: var(--yellow); animation: pulse 1s ease-in-out infinite; }
+.arena-message.verdict-win { color: var(--green); }
+.arena-message.verdict-loss { color: var(--red); }
+
+.target-circle {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--yellow);
+  box-shadow: 0 0 40px rgba(255,230,0,0.7), 0 0 90px rgba(255,230,0,0.3);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.08s;
+  animation: circle-pop 0.15s ease-out;
+}
+
+.target-circle:active { transform: translate(-50%, -50%) scale(0.9); }
+
+@keyframes circle-pop {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.15); }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.target-circle.pending {
+  background: var(--white);
+  box-shadow: 0 0 30px rgba(240,240,240,0.5);
+  animation: pending-pulse 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes pending-pulse {
+  0%   { transform: translate(-50%, -50%) scale(0.95); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+}
+
+.target-circle.hit {
+  background: var(--green);
+  box-shadow: 0 0 60px rgba(0,255,136,0.9), 0 0 120px rgba(0,255,136,0.5);
+  animation: win-flash 0.35s ease-out;
+}
+
+@keyframes win-flash {
+  0%   { transform: translate(-50%, -50%) scale(1.4); box-shadow: 0 0 100px rgba(0,255,136,1); }
+  100% { transform: translate(-50%, -50%) scale(1);   box-shadow: 0 0 60px rgba(0,255,136,0.9), 0 0 120px rgba(0,255,136,0.5); }
+}
+
+.target-circle.missed {
+  background: var(--red);
+  box-shadow: 0 0 40px rgba(255,45,0,0.7);
+  animation: loss-shake 0.3s ease-out;
+}
+
+@keyframes loss-shake {
+  0%   { transform: translate(-50%, -50%) translateX(0); }
+  25%  { transform: translate(-50%, -50%) translateX(-6px); }
+  50%  { transform: translate(-50%, -50%) translateX(6px); }
+  75%  { transform: translate(-50%, -50%) translateX(-3px); }
+  100% { transform: translate(-50%, -50%) translateX(0); }
+}
+
+.false-start-flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,45,0,0.25);
+  color: var(--red);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 14vw, 96px);
+  letter-spacing: 0.15em;
+  pointer-events: none;
+  animation: false-start 0.6s ease-out;
+}
+
+@keyframes false-start {
+  0%   { opacity: 0; transform: scale(1.3); }
+  30%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+.round-result {
+  padding: 16px 24px;
+  background: var(--black);
+  border-top: 2px solid var(--light-gray);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.round-result-text {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.reaction-time {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: #888;
+  letter-spacing: 0.05em;
+}
+
+/* ─── RESULT ─────────────────────────────────────────────────── */
+
+#screen-result {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.result-inner {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.superhuman-badge {
+  background: var(--yellow);
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  padding: 8px 20px;
+}
+
+.result-headline {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(48px, 14vw, 80px);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--yellow);
+}
+
+.result-detail {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  white-space: pre-line;
+}
+
+.share-section { width: 100%; }

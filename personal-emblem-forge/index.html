@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Emblem Forge</title>
+  <meta property="og:title" content="Personal Emblem Forge">
+  <meta property="og:description" content="Enter your name and traits to forge a unique heraldic emblem — medieval woodcut style, deterministic, shareable.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/personal-emblem-forge/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Personal Emblem Forge</h1>
+      <p id="intro-text">Every soul bears a crest unseen.<br>Speak your name, declare your nature, and the forge shall reveal it.</p>
+    </header>
+
+    <form id="input-form">
+      <div class="field">
+        <label for="name-input">Your True Name</label>
+        <input type="text" id="name-input" placeholder="e.g. Alexander" autocomplete="off" maxlength="40">
+      </div>
+
+      <div class="field">
+        <label>Choose Three Traits That Define You</label>
+        <div id="traits-grid"></div>
+        <p id="trait-count">0 of 3 selected</p>
+      </div>
+
+      <p id="error-msg" style="display:none"></p>
+
+      <button type="submit" id="forge-btn">Forge My Emblem</button>
+    </form>
+
+    <div id="computing" style="display:none">
+      <p id="computing-msg">The blacksmith heats the iron... consulting ancient heraldic tomes...</p>
+    </div>
+
+    <div id="result" style="display:none">
+      <canvas id="emblem-canvas" width="600" height="700"></canvas>
+      <p id="result-copy"></p>
+      <div id="actions">
+        <button id="download-btn" onclick="downloadEmblem()">Download My Emblem</button>
+      </div>
+    </div>
+
+    <div id="share" style="display:none">
+      <button onclick="share()">Share your emblem!</button>
+    </div>
+
+    <button id="restart-btn" style="display:none" onclick="restart()">Forge Another</button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Autopsy of My Last Situationship</title>
+  <meta property="og:title" content="The Autopsy of My Last Situationship">
+  <meta property="og:description" content="Enter the details. Receive an official Coroner's Report. Finally have closure.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/situationship-autopsy/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Intake form -->
+    <div id="intake-screen">
+      <div class="header-seal">
+        <div class="seal-circle">
+          <span class="seal-text">OFFICE OF THE<br>MEDICAL EXAMINER</span>
+        </div>
+      </div>
+      <h1>OFFICE OF THE<br>MEDICAL EXAMINER</h1>
+      <p class="subtitle">Relationship Decedent Division — Case Intake Form</p>
+      <p class="preamble">Complete the following fields truthfully. The examiner has seen worse. You will receive an official report. You may not like what it says.</p>
+
+      <form id="intake-form" novalidate>
+        <div class="field-group">
+          <label for="q-duration">1. Duration of the situationship</label>
+          <input type="text" id="q-duration" placeholder="e.g. 4 months, 2 years, one long weekend" maxlength="80" autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label for="q-vibe">2. The defining vibe</label>
+          <input type="text" id="q-vibe" placeholder='e.g. "we never defined it", "almost official", "situational chaos"' maxlength="120" autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label for="q-ending">3. How it ended</label>
+          <input type="text" id="q-ending" placeholder="e.g. slow fade, they moved on first, mutual ghosting" maxlength="120" autocomplete="off">
+        </div>
+        <div class="field-group">
+          <label for="q-moment">4. One defining moment (optional)</label>
+          <input type="text" id="q-moment" placeholder='e.g. "the rooftop night we never talked about"' maxlength="120" autocomplete="off">
+        </div>
+
+        <div id="error-msg" class="error-msg" style="display:none">
+          the examiner requires at least the first three fields. this is a formal proceeding.
+        </div>
+
+        <button type="submit" id="submit-btn">FILE INTAKE REPORT</button>
+      </form>
+    </div>
+
+    <!-- Loading screen -->
+    <div id="loading-screen" style="display:none">
+      <div class="loading-inner">
+        <div class="loading-seal">⚕</div>
+        <p id="loading-msg">conducting post-mortem analysis…</p>
+        <p class="loading-sub">please hold. grief requires paperwork.</p>
+      </div>
+    </div>
+
+    <!-- Report screen -->
+    <div id="report-screen" style="display:none">
+      <div id="report-card">
+        <div class="report-header">
+          <div class="report-header-left">
+            <div class="report-logo">⚕</div>
+            <div>
+              <div class="report-agency">COUNTY MEDICAL EXAMINER</div>
+              <div class="report-dept">Relationship Decedent Division</div>
+            </div>
+          </div>
+          <div class="report-header-right">
+            <div class="report-label">CASE NO.</div>
+            <div class="report-case-num" id="rpt-case-num">—</div>
+          </div>
+        </div>
+
+        <div class="report-title-bar">
+          AUTOPSY REPORT — FINAL
+        </div>
+
+        <div class="report-grid">
+          <div class="report-row">
+            <div class="report-cell">
+              <div class="cell-label">DECEDENT</div>
+              <div class="cell-value" id="rpt-decedent">The Situationship</div>
+            </div>
+            <div class="report-cell">
+              <div class="cell-label">DATE OF DEATH</div>
+              <div class="cell-value" id="rpt-dod">—</div>
+            </div>
+          </div>
+          <div class="report-row">
+            <div class="report-cell">
+              <div class="cell-label">TIME OF DEATH (EST.)</div>
+              <div class="cell-value" id="rpt-tod">—</div>
+            </div>
+            <div class="report-cell">
+              <div class="cell-label">DURATION IN SERVICE</div>
+              <div class="cell-value" id="rpt-duration">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">I. CAUSE OF DEATH</div>
+        <div class="report-block" id="rpt-cause">—</div>
+
+        <div class="section-header">II. CONTRIBUTING FACTORS</div>
+        <div class="report-block" id="rpt-contributing">—</div>
+
+        <div class="section-header">III. TOXICOLOGY SCREEN</div>
+        <div class="tox-grid" id="rpt-toxicology"></div>
+
+        <div class="section-header">IV. MANNER OF DEATH</div>
+        <div class="report-block" id="rpt-manner">—</div>
+
+        <div class="section-header">V. EXAMINER'S VERDICT</div>
+        <div class="report-block verdict-block" id="rpt-verdict">—</div>
+
+        <div class="report-footer">
+          <div class="examiner-sig">
+            <div class="sig-line">Dr. A. Closure, M.D.</div>
+            <div class="sig-title">Chief Medical Examiner, Relationship Decedent Division</div>
+          </div>
+          <div class="stamps-area">
+            <div class="stamp stamp-closed" id="stamp-closed">CLOSED</div>
+            <div class="stamp stamp-final">FINAL</div>
+          </div>
+        </div>
+
+        <div class="case-barcode" id="rpt-barcode">|||||||||||||||||||||||||||||||||||||||||||</div>
+      </div>
+
+      <div id="share" style="display:none">
+        <button onclick="share()">Share your report</button>
+        <button id="retry-btn" onclick="resetApp()">File another case</button>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Snowglobe Photographer</title>
+  <meta property="og:title" content="Snowglobe Photographer">
+  <meta property="og:description" content="Shake your phone to arrange the curios inside the globe into today's silhouette. Tap to take the photo when the match is strongest.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/snowglobe-photographer/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Special+Elite&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="stage">
+    <header id="plaque">
+      <div class="plaque-rule"></div>
+      <p class="plaque-overline">No. <span id="dateStamp">—</span> &middot; The Daily Subject</p>
+      <h1 id="subjectLine">TODAY&rsquo;S SUBJECT: <span id="subjectName">—</span></h1>
+      <p class="plaque-rule-sub"></p>
+    </header>
+
+    <section id="globeWrap">
+      <div id="globeScene">
+        <canvas id="globe" width="700" height="700"></canvas>
+        <div id="intro" class="intro-card">
+          <p class="intro-kicker">Shake the glass.</p>
+          <p class="intro-body">Tilt your phone, or drag the dome, to rearrange the curios inside. Take the photo when the silhouette is most filled.</p>
+          <button id="startBtn" class="start-btn">Wind the globe</button>
+        </div>
+      </div>
+      <div id="base">
+        <div id="meterRow">
+          <div class="meter-labels">
+            <span class="meter-now">NOW <span id="nowPct">0%</span></span>
+            <span class="meter-peak">PEAK <span id="peakPct">0%</span></span>
+          </div>
+          <div id="meter"><div id="meterFill"></div><div id="meterPeakMark"></div></div>
+          <button id="shootBtn" class="shoot-btn" disabled>Take the Photograph</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="result" class="result-card" aria-hidden="true">
+      <div class="result-inner">
+        <p class="result-overline">Developed &middot; <span id="resultDate">—</span></p>
+        <h2 id="resultTitle">A <span id="resultSubject">specimen</span></h2>
+        <div id="photoWrap"><canvas id="photoCanvas" width="620" height="620"></canvas></div>
+        <p class="result-big"><span id="resultPct">0</span><span class="pct">%</span></p>
+        <p id="resultRibbon" class="result-ribbon">—</p>
+        <p id="resultBest" class="result-best">Local best: <span id="bestPct">—</span></p>
+        <pre id="emojiGrid" class="emoji-grid"></pre>
+        <div class="result-actions">
+          <button id="againBtn" class="ghost-btn">Retake (shake again)</button>
+          <div id="share" style="display:block">
+            <button onclick="share()" class="share-btn">Share your photograph</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer id="colophon">
+      <p>A daily curio. Same subject for everyone, until midnight.</p>
+    </footer>
+  </main>
+</body>
+</html>

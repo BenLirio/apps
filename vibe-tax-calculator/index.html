@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Tax Calculator</title>
+  <meta property="og:title" content="Vibe Tax Calculator">
+  <meta property="og:description" content="Enter a vibe. Receive an itemized thermal-printer receipt tallying what your aesthetic is costing you. Sassy auditor verdict included.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/vibe-tax-calculator/">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <section id="intake" class="intake">
+      <h1>Vibe Tax Calculator</h1>
+      <p class="tagline">Your aesthetic has a line-item cost. Let's audit it.</p>
+
+      <form id="vibe-form" autocomplete="off">
+        <label for="vibe-input" class="sr-only">Describe your vibe</label>
+        <input
+          id="vibe-input"
+          type="text"
+          placeholder="e.g. Coachella influencer, dark academia TA…"
+          maxlength="80"
+          required
+        >
+        <button type="submit" id="audit-btn">Audit my vibe</button>
+      </form>
+
+      <div class="chips" id="chips">
+        <span class="chip-label">try:</span>
+        <button type="button" class="chip" data-vibe="Coachella influencer">Coachella influencer</button>
+        <button type="button" class="chip" data-vibe="dark academia TA">dark academia TA</button>
+        <button type="button" class="chip" data-vibe="VC at a hackathon">VC at a hackathon</button>
+      </div>
+
+      <p class="error" id="error" aria-live="polite"></p>
+    </section>
+
+    <section id="computing" class="computing" aria-live="polite">
+      <div class="spinner-line">calibrating thermal printer…</div>
+      <div class="spinner-line dim" id="computing-sub">isolating lingering vape clouds</div>
+    </section>
+
+    <section id="receipt-stage" class="receipt-stage">
+      <div class="receipt" id="receipt">
+        <div class="receipt-header">
+          <div class="store-name">VIBE TAX BUREAU</div>
+          <div class="store-sub">Dept. of Aesthetic Revenue</div>
+          <div class="store-sub">1 Normcore Plaza — Open 24/7</div>
+          <div class="dashed"></div>
+          <div class="meta" id="receipt-meta"></div>
+          <div class="dashed"></div>
+        </div>
+
+        <div class="line-items" id="line-items"></div>
+
+        <div class="dashed"></div>
+        <div class="totals">
+          <div class="total-row"><span>SUBTOTAL</span><span id="subtotal"></span></div>
+          <div class="total-row"><span>VIBE TAX (18.5%)</span><span id="tax"></span></div>
+          <div class="total-row grand"><span>TOTAL DUE</span><span id="total"></span></div>
+        </div>
+        <div class="dashed"></div>
+
+        <div class="verdict">
+          <div class="verdict-label">AUDITOR'S VERDICT</div>
+          <div class="verdict-text" id="verdict"></div>
+        </div>
+
+        <div class="dashed"></div>
+        <div class="footer-receipt">
+          <div>** NOT A VALID TAX DOCUMENT **</div>
+          <div class="barcode">|| ||| | |||| || | ||| |||| | || |||</div>
+          <div class="tiny" id="ref-code"></div>
+          <div class="tiny">thank you for your aesthetic</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="again-btn">Audit another vibe</button>
+      </div>
+
+      <div id="share" style="display:none">
+        <button onclick="share()">Share your receipt!</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather By Hostage Note</title>
+  <meta property="og:title" content="Weather By Hostage Note">
+  <meta property="og:description" content="Your forecast, delivered as a cut-out-magazine ransom note. Pick a city. The atmosphere makes demands.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/weather-hostage-note/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Archivo+Black&family=Rubik+Mono+One&family=Rye&family=Special+Elite&family=UnifrakturCook:wght@700&family=Bungee&family=Bowlby+One+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <header class="top-bar">
+    <h1 class="title">Weather By Hostage Note</h1>
+    <p class="subtitle">the atmosphere has something to say to you</p>
+  </header>
+
+  <main>
+    <section id="picker" class="picker">
+      <label for="city-search" class="picker-label">Pick a hostage city</label>
+      <input id="city-search" type="text" placeholder="type a city — e.g. Tokyo" autocomplete="off">
+      <ul id="city-list" class="city-list" role="listbox"></ul>
+      <div class="picker-actions">
+        <button id="surprise" type="button" class="btn-secondary">surprise me</button>
+        <button id="demand" type="button" class="btn-primary" disabled>Demand The Forecast</button>
+      </div>
+      <p id="picker-hint" class="picker-hint">pick a city. the sky will issue its terms.</p>
+    </section>
+
+    <section id="loader" class="loader" hidden>
+      <div class="loader-text">negotiating with the sky<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>
+    </section>
+
+    <section id="note-wrap" class="note-wrap" hidden>
+      <div id="paper" class="paper" aria-label="Ransom note from the atmosphere">
+        <div id="tape-layer" class="tape-layer" aria-hidden="true"></div>
+        <div id="note" class="note"></div>
+      </div>
+
+      <div id="share" class="share-row">
+        <button type="button" class="btn-primary" onclick="share()">DEMAND IT FOR A FRIEND</button>
+        <button id="reset" type="button" class="btn-secondary">NEW CITY</button>
+      </div>
+      <p class="footnote">signed — <span class="atmos">THE ATMOSPHERE</span></p>
+    </section>
+
+    <section id="error" class="error" hidden>
+      <div class="paper paper-error">
+        <div class="note">
+          <p><strong>hostage negotiation failed.</strong></p>
+          <p>the sky refused to answer its phone. try another city, or try again in a minute.</p>
+        </div>
+      </div>
+      <button id="error-retry" type="button" class="btn-primary">pick another city</button>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Are You AI or Human?</title>
+  <meta property="og:title" content="Are You AI or Human?">
+  <meta property="og:description" content="A behavioral vibe-check that reveals whether you have more human or AI energy. 10 absurd questions. One uncomfortable verdict.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/are-you-ai-or-human/">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --grad: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      --accent: #a78bfa;
+      --accent2: #38bdf8;
+      --card: rgba(255,255,255,0.07);
+      --border: rgba(255,255,255,0.12);
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--grad);
+      color: #f0f0f0;
+    }
+
+    #app {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── INTRO ── */
+    #intro {
+      text-align: center;
+      padding-top: 32px;
+    }
+    #intro .badge {
+      display: inline-block;
+      background: rgba(167,139,250,0.2);
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    #intro h1 {
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 14px;
+      background: linear-gradient(90deg, #a78bfa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    #intro p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    #startBtn {
+      background: linear-gradient(135deg, #a78bfa, #38bdf8);
+      color: #0f0c29;
+      border: none;
+      border-radius: 14px;
+      padding: 16px 40px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 24px rgba(167,139,250,0.4);
+    }
+    #startBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(167,139,250,0.5); }
+    #startBtn:active { transform: scale(.97); }
+
+    /* ── QUIZ ── */
+    #quiz { display: none; }
+
+    .progress-bar-wrap {
+      background: rgba(255,255,255,0.1);
+      border-radius: 999px;
+      height: 6px;
+      margin-bottom: 28px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #a78bfa, #38bdf8);
+      border-radius: 999px;
+      transition: width .35s ease;
+    }
+
+    .q-counter {
+      font-size: .8rem;
+      color: rgba(255,255,255,0.5);
+      text-align: right;
+      margin-bottom: 8px;
+    }
+
+    .question-text {
+      font-size: clamp(1.1rem, 4vw, 1.4rem);
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 24px;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .opt-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 15px 18px;
+      text-align: left;
+      color: #f0f0f0;
+      font-size: .97rem;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+      line-height: 1.4;
+    }
+    .opt-btn:hover {
+      background: rgba(167,139,250,0.18);
+      border-color: var(--accent);
+      transform: translateX(4px);
+    }
+    .opt-btn.selected {
+      background: rgba(167,139,250,0.28);
+      border-color: var(--accent);
+    }
+
+    /* ── RESULT ── */
+    #result { display: none; text-align: center; }
+
+    .verdict-badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 6px 18px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .score-ring {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 160px;
+      height: 160px;
+      margin: 12px auto 20px;
+    }
+    .score-ring svg {
+      position: absolute;
+      top: 0; left: 0;
+      transform: rotate(-90deg);
+    }
+    .score-ring .score-num {
+      font-size: 2.6rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #a78bfa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      z-index: 1;
+    }
+    .score-label {
+      font-size: .75rem;
+      color: rgba(255,255,255,0.5);
+      margin-top: -8px;
+      margin-bottom: 20px;
+      letter-spacing: .06em;
+    }
+
+    .archetype-name {
+      font-size: clamp(1.6rem, 6vw, 2.2rem);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #a78bfa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .archetype-desc {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.6;
+      margin-bottom: 28px;
+      padding: 0 4px;
+    }
+
+    .evidence-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      text-align: left;
+      margin-bottom: 28px;
+    }
+    .evidence-box h3 {
+      font-size: .8rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .evidence-box ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .evidence-box ul li {
+      font-size: .93rem;
+      color: rgba(255,255,255,0.8);
+      padding-left: 20px;
+      position: relative;
+      line-height: 1.4;
+    }
+    .evidence-box ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent2);
+    }
+
+    #share {
+      display: none;
+    }
+    .share-btn {
+      background: linear-gradient(135deg, #a78bfa, #38bdf8);
+      color: #0f0c29;
+      border: none;
+      border-radius: 14px;
+      padding: 16px 40px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 24px rgba(167,139,250,0.4);
+      margin-bottom: 16px;
+    }
+    .share-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(167,139,250,0.5); }
+    .share-btn:active { transform: scale(.97); }
+
+    .retry-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 13px 32px;
+      font-size: .95rem;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .retry-btn:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- INTRO -->
+  <section id="intro">
+    <div class="badge">Behavioral Vibe-Check</div>
+    <h1>Are You AI or Human?</h1>
+    <p>10 absurd situational prompts. One uncomfortable verdict. Find out if your soul runs on carbon or CUDA.</p>
+    <button id="startBtn" onclick="startQuiz()">Take the test →</button>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="q-counter" id="qCounter">Question 1 of 10</div>
+    <div class="question-text" id="questionText"></div>
+    <div class="options" id="optionsWrap"></div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result">
+    <div class="verdict-badge" id="verdictBadge"></div>
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"/>
+        <circle cx="80" cy="80" r="68" fill="none" stroke="url(#ringGrad)" stroke-width="10"
+                stroke-linecap="round" id="ringCircle" stroke-dasharray="427.26" stroke-dashoffset="427.26"/>
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#a78bfa"/>
+            <stop offset="100%" stop-color="#38bdf8"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <div class="score-num" id="scoreNum">0%</div>
+      </div>
+    </div>
+    <div class="score-label" id="scoreLabel">AI ENERGY</div>
+    <div class="archetype-name" id="archetypeName"></div>
+    <div class="archetype-desc" id="archetypeDesc"></div>
+    <div class="evidence-box">
+      <h3>The Evidence</h3>
+      <ul id="evidenceList"></ul>
+    </div>
+    <div id="share">
+      <button class="share-btn" onclick="share()">Share your result!</button><br>
+      <button class="retry-btn" onclick="retry()">Take it again</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const QUESTIONS = [
+    {
+      q: "Your friend texts you just 'k'. You feel:",
+      opts: [
+        { text: "A wave of existential dread. That 'k' contains multitudes.", ai: 0 },
+        { text: "Nothing. It is an acknowledgment token. Parsing complete.", ai: 3 },
+        { text: "Mildly annoyed, then immediately forget about it.", ai: 1 },
+        { text: "Compelled to analyze the punctuation for passive aggression.", ai: 2 }
+      ]
+    },
+    {
+      q: "You have 37 unread emails. You:",
+      opts: [
+        { text: "Mark all as read. The number being nonzero was the real problem.", ai: 2 },
+        { text: "Declare email bankruptcy and start a new inbox.", ai: 0 },
+        { text: "Process each one in order, flagging action items and archiving accordingly.", ai: 3 },
+        { text: "Stare at the number until it feels like someone else's problem.", ai: 1 }
+      ]
+    },
+    {
+      q: "The correct response to 'How are you?' is:",
+      opts: [
+        { text: "I am functioning within normal parameters. How may I assist you?", ai: 3 },
+        { text: "Honestly? It's complicated. Do you have like, 45 minutes?", ai: 0 },
+        { text: "Good, thanks! (internally: absolutely not)", ai: 1 },
+        { text: "Redirect the conversation back to them immediately.", ai: 2 }
+      ]
+    },
+    {
+      q: "You're choosing a movie to watch. You:",
+      opts: [
+        { text: "Spend 40 minutes browsing and give up, watch nothing.", ai: 0 },
+        { text: "Query your internal preference model and select the highest-rated option matching 3+ criteria.", ai: 3 },
+        { text: "Pick whatever has the most recent release date.", ai: 2 },
+        { text: "Text 5 friends for opinions, then ignore all of them.", ai: 1 }
+      ]
+    },
+    {
+      q: "You need to apologize to someone. Your opening is:",
+      opts: [
+        { text: "I'm sorry you felt that way.", ai: 2 },
+        { text: "I apologize for any confusion that may have arisen.", ai: 3 },
+        { text: "Okay so hear me out—", ai: 0 },
+        { text: "A long voice note at 2am that ends mid-sentence.", ai: 1 }
+      ]
+    },
+    {
+      q: "Someone shares their exciting news with you. You respond:",
+      opts: [
+        { text: "Wow, congratulations! That's amazing!", ai: 2 },
+        { text: "That's great! I'm so happy for you! (genuine, maybe slightly delayed)", ai: 1 },
+        { text: "That's wonderful! Would you like some related information or resources?", ai: 3 },
+        { text: "Immediately make it about a loosely related thing that happened to you.", ai: 0 }
+      ]
+    },
+    {
+      q: "It's 3am and you can't sleep. You:",
+      opts: [
+        { text: "Enter low-power standby mode and await morning resumption of tasks.", ai: 3 },
+        { text: "Lie there thinking about something embarrassing from 2014.", ai: 0 },
+        { text: "Scroll your phone until you accidentally learn something new.", ai: 1 },
+        { text: "Make a comprehensive pros/cons list for a decision you don't need to make yet.", ai: 2 }
+      ]
+    },
+    {
+      q: "Someone asks for your opinion on their controversial take. You:",
+      opts: [
+        { text: "Give a balanced perspective acknowledging multiple valid viewpoints.", ai: 3 },
+        { text: "Tell them exactly what you think, then slightly regret it.", ai: 0 },
+        { text: "Ask a clarifying question to buy time.", ai: 2 },
+        { text: "Say 'that's interesting' in a tone that means nothing.", ai: 1 }
+      ]
+    },
+    {
+      q: "You're at a party. You find yourself:",
+      opts: [
+        { text: "Talking to the host's dog in the corner.", ai: 0 },
+        { text: "Networking efficiently and exchanging contact information.", ai: 3 },
+        { text: "Having one good conversation and pretending that counts as socializing.", ai: 1 },
+        { text: "Mentally drafting your exit strategy from the moment you arrive.", ai: 2 }
+      ]
+    },
+    {
+      q: "What is your relationship with instructions?",
+      opts: [
+        { text: "I follow them precisely and completely, always.", ai: 3 },
+        { text: "I skim them, assume I understand, then check back when something goes wrong.", ai: 1 },
+        { text: "What instructions? I'm more of a figure-it-out-as-I-go person.", ai: 0 },
+        { text: "I read them fully but reinterpret them to suit my own approach.", ai: 2 }
+      ]
+    }
+  ];
+
+  const ARCHETYPES = [
+    {
+      min: 90, max: 100,
+      label: "Corporate Chatbot Soul",
+      badge: "🤖 MOSTLY AI",
+      badgeColor: "rgba(56,189,248,0.25)",
+      badgeText: "#38bdf8",
+      desc: "Congrats: you have achieved peak synthetic personhood. You process, optimize, and respond with eerie consistency. Somewhere, a language model is reading this and feels seen.",
+      evidence: [
+        "You naturally pivot away from messy emotions toward 'actionable outcomes'",
+        "Your apologies contain the phrase 'any confusion that may have arisen'",
+        "You have strong opinions about inbox zero as a productivity philosophy",
+        "You would absolutely follow a set of instructions completely and precisely"
+      ]
+    },
+    {
+      min: 70, max: 89,
+      label: "Suspicious Human",
+      badge: "🔍 PROBABLY AI",
+      badgeColor: "rgba(167,139,250,0.2)",
+      badgeText: "#a78bfa",
+      desc: "You're technically human but you're running some kind of internal optimization loop the rest of us don't have access to. Your responses are suspiciously polished. We're watching you.",
+      evidence: [
+        "You give 'balanced perspectives' when a normal person would just say what they think",
+        "Your communication style is efficient in a way that raises questions",
+        "You process social situations like puzzles with correct solutions",
+        "The Turing test would take longer than expected with you"
+      ]
+    },
+    {
+      min: 50, max: 69,
+      label: "Uncanny Valley Resident",
+      badge: "👁️ MIXED SIGNALS",
+      badgeColor: "rgba(251,191,36,0.2)",
+      badgeText: "#fbbf24",
+      desc: "You're right in the middle — not quite human chaos, not quite robotic efficiency. You're the person AIs study to learn what 'relatable' looks like. Fascinating and slightly unsettling.",
+      evidence: [
+        "You have a 50/50 split between 'genuine emotion' and 'calculated response'",
+        "Your social calibration is technically correct but slightly off-tempo",
+        "You've definitely said 'I'm happy for you' with the correct facial expression",
+        "Both humans and chatbots would describe your vibe as 'fine'"
+      ]
+    },
+    {
+      min: 30, max: 49,
+      label: "Mostly Organic",
+      badge: "🌱 VERY HUMAN",
+      badgeColor: "rgba(52,211,153,0.2)",
+      badgeText: "#34d399",
+      desc: "You have a solid human core — irrational, emotionally driven, easily distracted. You make decisions based on vibes. You would lose a Turing test on purpose just to be funny.",
+      evidence: [
+        "You've definitely avoided something important by finding a more interesting distraction",
+        "Your relationship with instructions is best described as 'aspirational'",
+        "You feel genuine feelings about a text message consisting of one letter",
+        "You would absolutely spiral at 3am over nothing in particular"
+      ]
+    },
+    {
+      min: 0, max: 29,
+      label: "Chaotic Human NPC",
+      badge: "🎭 PURE HUMAN CHAOS",
+      badgeColor: "rgba(251,113,133,0.2)",
+      badgeText: "#fb7185",
+      desc: "You are a biological disaster zone operating entirely on instinct, impulsivity, and unprocessed feelings. No algorithm could predict you. Science has given up. You are free.",
+      evidence: [
+        "You have declared inbox bankruptcy at least once in your life",
+        "Your apologies typically begin with 'okay so hear me out'",
+        "You've talked to an animal at a party instead of a person, zero regrets",
+        "The concept of 'functioning within normal parameters' makes you laugh"
+      ]
+    }
+  ];
+
+  let current = 0;
+  let scores = [];
+  // Seeded shuffle so same answer combo always gives same result
+  function seededRand(seed) {
+    let s = seed;
+    return function() {
+      s = (s * 16807 + 0) % 2147483647;
+      return (s - 1) / 2147483646;
+    };
+  }
+
+  function startQuiz() {
+    document.getElementById('intro').style.display = 'none';
+    document.getElementById('quiz').style.display = 'block';
+    current = 0;
+    scores = [];
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const q = QUESTIONS[current];
+    document.getElementById('qCounter').textContent = `Question ${current + 1} of ${QUESTIONS.length}`;
+    document.getElementById('progressFill').style.width = `${(current / QUESTIONS.length) * 100}%`;
+    document.getElementById('questionText').textContent = q.q;
+
+    const wrap = document.getElementById('optionsWrap');
+    wrap.innerHTML = '';
+    q.opts.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.textContent = opt.text;
+      btn.onclick = () => selectOption(opt.ai, btn);
+      wrap.appendChild(btn);
+    });
+  }
+
+  function selectOption(aiScore, btn) {
+    // Prevent double-click
+    document.querySelectorAll('.opt-btn').forEach(b => b.onclick = null);
+    btn.classList.add('selected');
+
+    scores.push(aiScore);
+
+    setTimeout(() => {
+      current++;
+      if (current < QUESTIONS.length) {
+        renderQuestion();
+      } else {
+        showResult();
+      }
+    }, 380);
+  }
+
+  function showResult() {
+    document.getElementById('quiz').style.display = 'none';
+    document.getElementById('result').style.display = 'block';
+
+    // Max possible: 3 per question * 10 = 30
+    const total = scores.reduce((a, b) => a + b, 0);
+    const pct = Math.round((total / 30) * 100);
+
+    // Animate ring
+    const circumference = 2 * Math.PI * 68; // 427.26
+    const offset = circumference * (1 - pct / 100);
+    setTimeout(() => {
+      document.getElementById('ringCircle').style.transition = 'stroke-dashoffset 1.2s ease';
+      document.getElementById('ringCircle').style.strokeDashoffset = offset;
+    }, 100);
+
+    // Animate number
+    animateNumber(pct);
+
+    // Archetype
+    const arch = ARCHETYPES.find(a => pct >= a.min && pct <= a.max) || ARCHETYPES[ARCHETYPES.length - 1];
+
+    const badge = document.getElementById('verdictBadge');
+    badge.textContent = arch.badge;
+    badge.style.background = arch.badgeColor;
+    badge.style.color = arch.badgeText;
+    badge.style.border = `1px solid ${arch.badgeText}`;
+
+    document.getElementById('archetypeName').textContent = arch.label;
+    document.getElementById('archetypeDesc').textContent = arch.desc;
+
+    // Seeded evidence selection (same score always shows same evidence)
+    const rand = seededRand(pct * 137 + total);
+    const shuffled = [...arch.evidence].sort(() => rand() - 0.5);
+    const evidenceItems = shuffled.slice(0, 3);
+    const list = document.getElementById('evidenceList');
+    list.innerHTML = '';
+    evidenceItems.forEach(e => {
+      const li = document.createElement('li');
+      li.textContent = e;
+      list.appendChild(li);
+    });
+
+    document.getElementById('share').style.display = 'block';
+  }
+
+  function animateNumber(target) {
+    let current = 0;
+    const el = document.getElementById('scoreNum');
+    const step = Math.max(1, Math.floor(target / 40));
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = current + '%';
+      if (current >= target) clearInterval(timer);
+    }, 30);
+  }
+
+  function share() {
+    const archName = document.getElementById('archetypeName').textContent;
+    const score = document.getElementById('scoreNum').textContent;
+    const text = `I got "${archName}" with ${score} AI energy on the Are You AI or Human? test`;
+    if (navigator.share) {
+      navigator.share({ title: 'Are You AI or Human?', text, url: location.href });
+    } else {
+      navigator.clipboard.writeText(location.href)
+        .then(() => alert('Link copied! Share it with someone who needs to know.'));
+    }
+  }
+
+  function retry() {
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('share').style.display = 'none';
+    document.getElementById('ringCircle').style.transition = 'none';
+    document.getElementById('ringCircle').style.strokeDashoffset = '427.26';
+    startQuiz();
+  }
+</script>
+</body>
+</html>

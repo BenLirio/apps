@@ -1,0 +1,314 @@
+/* Aesthetic: open-sky pastel + fine ink — dusk-blue paper sky, sun-bleached horizon, hand-drawn ink stroke for kite + line, handwritten serif for the flight log */
+
+:root {
+  --sky-top: #c7dbe6;
+  --sky-mid: #e4d7c4;
+  --sky-low: #f0cfb2;
+  --sun: #f7e3c3;
+  --ink: #1a1f29;
+  --ink-soft: rgba(26, 31, 41, 0.55);
+  --ink-faint: rgba(26, 31, 41, 0.18);
+  --paper: #f4ecd8;
+  --paper-edge: #d9ccb0;
+  --accent: #c94f3a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky-top);
+  font-family: "Fraunces", "Iowan Old Style", Georgia, serif;
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#sky {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 78% 22%, var(--sun) 0%, rgba(247,227,195,0) 38%),
+    linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-mid) 62%, var(--sky-low) 100%);
+}
+
+#kite-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* HUD */
+#hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-family: "Caveat", cursive;
+  font-size: 22px;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#wind-label {
+  background: rgba(244, 236, 216, 0.72);
+  border: 1px solid var(--ink-faint);
+  padding: 4px 10px;
+  border-radius: 2px;
+  box-shadow: 1px 1px 0 var(--ink-faint);
+}
+
+#timer {
+  font-family: "Fraunces", serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(244, 236, 216, 0.72);
+  border: 1px solid var(--ink-faint);
+  padding: 4px 10px;
+  border-radius: 2px;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Trick toast */
+#trick-toast {
+  position: absolute;
+  top: 54%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  font-family: "Caveat", cursive;
+  font-size: 44px;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(244, 236, 216, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+  transition: transform 240ms cubic-bezier(.2,1.2,.3,1), opacity 240ms ease;
+  white-space: nowrap;
+}
+#trick-toast.show {
+  opacity: 1;
+  transform: translate(-50%, -60%) scale(1);
+}
+
+/* Pre-start overlay */
+#prestart {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background: linear-gradient(to bottom, rgba(199,219,230,0.4), rgba(240,207,178,0.5));
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.prestart-inner {
+  text-align: center;
+  max-width: 340px;
+  padding: 28px 22px;
+}
+.prestart-inner h1 {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 42px;
+  line-height: 1;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.prestart-inner .tag {
+  font-family: "Caveat", cursive;
+  font-size: 26px;
+  color: var(--ink-soft);
+  margin: 0 0 18px;
+}
+.prestart-inner .howto {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin: 0 0 22px;
+}
+#start-btn, #share-btn, #again-btn {
+  font-family: "Caveat", cursive;
+  font-size: 24px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  padding: 10px 22px;
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  min-height: 44px;
+}
+#start-btn:active, #share-btn:active, #again-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+/* Flight log card */
+#flight-log {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  gap: 14px;
+  background: linear-gradient(to bottom, rgba(199,219,230,0.55), rgba(240,207,178,0.65));
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: cardIn 420ms cubic-bezier(.2,1.1,.3,1);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+  width: min(340px, 92vw);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 18px 18px 14px;
+  position: relative;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(26,31,41,0.025) 0 1px, transparent 1px 22px);
+}
+.card::before {
+  content: "";
+  position: absolute;
+  top: 6px; left: 6px; right: 6px; bottom: 6px;
+  border: 1px dashed var(--ink-faint);
+  pointer-events: none;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+.card-title {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+}
+.card-date {
+  font-family: "Caveat", cursive;
+  font-size: 18px;
+  color: var(--ink-soft);
+}
+.card-wind {
+  font-family: "Caveat", cursive;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+#card-path {
+  width: 100%;
+  height: 140px;
+  display: block;
+  background: rgba(255,255,255,0.35);
+  border: 1px solid var(--ink-faint);
+  margin-bottom: 10px;
+}
+#card-path path.route {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+#card-path path.reel {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.7;
+}
+.card-tricks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-height: 26px;
+}
+.trick-stamp {
+  font-family: "Caveat", cursive;
+  font-size: 18px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 1px 8px;
+  border-radius: 2px;
+  transform: rotate(var(--rot, -1.5deg));
+  background: rgba(255,255,255,0.35);
+}
+.no-tricks {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.card-meta {
+  font-family: "Fraunces", serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.card-sig {
+  font-family: "Caveat", cursive;
+  font-size: 18px;
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+#share {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+#again-btn { background: transparent; }
+
+/* Replay banner */
+#replay-banner {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(201, 79, 58, 0.9);
+  color: var(--paper);
+  font-family: "Caveat", cursive;
+  font-size: 20px;
+  padding: 4px 14px;
+  border-radius: 2px;
+  z-index: 7;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+@media (max-width: 380px) {
+  .prestart-inner h1 { font-size: 34px; }
+  #trick-toast { font-size: 36px; }
+}

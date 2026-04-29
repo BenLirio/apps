@@ -1,0 +1,344 @@
+/* Aesthetic: Victorian botanical-illustration field journal — aged ivory paper, sepia ink, single rust accent, hand-typed labels (Special Elite) over a Cormorant serif. Pot-of-bones is the recurring motif. */
+
+:root {
+  --paper: #f3ead6;
+  --paper-deep: #e7dcc1;
+  --ink: #2b2118;
+  --ink-soft: #4a3a28;
+  --ink-faint: #8a7556;
+  --rust: #a3401a;
+  --rust-deep: #7a2c10;
+  --rule: #b8a78400;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(123, 90, 50, 0.07) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(163, 64, 26, 0.06) 0, transparent 45%),
+    repeating-linear-gradient(0deg, rgba(80, 60, 30, 0.022) 0, rgba(80, 60, 30, 0.022) 1px, transparent 1px, transparent 3px);
+}
+
+main {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 28px 22px 80px;
+}
+
+.hidden { display: none !important; }
+
+/* ---------- masthead ---------- */
+.masthead {
+  text-align: center;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  padding: 18px 8px 22px;
+  margin-bottom: 28px;
+  position: relative;
+}
+.masthead::before, .masthead::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 1px;
+  background: var(--ink);
+}
+.masthead::before { top: 4px; }
+.masthead::after  { bottom: 4px; }
+
+.cataloged {
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-weight: 600;
+  font-size: clamp(36px, 9vw, 52px);
+  line-height: 0.98;
+  letter-spacing: -0.01em;
+  font-style: italic;
+}
+
+.kicker {
+  margin: 14px auto 0;
+  max-width: 380px;
+  font-size: 16px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+/* ---------- quiz ---------- */
+.quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.q-screen {
+  display: none;
+  animation: paper-in 360ms ease-out;
+}
+.q-screen.active { display: block; }
+
+@keyframes paper-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.q-counter {
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ink-faint);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.q-prompt {
+  font-size: clamp(22px, 5.6vw, 28px);
+  line-height: 1.2;
+  text-align: center;
+  margin: 0 0 22px;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.q-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.q-opt {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 18px;
+  text-align: left;
+  padding: 14px 18px;
+  min-height: 56px;
+  cursor: pointer;
+  position: relative;
+  transition: background 120ms ease, transform 120ms ease;
+  border-radius: 0;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.q-opt:hover { background: var(--paper-deep); }
+.q-opt:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+.q-opt .marker {
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  color: var(--rust);
+  margin-right: 10px;
+  letter-spacing: 0.15em;
+}
+
+/* ---------- loading ---------- */
+.loading {
+  text-align: center;
+  padding: 32px 8px;
+}
+.loading-bones {
+  width: 120px;
+  margin: 0 auto 16px;
+  color: var(--ink-soft);
+}
+.loading-bones svg { width: 100%; height: auto; display: block; }
+.bones-group { animation: rattle 900ms ease-in-out infinite; transform-origin: 100px 80px; }
+@keyframes rattle {
+  0%, 100% { transform: rotate(-3deg); }
+  50%      { transform: rotate(3deg); }
+}
+.loading-text {
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-soft);
+}
+
+/* ---------- result card ---------- */
+.result { animation: paper-in 500ms ease-out; }
+
+.card {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 22px 22px 18px;
+  position: relative;
+  box-shadow:
+    4px 4px 0 var(--ink),
+    inset 0 0 60px rgba(120, 90, 40, 0.08);
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--ink-faint);
+  pointer-events: none;
+}
+
+.card-meta {
+  font-family: 'Special Elite', monospace;
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  color: var(--ink-faint);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.pot-bones {
+  width: 180px;
+  margin: 4px auto 14px;
+  color: var(--ink);
+}
+.pot-bones svg { width: 100%; height: auto; display: block; }
+
+.archetype-label, .killing-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ink-faint);
+  text-align: center;
+  margin: 6px 0 4px;
+}
+
+.archetype {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: clamp(30px, 7.2vw, 44px);
+  line-height: 1.05;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--rust-deep);
+}
+
+.plant {
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: clamp(22px, 5.4vw, 28px);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.death {
+  margin: 4px auto 18px;
+  max-width: 420px;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.death::before { content: '“'; color: var(--rust); margin-right: 2px; font-size: 22px; }
+.death::after  { content: '”'; color: var(--rust); margin-left: 2px; font-size: 22px; }
+
+.stamp {
+  margin-top: 12px;
+  text-align: center;
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--rust);
+  border: 1.5px dashed var(--rust);
+  padding: 6px 8px;
+  display: inline-block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+}
+
+/* ---------- share ---------- */
+.share-block {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.share-btn, .restart-btn {
+  font-family: 'Special Elite', monospace;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 0;
+  min-height: 48px;
+  padding: 10px 22px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.share-btn {
+  background: var(--rust);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.share-btn:hover { background: var(--rust-deep); }
+.share-btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+
+.restart-btn {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink-soft);
+}
+.restart-btn:hover { background: var(--paper-deep); }
+
+.footnote {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* ---------- copied toast ---------- */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Special Elite', monospace;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  padding: 10px 16px;
+  border: 2px solid var(--rust);
+  z-index: 9999;
+  animation: toast-pop 2.2s ease forwards;
+}
+@keyframes toast-pop {
+  0%   { opacity: 0; transform: translate(-50%, 8px); }
+  10%  { opacity: 1; transform: translate(-50%, 0); }
+  85%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -6px); }
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 380px) {
+  main { padding: 18px 14px 60px; }
+  .pot-bones { width: 150px; }
+  .card { padding: 18px 16px 16px; }
+}

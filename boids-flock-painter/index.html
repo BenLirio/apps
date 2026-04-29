@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boids Flock Painter</title>
+  <meta property="og:title" content="Boids Flock Painter">
+  <meta property="og:description" content="Tap to drop glowing beacons and watch flocks of boids swoop and split around them. A live, hypnotic ballet of emergent motion.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/boids-flock-painter/">
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.3/lib/p5.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="ui">
+    <div id="title-area">
+      <h1>Boids Flock Painter</h1>
+      <p id="hint">tap anywhere to drop a beacon — boids split into flocks, each chasing its own color</p>
+    </div>
+    <div id="controls">
+      <button id="btn-reset" onclick="resetCanvas()">Clear beacons</button>
+    </div>
+  </div>
+</body>
+</html>

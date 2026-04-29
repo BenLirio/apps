@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Petty Small Claims — File Your Grievance</title>
+  <meta property="og:title" content="Petty Small Claims">
+  <meta property="og:description" content="File your most absurd everyday grievance in small-claims court and receive an official typewritten judgment.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/petty-small-claims/">
+  <meta property="og:image" content="https://benlirio.com/apps/petty-small-claims/favicon.jpg">
+  <meta name="theme-color" content="#b1271b">
+  <link rel="icon" type="image/jpeg" href="favicon.jpg">
+  <link rel="apple-touch-icon" href="favicon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Special+Elite&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <!-- Intake form screen -->
+    <section id="intake" class="screen">
+      <header class="masthead">
+        <div class="masthead-rule"></div>
+        <h1 class="masthead-title">PETTY SMALL CLAIMS</h1>
+        <p class="masthead-sub">Circuit Court of Honest Grievances — Intake Form 26-A</p>
+        <div class="masthead-rule"></div>
+      </header>
+
+      <form id="case-form" novalidate>
+        <!-- STEP 1 — who + what -->
+        <div id="step-1" class="step step-active" data-step="1">
+          <div class="form-row">
+            <label for="plaintiff">1. Your name</label>
+            <input id="plaintiff" name="plaintiff" type="text" autocomplete="name" maxlength="60" placeholder="e.g. Jordan P. Reeves">
+          </div>
+
+          <div class="form-row">
+            <label for="defendant">2. Who owes you</label>
+            <input id="defendant" name="defendant" type="text" maxlength="60" placeholder="my roommate / my cat / the USPS">
+          </div>
+
+          <div class="form-row">
+            <label for="grievance">3. What they did</label>
+            <textarea id="grievance" name="grievance" maxlength="280" rows="3" placeholder="ate my labeled leftovers"></textarea>
+          </div>
+
+          <button id="continue-btn" type="button" class="continue-btn" disabled>CONTINUE →</button>
+        </div>
+
+        <!-- STEP 2 — optional extras, revealed only after step 1 is complete -->
+        <div id="step-2" class="step step-hidden" data-step="2" aria-hidden="true">
+          <p class="step-caption">Anything else for the record? <span class="step-caption-sub">(optional)</span></p>
+
+          <div class="form-row">
+            <label class="chip-label">Aggravating factors</label>
+            <div id="suggest-status" class="suggest-status" aria-live="polite"></div>
+            <div id="aggravator-chips" class="chips" role="group" aria-label="Aggravating factors">
+              <!-- Rendered by JS once the clerk returns tailored suggestions. -->
+            </div>
+            <div id="agg-summary" class="agg-summary" aria-live="polite"></div>
+          </div>
+
+          <div class="form-row">
+            <label class="chip-label">Petty damages <span class="label-hint">(check any that fit)</span></label>
+            <div id="item-chips" class="chips" role="group" aria-label="Itemized damages">
+              <!-- Rendered by JS -->
+            </div>
+            <div id="item-summary" class="agg-summary" aria-live="polite"></div>
+          </div>
+
+          <div id="form-error" class="form-error" aria-live="polite"></div>
+
+          <button id="file-btn" type="submit" class="file-btn">FILE THE CASE</button>
+          <button id="back-btn" type="button" class="back-btn">← back</button>
+          <p class="disclaimer">Not a real court. No legal advice. Not even close. The clerk assesses all amounts — the award is revealed only in the final judgment.</p>
+        </div>
+      </form>
+    </section>
+
+    <!-- Loading screen -->
+    <section id="loading" class="screen hidden">
+      <div class="loader-stack">
+        <div class="stamp-spin" aria-hidden="true">
+          <svg viewBox="0 0 140 140" width="140" height="140">
+            <defs>
+              <path id="rim" d="M70,70 m-55,0 a55,55 0 1,1 110,0 a55,55 0 1,1 -110,0"></path>
+            </defs>
+            <circle cx="70" cy="70" r="62" fill="none" stroke="#1a1a1a" stroke-width="2"></circle>
+            <circle cx="70" cy="70" r="52" fill="none" stroke="#1a1a1a" stroke-width="1"></circle>
+            <text font-family="'IBM Plex Mono', monospace" font-size="10" letter-spacing="3" fill="#1a1a1a">
+              <textPath href="#rim" startOffset="0">CIRCUIT COURT OF HONEST GRIEVANCES ★ SEAL ★ </textPath>
+            </text>
+            <text x="70" y="76" text-anchor="middle" font-family="'Playfair Display', serif" font-weight="900" font-size="22" fill="#b1271b">S.C.</text>
+          </svg>
+        </div>
+        <p id="loader-text" class="typewriter">docketing your case…</p>
+      </div>
+    </section>
+
+    <!-- Judgment (result) screen -->
+    <section id="judgment" class="screen hidden">
+      <article id="judgment-doc" class="judgment-doc">
+        <!-- Rendered by JS -->
+      </article>
+
+      <div id="share" class="share-row">
+        <p class="share-preamble">Serve this notice on the defendant — this is how you collect.</p>
+        <button onclick="serveDefendant()" class="share-btn" id="serve-btn">SERVE THE DEFENDANT</button>
+        <button id="reset-btn" type="button" class="reset-btn">File another case</button>
+      </div>
+
+      <div id="paid-actions" class="paid-actions" aria-live="polite"></div>
+    </section>
+  </main>
+</body>
+</html>

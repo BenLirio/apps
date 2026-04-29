@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group Chat Energy Audit</title>
+  <meta property="og:title" content="Group Chat Energy Audit">
+  <meta property="og:description" content="Paste your group chat messages. Get an official-looking inspection report naming your role in the chat.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/group-chat-energy-audit/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Oswald:wght@500;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main class="wrap">
+    <section id="intake" class="intake">
+      <div class="dept-header">
+        <div class="seal" aria-hidden="true">
+          <div class="seal-inner">
+            <span class="seal-top">DEPT. OF</span>
+            <span class="seal-mid">GROUP<br>CHAT</span>
+            <span class="seal-bot">COMPLIANCE</span>
+          </div>
+        </div>
+        <div class="dept-title">
+          <div class="kicker">FORM GC-1040 · ENERGY AUDIT INTAKE</div>
+          <h1>Group Chat Energy Audit</h1>
+          <p class="lede">An impartial, badly-funded inspection of your conduct in the groupchat. Submit the evidence below. An inspector will be assigned.</p>
+        </div>
+      </div>
+
+      <form id="auditForm" class="intake-form" autocomplete="off">
+        <label class="field">
+          <span class="field-label">01 · SUBJECT NAME <span class="req">(required)</span></span>
+          <input id="subjectName" type="text" maxlength="40" placeholder="e.g. Jordan M." required>
+        </label>
+
+        <fieldset class="field chips-field">
+          <legend class="field-label">02 · OBSERVED BEHAVIORS <span class="hint">(tap 2&ndash;6)</span></legend>
+          <div id="chips" class="chips"></div>
+        </fieldset>
+
+        <label class="field">
+          <span class="field-label">03 · EVIDENCE LOG <span class="hint">(optional &mdash; paste 5&ndash;10 of YOUR messages, one per line)</span></span>
+          <textarea id="messages" rows="6" maxlength="2400" placeholder="lmao&#10;anyway i'm going to bed&#10;who's bringing chips on saturday??&#10;i CANNOT believe he said that&#10;sorry just saw this"></textarea>
+          <span class="counter"><span id="msgCount">0</span>/2400</span>
+        </label>
+
+        <button id="submitBtn" type="submit" class="stamp-btn">FILE AUDIT &raquo;</button>
+        <p id="formError" class="form-error" hidden>hold on &mdash; we need a name and at least 2 chips (or some messages).</p>
+      </form>
+
+      <p class="footnote">This form is not affiliated with any real agency. Your data stays in your browser.</p>
+    </section>
+
+    <section id="loading" class="loading" hidden>
+      <div class="loading-inner">
+        <div class="rotary"></div>
+        <p id="loadingMsg">inspector en route &mdash; unfolding clipboard&hellip;</p>
+      </div>
+    </section>
+
+    <section id="reportWrap" class="report-wrap" hidden>
+      <article id="report" class="report" aria-live="polite">
+        <header class="rpt-header">
+          <div class="rpt-agency">
+            <div class="rpt-seal" aria-hidden="true">
+              <div class="rpt-seal-inner">
+                <span>DEPT.</span><span>GROUP CHAT</span><span>COMPLIANCE</span>
+              </div>
+            </div>
+            <div class="rpt-title-block">
+              <div class="rpt-super">UNITED DEPARTMENT OF GROUP CHAT COMPLIANCE</div>
+              <h2 class="rpt-title">OFFICIAL INSPECTION REPORT</h2>
+              <div class="rpt-sub">Form GC-1040 &middot; Behavioral Audit, Tier II</div>
+            </div>
+          </div>
+          <div class="rpt-meta">
+            <div><span class="mk">CASE #</span><span id="caseNo" class="mv">&mdash;</span></div>
+            <div><span class="mk">FILED</span><span id="filedOn" class="mv">&mdash;</span></div>
+            <div><span class="mk">INSPECTOR</span><span id="inspector" class="mv">&mdash;</span></div>
+          </div>
+        </header>
+
+        <section class="rpt-subject">
+          <div class="kv"><span class="mk">SUBJECT</span><span id="rptSubject" class="mv big">&mdash;</span></div>
+          <div class="kv"><span class="mk">JURISDICTION</span><span class="mv">The Groupchat, Sect. 7</span></div>
+        </section>
+
+        <section class="rpt-verdict">
+          <div class="mk">DETERMINATION OF ROLE</div>
+          <div id="roleName" class="role">&mdash;</div>
+          <div id="roleTagline" class="role-tag">&mdash;</div>
+        </section>
+
+        <section class="rpt-hazard">
+          <div class="hz-row">
+            <span class="mk">HAZARD LEVEL</span>
+            <span id="hazardLabel" class="hz-label">&mdash;</span>
+          </div>
+          <div class="hz-meter" role="img" aria-label="Hazard meter">
+            <div class="hz-tick" data-lvl="1">I</div>
+            <div class="hz-tick" data-lvl="2">II</div>
+            <div class="hz-tick" data-lvl="3">III</div>
+            <div class="hz-tick" data-lvl="4">IV</div>
+            <div class="hz-tick" data-lvl="5">V</div>
+            <div id="hzFill" class="hz-fill"></div>
+          </div>
+        </section>
+
+        <section class="rpt-citations">
+          <div class="mk">CITATIONS &amp; OBSERVATIONS</div>
+          <ol id="citations" class="citations"></ol>
+        </section>
+
+        <section class="rpt-findings">
+          <div class="mk">INSPECTOR'S NOTES</div>
+          <p id="inspectorNotes" class="notes">&mdash;</p>
+        </section>
+
+        <footer class="rpt-footer">
+          <div class="sig">
+            <div class="sig-line" aria-hidden="true"></div>
+            <div class="sig-label">AUTHORIZED SIGNATURE &middot; <span id="sigName">&mdash;</span></div>
+          </div>
+          <div id="stamp" class="stamp" aria-hidden="true">
+            <div class="stamp-inner">
+              <div class="stamp-top">FILED &middot; ON RECORD</div>
+              <div class="stamp-mid" id="stampMid">CERTIFIED</div>
+              <div class="stamp-bot">DO NOT REMOVE</div>
+            </div>
+          </div>
+        </footer>
+      </article>
+
+      <div id="share" class="share-row">
+        <button id="dlBtn" type="button" class="ghost-btn">Download PNG</button>
+        <button type="button" onclick="share()" class="stamp-btn">Share your result!</button>
+        <button id="resetBtn" type="button" class="ghost-btn">File another audit</button>
+      </div>
+
+      <p class="cta">Got this from a friend? <a id="ctaLink" href="#">Get your own audit &raquo;</a></p>
+    </section>
+  </main>
+</body>
+</html>

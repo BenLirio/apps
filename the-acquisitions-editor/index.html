@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Acquisitions Editor</title>
+  <meta property="og:title" content="The Acquisitions Editor">
+  <meta property="og:description" content="Pitch your weirdest niche obsession to a jaded mid-list publishing editor. Get a four-line letter, an absurd advance, and a comp title nobody's heard of.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/the-acquisitions-editor/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main class="desk">
+
+    <header class="masthead">
+      <div class="press-mark" aria-hidden="true">
+        <div class="mark-dot"></div>
+        <div class="mark-line"></div>
+      </div>
+      <h1>The Acquisitions Editor</h1>
+      <p class="kicker">A jaded mid-list publishing desk. One pitch. One letter back.</p>
+    </header>
+
+    <!-- INTRO / INPUT -->
+    <section id="intro" class="screen">
+      <p class="lede">
+        Pick a weird obsession below (or write your own) and the desk will reply with a
+        four-line acquisition or rejection &mdash; absurd advance, comp title, signed
+        in fountain pen.
+      </p>
+
+      <div class="starter-block">
+        <div class="starter-label">Pick a pitch to start with</div>
+        <div id="starters" class="starters"></div>
+        <button id="surprise" class="ghost-button surprise-btn" type="button">Surprise me</button>
+      </div>
+
+      <label for="pitch" class="pitch-label">Your pitch (edit freely)</label>
+      <textarea
+        id="pitch"
+        rows="6"
+        maxlength="900"
+        placeholder="Click a starter above, or write your own: a weird hobby, a petty grudge, a niche habit you've been keeping notes on..."
+        spellcheck="true"></textarea>
+      <div class="row-bottom">
+        <span id="counter" class="counter">0 / 900</span>
+        <button id="submit" class="stamp-button" type="button">Send to the desk</button>
+      </div>
+      <div id="error" class="err-msg" hidden></div>
+    </section>
+
+    <!-- LOADING -->
+    <section id="loading" class="screen" hidden>
+      <div class="typewriter" aria-hidden="true">
+        <div class="tw-bar"></div>
+        <div class="tw-keys"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <p id="loading-msg" class="loading-msg">opening your envelope with a butter knife&hellip;</p>
+    </section>
+
+    <!-- LETTER / RESULT -->
+    <section id="result" class="screen" hidden>
+      <article class="letter" id="letter-card">
+        <header class="letterhead">
+          <div class="letterhead-mark" aria-hidden="true">
+            <div class="mark-dot small"></div>
+            <div class="mark-line short"></div>
+          </div>
+          <div class="letterhead-text">
+            <div class="press-name" id="press-name">PALE OWL PRESS</div>
+            <div class="press-sub">&mdash; Acquisitions Desk &mdash;</div>
+          </div>
+          <div class="letterhead-meta">
+            <div id="letter-date">apr 19, 2026</div>
+            <div id="letter-ref">ref / AQ&middot;0000</div>
+          </div>
+        </header>
+
+        <div class="letter-body">
+          <p class="salutation" id="salutation">Re: your submission.</p>
+          <p class="bodyline" id="line1"></p>
+          <p class="bodyline" id="line2"></p>
+          <p class="bodyline" id="line3"></p>
+          <p class="bodyline" id="line4"></p>
+        </div>
+
+        <div class="terms-block">
+          <div class="terms-row">
+            <span class="terms-key">Advance offered</span>
+            <span class="terms-val advance" id="advance">$0.00</span>
+          </div>
+          <div class="terms-row">
+            <span class="terms-key">Comp title</span>
+            <span class="terms-val comp" id="comp">&mdash;</span>
+          </div>
+          <div class="terms-row verdict-row">
+            <span class="terms-key">Verdict</span>
+            <span class="terms-val verdict" id="verdict">&mdash;</span>
+          </div>
+        </div>
+
+        <footer class="signoff">
+          <div class="signature" id="signature">&mdash;</div>
+          <div class="signed-name" id="signed-name">&mdash;</div>
+          <div class="signed-title" id="signed-title">Acquisitions Editor</div>
+          <div class="stamp" id="stamp" aria-hidden="true">RECEIVED</div>
+        </footer>
+      </article>
+
+      <div id="share" class="share-row" style="display:none">
+        <button onclick="share()" class="stamp-button share-btn" type="button">Share the letter</button>
+        <button id="restart" class="ghost-button" type="button">Pitch another</button>
+      </div>
+    </section>
+
+    <footer class="colophon">
+      <p>&mdash; postmarked from a building with a leaking radiator &mdash;</p>
+    </footer>
+
+  </main>
+</body>
+</html>

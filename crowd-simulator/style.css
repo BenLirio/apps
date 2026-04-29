@@ -1,0 +1,278 @@
+/* Aesthetic: High-contrast Black/Yellow Industrial Safety
+   Inspired by hazard tape, emergency signage, and crowd-control barriers.
+   Typeface: Bebas Neue (headers) + Share Tech Mono (data/UI)
+   Vibe: You are the safety officer. Everything is your fault. */
+
+:root {
+  --black: #0a0a0a;
+  --yellow: #f5c400;
+  --yellow-dim: #a88600;
+  --white: #e8e8e8;
+  --red: #d4342a;
+  --green: #2ad47a;
+  --grey: #2a2a2a;
+  --grey-mid: #444;
+  --border: 3px solid var(--yellow);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+#app {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+header {
+  border-left: 6px solid var(--yellow);
+  padding: 8px 12px;
+}
+
+h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.8rem;
+  letter-spacing: 4px;
+  color: var(--yellow);
+  line-height: 1;
+}
+
+#tagline {
+  font-size: 0.78rem;
+  color: var(--grey-mid);
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
+/* Toolbar */
+#toolbar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tool-btn,
+.action-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border: 2px solid var(--grey-mid);
+  background: var(--black);
+  color: var(--grey-mid);
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool-btn.active,
+.tool-btn:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.action-btn {
+  border-color: var(--grey-mid);
+  color: var(--white);
+  margin-left: auto;
+}
+
+.action-btn:hover {
+  border-color: var(--white);
+}
+
+.simulate-btn {
+  border-color: var(--yellow) !important;
+  color: var(--yellow) !important;
+  background: rgba(245, 196, 0, 0.08);
+}
+
+.simulate-btn:hover {
+  background: rgba(245, 196, 0, 0.2);
+}
+
+.tool-icon {
+  font-size: 1rem;
+}
+
+/* Canvas */
+#canvas-wrapper {
+  position: relative;
+  width: 100%;
+  border: var(--border);
+  background: #111;
+  line-height: 0;
+}
+
+#gameCanvas {
+  width: 100%;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  display: none;
+}
+
+#loading-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--yellow);
+  letter-spacing: 2px;
+  animation: blink 0.7s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* HUD */
+#hud {
+  display: flex;
+  gap: 0;
+  border: 2px solid var(--grey);
+}
+
+.hud-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border-right: 2px solid var(--grey);
+}
+
+.hud-item:last-child {
+  border-right: none;
+}
+
+.hud-label {
+  font-size: 0.6rem;
+  color: var(--grey-mid);
+  letter-spacing: 2px;
+}
+
+.hud-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  color: var(--yellow);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* Result panel */
+#result-panel {
+  border: 3px solid var(--yellow);
+  background: rgba(245, 196, 0, 0.05);
+  padding: 20px;
+  text-align: center;
+}
+
+#result-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+#result-time {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3.5rem;
+  color: var(--yellow);
+  line-height: 1;
+}
+
+#result-copy {
+  font-size: 0.8rem;
+  color: var(--grey-mid);
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+#result-best {
+  font-size: 0.75rem;
+  color: var(--yellow-dim);
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+
+.result-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.result-buttons .action-btn {
+  margin-left: 0;
+}
+
+/* Mobile hint */
+#mobile-hint {
+  font-size: 0.7rem;
+  color: var(--grey-mid);
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* Share button (hidden by default, shown after result) */
+#share {
+  text-align: center;
+}
+
+#share button {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  padding: 12px 24px;
+  min-height: 44px;
+  border: 2px solid var(--green);
+  background: rgba(42, 212, 122, 0.08);
+  color: var(--green);
+  cursor: pointer;
+  width: 100%;
+}
+
+#share button:hover {
+  background: rgba(42, 212, 122, 0.2);
+}
+
+/* Disabled state during simulation */
+body.simulating .tool-btn,
+body.simulating #btn-clear,
+body.simulating #btn-simulate {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+body.simulating #btn-simulate {
+  opacity: 1;
+  pointer-events: none;
+}

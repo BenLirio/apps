@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow My Civilization</title>
+  <meta property="og:title" content="Grow My Civilization">
+  <meta property="og:description" content="Name your civilization, pick your trait, and steer it through 10 eras of decisions. Every choice shapes your fate.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/grow-my-civilization/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Single canvas used for both setup preview and main game -->
+    <div id="canvas-wrap">
+      <canvas id="canvas" width="360" height="300"></canvas>
+    </div>
+
+    <!-- ── SETUP PANEL ─────────────────────────────────────────────── -->
+    <div id="setup-panel">
+      <div id="header">
+        <h1>GROW MY<br>CIVILIZATION</h1>
+        <p id="header-sub">Name your people. Pick your path. Shape your fate.</p>
+      </div>
+
+      <div id="setup-form">
+        <label class="field-label" for="civ-name-input">CIVILIZATION NAME</label>
+        <input id="civ-name-input" type="text" maxlength="24" placeholder="e.g. The Iron Shore" autocomplete="off" spellcheck="false">
+
+        <label class="field-label">STARTING TRAIT</label>
+        <div id="trait-grid"></div>
+
+        <div id="setup-error"></div>
+        <button id="start-btn" disabled>BEGIN ►</button>
+      </div>
+    </div>
+
+    <!-- ── GAME PANEL ──────────────────────────────────────────────── -->
+    <div id="game-panel" style="display:none">
+      <div id="game-header">
+        <div id="civ-title-row">
+          <span id="civ-title"></span>
+          <span id="trait-badge"></span>
+        </div>
+        <div id="era-progress-track"><div id="era-progress-bar"></div></div>
+        <div id="era-label"></div>
+      </div>
+
+      <div id="stats-bar">
+        <div class="stat"><span class="stat-label">POP</span><span id="stat-pop">0</span></div>
+        <div class="stat"><span class="stat-label">ERA</span><span id="stat-era">—</span></div>
+        <div class="stat"><span class="stat-label">STABILITY</span><span id="stat-stability">—</span></div>
+      </div>
+
+      <!-- Decision panel (shown at each era transition) -->
+      <div id="decision-panel" style="display:none">
+        <div id="decision-era-tag">ERA EVENT</div>
+        <div id="decision-event"></div>
+        <div id="decision-choices">
+          <button id="choice-a" class="choice-btn"></button>
+          <button id="choice-b" class="choice-btn"></button>
+        </div>
+        <div id="decision-flavor"></div>
+      </div>
+    </div>
+
+    <!-- ── VERDICT PANEL ───────────────────────────────────────────── -->
+    <div id="verdict-panel" style="display:none">
+      <div id="verdict-title"></div>
+      <div id="verdict-civ-name"></div>
+      <div id="verdict-decisions-label">YOUR DECISIONS</div>
+      <div id="verdict-decisions"></div>
+      <div id="verdict-stats"></div>
+    </div>
+
+    <div id="share" style="display:none">
+      <button onclick="share()">Share your civilization's story</button>
+      <button id="play-again-btn" class="secondary-btn">Play Again</button>
+    </div>
+
+  </div>
+</body>
+</html>

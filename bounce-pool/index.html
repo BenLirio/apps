@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bounce Pool — today's daily one-shot puzzle</title>
+  <meta property="og:title" content="Bounce Pool">
+  <meta property="og:description" content="One curated pool puzzle per day. Trajectory fully visible. Clear 5 targets. Par is 3.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/bounce-pool/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <header id="hud">
+      <div class="hud-cell" id="hud-date">DAY --</div>
+      <div class="hud-cell" id="hud-shots">SHOT 0 / PAR 3</div>
+      <div class="hud-cell" id="hud-targets">0 / 5</div>
+    </header>
+
+    <div id="table-wrap">
+      <canvas id="felt" width="600" height="800"></canvas>
+      <div id="prelude">
+        <p class="prelude-title">BOUNCE POOL</p>
+        <p class="prelude-sub">drag from the cue — the line shows you three bounces — then let go</p>
+        <p class="prelude-sub dim">same level for everyone, every day. par is 3.</p>
+      </div>
+      <div id="blocker"></div>
+    </div>
+
+    <footer id="controls">
+      <button id="reset-btn" type="button">RESET LEVEL</button>
+      <span id="status">chalking up...</span>
+    </footer>
+
+    <div id="result" style="display:none">
+      <div id="result-card">
+        <div id="result-verdict">TABLE RUN</div>
+        <div id="result-line">5 targets in <span id="result-shots">0</span> shots</div>
+        <pre id="result-grid">::</pre>
+        <div id="share">
+          <button onclick="share()" type="button">SHARE TODAY'S RUN</button>
+        </div>
+        <button id="replay-btn" type="button">watch again</button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

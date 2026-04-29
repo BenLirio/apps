@@ -1,0 +1,629 @@
+/* Aesthetic: Vintage government document — aged paper, typewriter serif, rubber stamp marks, official bureaucratic form layout */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --paper: #f5f0e8;
+  --paper-dark: #e8e0cc;
+  --ink: #1a1008;
+  --ink-faded: #4a3c28;
+  --red-stamp: #a01010;
+  --blue-stamp: #0c2a5e;
+  --rule: #b8a88a;
+  --accent: #6b2d0e;
+  --font-type: 'Courier Prime', 'Courier New', monospace;
+  --font-header: 'Special Elite', serif;
+}
+
+html, body {
+  min-height: 100%;
+  background: #2a1f10;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+  font-family: var(--font-type);
+  color: var(--ink);
+}
+
+#app {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+/* ── Intake Screen ─────────────────────────────────── */
+
+#intake-screen {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    inset 0 0 0 4px var(--paper),
+    inset 0 0 0 6px var(--ink),
+    4px 4px 0 #1a1008;
+  padding: 32px 28px 36px;
+  position: relative;
+}
+
+#intake-screen::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px solid var(--rule);
+  pointer-events: none;
+}
+
+.header-seal {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.seal-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--blue-stamp);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue-stamp);
+}
+
+.seal-text {
+  font-family: var(--font-header);
+  font-size: 7px;
+  text-align: center;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#intake-screen h1 {
+  font-family: var(--font-header);
+  font-size: clamp(18px, 5vw, 26px);
+  text-align: center;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-family: var(--font-type);
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-faded);
+  margin-bottom: 20px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 6px 0;
+}
+
+.preamble {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ink-faded);
+  margin-bottom: 28px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+#intake-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-group label {
+  font-family: var(--font-type);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faded);
+}
+
+.field-group input {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--rule);
+  font-family: var(--font-type);
+  font-size: 15px;
+  color: var(--ink);
+  padding: 6px 2px;
+  outline: none;
+  width: 100%;
+  min-height: 44px;
+  transition: border-color 0.2s;
+}
+
+.field-group input:focus {
+  border-bottom-color: var(--ink);
+}
+
+.field-group input::placeholder {
+  color: #b0a080;
+  font-style: italic;
+}
+
+.error-msg {
+  font-family: var(--font-type);
+  font-size: 13px;
+  color: var(--red-stamp);
+  font-style: italic;
+  text-align: center;
+  padding: 8px 0;
+}
+
+#submit-btn {
+  margin-top: 8px;
+  background: var(--blue-stamp);
+  color: var(--paper);
+  font-family: var(--font-header);
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border: none;
+  padding: 14px 24px;
+  cursor: pointer;
+  width: 100%;
+  min-height: 48px;
+  transition: background 0.15s, transform 0.1s;
+  box-shadow: 3px 3px 0 #06152e;
+}
+
+#submit-btn:hover {
+  background: #0d3470;
+}
+
+#submit-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #06152e;
+}
+
+/* ── Loading Screen ────────────────────────────────── */
+
+#loading-screen {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 #1a1008;
+  padding: 60px 28px;
+  text-align: center;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-seal {
+  font-size: 48px;
+  animation: pulse-seal 1.4s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+@keyframes pulse-seal {
+  0%, 100% { opacity: 0.4; transform: scale(0.96); }
+  50% { opacity: 0.8; transform: scale(1.04); }
+}
+
+#loading-msg {
+  font-family: var(--font-type);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink-faded);
+}
+
+.loading-sub {
+  font-family: var(--font-type);
+  font-size: 12px;
+  color: #9a8a70;
+  letter-spacing: 0.08em;
+}
+
+/* ── Report Screen ─────────────────────────────────── */
+
+#report-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#report-card {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    inset 0 0 0 4px var(--paper),
+    inset 0 0 0 6px var(--ink),
+    4px 4px 0 #1a1008;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* aged paper texture overlay */
+#report-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.report-header {
+  background: var(--blue-stamp);
+  color: var(--paper);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.report-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-logo {
+  font-size: 28px;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.report-agency {
+  font-family: var(--font-header);
+  font-size: clamp(12px, 3.5vw, 16px);
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+}
+
+.report-dept {
+  font-family: var(--font-type);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.report-header-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.report-label {
+  font-family: var(--font-type);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.report-case-num {
+  font-family: var(--font-header);
+  font-size: clamp(13px, 3.5vw, 17px);
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.report-title-bar {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-header);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-align: center;
+  padding: 6px 16px;
+}
+
+.report-grid {
+  border-bottom: 1px solid var(--rule);
+}
+
+.report-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--rule);
+}
+
+.report-row:last-child {
+  border-bottom: none;
+}
+
+.report-cell {
+  padding: 10px 16px;
+  border-right: 1px solid var(--rule);
+}
+
+.report-cell:last-child {
+  border-right: none;
+}
+
+.cell-label {
+  font-family: var(--font-type);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  margin-bottom: 4px;
+}
+
+.cell-value {
+  font-family: var(--font-type);
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.section-header {
+  background: var(--paper-dark);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-type);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+  padding: 5px 16px;
+}
+
+.report-block {
+  padding: 12px 16px;
+  font-family: var(--font-type);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+
+.verdict-block {
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Toxicology Grid */
+.tox-grid {
+  padding: 10px 16px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: var(--font-type);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tox-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.tox-dot.pos {
+  background: var(--red-stamp);
+}
+
+.tox-dot.neg {
+  background: var(--rule);
+}
+
+.tox-substance {
+  flex: 1;
+}
+
+.tox-result {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tox-result.pos {
+  color: var(--red-stamp);
+  border: 1px solid var(--red-stamp);
+}
+
+.tox-result.neg {
+  color: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+/* Footer / stamps */
+.report-footer {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.examiner-sig {
+  flex: 1;
+}
+
+.sig-line {
+  font-family: var(--font-header);
+  font-size: 16px;
+  color: var(--blue-stamp);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+.sig-title {
+  font-family: var(--font-type);
+  font-size: 10px;
+  color: var(--ink-faded);
+  letter-spacing: 0.04em;
+}
+
+.stamps-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.stamp {
+  font-family: var(--font-header);
+  font-size: 22px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 3px solid;
+  transform: rotate(-8deg);
+  opacity: 0.82;
+  line-height: 1;
+}
+
+.stamp-closed {
+  color: var(--red-stamp);
+  border-color: var(--red-stamp);
+  transform: rotate(-10deg);
+}
+
+.stamp-final {
+  color: var(--blue-stamp);
+  border-color: var(--blue-stamp);
+  transform: rotate(-6deg);
+  font-size: 17px;
+}
+
+.case-barcode {
+  background: var(--paper-dark);
+  border-top: 1px solid var(--rule);
+  font-family: 'Courier Prime', monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--rule);
+  padding: 5px 16px;
+  text-align: center;
+}
+
+/* ── Share / Retry ────────────────────────────────── */
+
+#share {
+  display: flex;
+  gap: 12px;
+}
+
+#share button {
+  flex: 1;
+  min-height: 48px;
+  font-family: var(--font-header);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+#share button:first-child {
+  background: var(--blue-stamp);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 #06152e;
+}
+
+#share button:last-child {
+  background: transparent;
+  color: var(--paper);
+  border: 2px solid var(--rule);
+}
+
+#share button:hover {
+  filter: brightness(1.1);
+}
+
+#share button:active {
+  transform: translate(1px, 1px);
+}
+
+/* ── Responsive ───────────────────────────────────── */
+
+@media (max-width: 420px) {
+  #app {
+    padding: 12px 10px 50px;
+  }
+
+  #intake-screen,
+  #loading-screen,
+  #report-card {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .report-row {
+    grid-template-columns: 1fr;
+  }
+
+  .report-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .report-cell:last-child {
+    border-bottom: none;
+  }
+
+  .tox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stamps-area {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .report-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #share {
+    flex-direction: column;
+  }
+}

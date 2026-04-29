@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Exquisite Corpse</title>
+  <meta property="og:title" content="Exquisite Corpse">
+  <meta property="og:description" content="A pass-and-play drawing game for two. Invent a creature together. Don't peek.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/exquisite-corpse/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="paper">
+    <header>
+      <div class="plate">PLATE № <span id="plate-num">—</span></div>
+      <h1>Exquisite Corpse</h1>
+      <div class="sub">A field-guide for creatures that ought not exist.</div>
+    </header>
+
+    <main>
+      <section id="screen-landing" class="screen">
+        <p class="prelude">Two players. One phone. One creature you will invent together &mdash; without ever seeing what the other drew.</p>
+        <p class="prelude small">Player One draws the upper half. The device passes. Player Two completes the specimen blind. A name is bestowed.</p>
+        <button class="primary" id="begin">Begin the Plate</button>
+      </section>
+
+      <section id="screen-p1" class="screen hidden">
+        <p class="instruction"><span class="tag">Player One</span> sketch the <em>upper half</em>. Head, shoulders, the usual pretensions. Pass when finished.</p>
+        <div class="actions top">
+          <button class="secondary" id="undo-1">Undo stroke</button>
+          <button class="primary" id="done-1">Pass to Player Two &rarr;</button>
+        </div>
+        <div class="canvas-wrap" data-turn="top">
+          <canvas id="cvs-edit"></canvas>
+          <div class="fold-hint"></div>
+          <div class="fold-note">the seam</div>
+        </div>
+        <p class="hint" id="hint-1">&nbsp;</p>
+      </section>
+
+      <section id="screen-handoff" class="screen hidden">
+        <p class="handoff-big">Pass the phone.</p>
+        <p class="handoff-small">Player Two &mdash; when you have it, tap below. No peeking.</p>
+        <button class="primary" id="p2-ready">I am Player Two</button>
+      </section>
+
+      <section id="screen-p2" class="screen hidden">
+        <p class="instruction"><span class="tag">Player Two</span> complete the <em>lower half</em>. Meet the small marks at the seam &mdash; those are where Player One left off.</p>
+        <div class="actions top">
+          <button class="secondary" id="undo-2">Undo stroke</button>
+          <button class="primary" id="done-2">Reveal the specimen</button>
+        </div>
+        <div class="canvas-wrap" data-turn="bottom">
+          <canvas id="cvs-edit-2"></canvas>
+          <div class="fold-hint"></div>
+        </div>
+        <p class="hint" id="hint-2">&nbsp;</p>
+      </section>
+
+      <section id="screen-reveal" class="screen hidden">
+        <div class="loading" id="loading">Cataloguing the specimen&hellip;</div>
+        <div class="plate-frame" id="plate-frame" style="display:none">
+          <div class="plate-top">A newly-observed specimen, drawn from life</div>
+          <div class="reveal-canvas-wrap">
+            <canvas id="cvs-reveal"></canvas>
+          </div>
+          <div class="creature-meta">
+            <div class="creature-name" id="creature-name"></div>
+            <div class="creature-binomial" id="creature-binomial"></div>
+            <div class="creature-blurb" id="creature-blurb"></div>
+            <div class="creature-signature">
+              <span id="obs-date"></span>
+              <span>Plate № <span id="plate-num-2">—</span></span>
+            </div>
+          </div>
+        </div>
+        <div id="share" style="display:none">
+          <button class="primary" onclick="share()">Share this specimen</button>
+          <button class="secondary" id="again">New expedition</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="ornament">❦</div>
+      <div class="colophon">Field Guide of Unlikely Animals, 1867 &middot; a parlour entertainment</div>
+    </footer>
+  </div>
+</body>
+</html>

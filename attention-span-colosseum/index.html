@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attention Span Colosseum</title>
+  <meta property="og:title" content="Attention Span Colosseum" />
+  <meta property="og:description" content="Hold completely still for 10 seconds. How zen are you?" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://benlirio.com/attention-span-colosseum/">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #e8e0ff;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #c77dff, #7b2fff, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    #subtitle {
+      font-size: clamp(0.75rem, 2.5vw, 0.95rem);
+      color: #a89fc0;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: 0.03em;
+    }
+
+    #canvas-wrap {
+      position: relative;
+      width: min(90vw, 480px);
+      aspect-ratio: 1;
+    }
+
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* ── HUD below canvas ── */
+    #hud {
+      width: min(90vw, 480px);
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #timer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #c4b8e0;
+    }
+
+    #timer-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #drift-label {
+      font-size: 0.85rem;
+      color: #c4b8e0;
+    }
+
+    #meter-wrap {
+      width: 100%;
+      height: 14px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 7px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #meter-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00ff88, #ffee00, #ff4444);
+      border-radius: 7px;
+      transition: width 0.1s ease, background 0.2s ease;
+    }
+
+    /* ── Start / Result overlay ── */
+    #overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: rgba(10,10,26,0.82);
+      backdrop-filter: blur(6px);
+      padding: 24px;
+      text-align: center;
+    }
+
+    #overlay.hidden { display: none; }
+
+    #overlay-title {
+      font-size: clamp(1.3rem, 5vw, 2rem);
+      font-weight: 900;
+      line-height: 1.15;
+      background: linear-gradient(90deg, #c77dff, #7b2fff, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    #overlay-body {
+      font-size: clamp(0.8rem, 2.8vw, 1rem);
+      color: #c4b8e0;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    #archetype-label {
+      font-size: clamp(1.4rem, 5.5vw, 2.2rem);
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 24px #c77dffaa;
+    }
+
+    #pixels-moved {
+      font-size: clamp(0.85rem, 3vw, 1.1rem);
+      color: #a89fc0;
+    }
+
+    .btn {
+      padding: 14px 32px;
+      border: none;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .btn:active { transform: scale(0.96); }
+
+    #start-btn {
+      background: linear-gradient(135deg, #7b2fff, #c77dff);
+      color: #fff;
+      box-shadow: 0 0 30px #7b2fff99;
+    }
+    #start-btn:hover { box-shadow: 0 0 50px #c77dffbb; }
+
+    #share-btn {
+      background: linear-gradient(135deg, #00d4ff, #7b2fff);
+      color: #fff;
+      box-shadow: 0 0 30px #00d4ff66;
+    }
+    #share-btn:hover { box-shadow: 0 0 50px #00d4ffaa; }
+
+    #play-again-btn {
+      background: rgba(255,255,255,0.08);
+      color: #c4b8e0;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    #play-again-btn:hover { background: rgba(255,255,255,0.14); }
+  </style>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+
+<h1>Attention Span Colosseum</h1>
+<p id="subtitle">The arena of absolute stillness. Are you even human?</p>
+
+<div id="canvas-wrap">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- START overlay -->
+  <div id="overlay">
+    <div id="overlay-title" id="ov-title">Hold Completely Still</div>
+    <div id="overlay-body">
+      Move your cursor (or finger) over the orb, then hold <strong>perfectly still</strong> for <strong>10 seconds</strong>.<br><br>
+      Every pixel you move is counted against you.<br>
+      Less movement = higher rank.
+    </div>
+    <button class="btn" id="start-btn">Enter the Colosseum</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="timer-row">
+    <span id="drift-label">Total drift: <strong id="drift-val">0</strong> px</span>
+    <span><span id="timer-val">10.0</span>s</span>
+  </div>
+  <div id="meter-wrap">
+    <div id="meter-bar"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ──────────────────────────────────────────────────────────────
+  const GAME_DURATION = 10000; // ms
+  const CANVAS_SIZE   = 480;   // logical px
+
+  const ARCHETYPES = [
+    { max:   20, label: 'Zen Master 🧘',          msg: 'you barely exist' },
+    { max:  100, label: 'Digital Monk 🕊️',         msg: 'eerily calm' },
+    { max:  300, label: 'Baseline Human 🙂',       msg: 'solidly average' },
+    { max:  700, label: 'Caffeinated Squirrel ☕', msg: 'your mouse has opinions' },
+    { max: 1500, label: 'ADHD Goblin Mode 🐸',     msg: 'chaotic but thriving' },
+    { max: Infinity, label: 'Human Earthquake 💀', msg: 'please sit down' },
+  ];
+
+  // ── DOM ──────────────────────────────────────────────────────────────────
+  const canvas      = document.getElementById('game-canvas');
+  const ctx         = canvas.getContext('2d');
+  const overlay     = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayBody = document.getElementById('overlay-body');
+  const startBtn    = document.getElementById('start-btn');
+  const driftVal    = document.getElementById('drift-val');
+  const timerVal    = document.getElementById('timer-val');
+  const meterBar    = document.getElementById('meter-bar');
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let phase        = 'idle'; // idle | playing | done
+  let totalDrift   = 0;
+  let lastPos      = null;
+  let gameStart    = null;
+  let animId       = null;
+  let pulseT       = 0;
+  let recentDrift  = 0;        // px moved in last ~300ms for meter
+  let recentDecay  = 0;
+  let particles    = [];
+  let dpr          = 1;
+  let CX, CY;                  // orb centre in logical px
+
+  // ── Canvas sizing ────────────────────────────────────────────────────────
+  function resizeCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    const wrap = document.getElementById('canvas-wrap');
+    const size = wrap.clientWidth;
+    canvas.width  = size * dpr;
+    canvas.height = size * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    CX = size / 2;
+    CY = size / 2;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', () => { resizeCanvas(); });
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function logicalSize() { return canvas.width / dpr; }
+
+  function getArchetype(drift) {
+    return ARCHETYPES.find(a => drift <= a.max);
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  // ── Particle system ──────────────────────────────────────────────────────
+  function spawnParticles(x, y, count = 4) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 1.8 + 0.4;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: Math.random() * 0.04 + 0.02,
+        radius: Math.random() * 4 + 1,
+        hue: Math.random() * 60 + 260, // purple–violet
+      });
+    }
+  }
+
+  function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.04; // gravity
+      p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.save();
+      ctx.globalAlpha = p.life * 0.8;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(${p.hue}, 90%, 70%)`;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ── Drawing ──────────────────────────────────────────────────────────────
+  function drawBackground() {
+    const sz = logicalSize();
+    const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, sz * 0.7);
+    grad.addColorStop(0, '#16063a');
+    grad.addColorStop(1, '#0a0a1a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, sz, sz);
+  }
+
+  function drawRings(pulse) {
+    const sz = logicalSize();
+    // Danger rings at r = 120, 90, 60
+    const rings = [
+      { r: sz * 0.29, alpha: 0.12 + pulse * 0.06, width: 1 },
+      { r: sz * 0.22, alpha: 0.18 + pulse * 0.07, width: 1.5 },
+      { r: sz * 0.14, alpha: 0.28 + pulse * 0.10, width: 2 },
+    ];
+    for (const ring of rings) {
+      ctx.beginPath();
+      ctx.arc(CX, CY, ring.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(180,120,255,${ring.alpha})`;
+      ctx.lineWidth   = ring.width;
+      ctx.stroke();
+    }
+    // Cross-hairs
+    ctx.save();
+    ctx.globalAlpha = 0.12 + pulse * 0.06;
+    ctx.strokeStyle = '#9b72ff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(CX, CY - sz * 0.38);
+    ctx.lineTo(CX, CY + sz * 0.38);
+    ctx.moveTo(CX - sz * 0.38, CY);
+    ctx.lineTo(CX + sz * 0.38, CY);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawOrb(pulse) {
+    const sz = logicalSize();
+    const orbR = sz * 0.09 + pulse * sz * 0.012;
+
+    // Outer glow
+    const glowR = orbR * 3.5;
+    const glow  = ctx.createRadialGradient(CX, CY, orbR * 0.3, CX, CY, glowR);
+    glow.addColorStop(0, 'rgba(140,80,255,0.35)');
+    glow.addColorStop(1, 'rgba(140,80,255,0)');
+    ctx.beginPath();
+    ctx.arc(CX, CY, glowR, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // Core gradient
+    const core = ctx.createRadialGradient(
+      CX - orbR * 0.3, CY - orbR * 0.3, orbR * 0.05,
+      CX, CY, orbR
+    );
+    core.addColorStop(0, '#e8d0ff');
+    core.addColorStop(0.35, '#a366ff');
+    core.addColorStop(1, '#5a00cc');
+    ctx.beginPath();
+    ctx.arc(CX, CY, orbR, 0, Math.PI * 2);
+    ctx.fillStyle = core;
+    ctx.fill();
+
+    // Specular highlight
+    const hl = ctx.createRadialGradient(
+      CX - orbR * 0.38, CY - orbR * 0.38, 0,
+      CX - orbR * 0.38, CY - orbR * 0.38, orbR * 0.55
+    );
+    hl.addColorStop(0, 'rgba(255,255,255,0.55)');
+    hl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(CX, CY, orbR, 0, Math.PI * 2);
+    ctx.fillStyle = hl;
+    ctx.fill();
+  }
+
+  function drawCountdown(remaining) {
+    const sz = logicalSize();
+    const secs = Math.ceil(remaining / 1000);
+    ctx.save();
+    ctx.font = `bold ${sz * 0.085}px 'Segoe UI', system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const y = sz * 0.88;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${secs}`, CX, y);
+    ctx.restore();
+  }
+
+  function drawStillnessZone(pulse) {
+    const sz = logicalSize();
+    // Pulsing "safe zone" inner ring
+    const safeR = sz * 0.08 + pulse * sz * 0.004;
+    ctx.beginPath();
+    ctx.arc(CX, CY, safeR + sz * 0.05, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,255,136,${0.18 + pulse * 0.12})`;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 8]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Meter update ─────────────────────────────────────────────────────────
+  function updateMeter(instantDelta) {
+    recentDrift += instantDelta;
+    // Decay toward zero
+    recentDrift *= 0.88;
+    const pct = clamp(recentDrift / 8, 0, 100);
+    meterBar.style.width = pct + '%';
+  }
+
+  // ── Main animation loop ──────────────────────────────────────────────────
+  function loop(ts) {
+    animId = requestAnimationFrame(loop);
+    pulseT += 0.03;
+    const pulse = (Math.sin(pulseT) + 1) / 2; // 0-1 smoothly
+
+    drawBackground();
+    drawRings(pulse);
+    drawStillnessZone(pulse);
+    drawParticles();
+    drawOrb(pulse);
+    updateParticles();
+
+    if (phase === 'playing') {
+      const elapsed  = ts - gameStart;
+      const remaining = Math.max(0, GAME_DURATION - elapsed);
+      const secs = remaining / 1000;
+
+      timerVal.textContent = secs.toFixed(1);
+      drawCountdown(remaining);
+
+      if (remaining <= 0) {
+        endGame();
+      }
+    }
+  }
+
+  // ── Input handling ───────────────────────────────────────────────────────
+  function toLogical(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const scale = logicalSize() / rect.width;
+    return {
+      x: (clientX - rect.left) * scale,
+      y: (clientY - rect.top)  * scale,
+    };
+  }
+
+  function handleMove(clientX, clientY) {
+    if (phase !== 'playing') return;
+    const pos = toLogical(clientX, clientY);
+    if (lastPos) {
+      const dx = pos.x - lastPos.x;
+      const dy = pos.y - lastPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      totalDrift += dist;
+      driftVal.textContent = Math.round(totalDrift);
+      updateMeter(dist);
+      if (dist > 2) spawnParticles(pos.x, pos.y, Math.min(6, Math.floor(dist)));
+    }
+    lastPos = pos;
+  }
+
+  canvas.addEventListener('mousemove', e => {
+    handleMove(e.clientX, e.clientY);
+  });
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    handleMove(t.clientX, t.clientY);
+  }, { passive: false });
+
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    const pos = toLogical(t.clientX, t.clientY);
+    lastPos = pos;
+  }, { passive: false });
+
+  // ── Game flow ────────────────────────────────────────────────────────────
+  function startGame(ts) {
+    phase      = 'playing';
+    totalDrift = 0;
+    lastPos    = null;
+    particles  = [];
+    gameStart  = ts;
+
+    driftVal.textContent = '0';
+    timerVal.textContent = '10.0';
+    meterBar.style.width = '0%';
+
+    overlay.classList.add('hidden');
+  }
+
+  function endGame() {
+    phase = 'done';
+    const arch = getArchetype(Math.round(totalDrift));
+    const moved = Math.round(totalDrift);
+
+    overlayTitle.textContent = arch.label;
+
+    const pageUrl = document.querySelector('meta[property="og:url"]').content || window.location.href;
+
+    overlayBody.innerHTML = `
+      <div id="archetype-label" style="font-size:clamp(1.1rem,4vw,1.6rem);font-weight:900;color:#fff;text-shadow:0 0 24px #c77dffaa;margin-bottom:4px;">${arch.label}</div>
+      <div id="pixels-moved" style="color:#a89fc0;margin-bottom:4px;">${moved} px of movement in 10 seconds</div>
+      <div style="font-size:0.85rem;color:#7a6e90;margin-bottom:16px;">"${arch.msg}"</div>
+      <button class="btn" id="share-btn" style="background:linear-gradient(135deg,#00d4ff,#7b2fff);color:#fff;box-shadow:0 0 30px #00d4ff66;margin-bottom:8px;">Share Result</button>
+      <button class="btn" id="play-again-btn" style="background:rgba(255,255,255,0.08);color:#c4b8e0;border:1px solid rgba(255,255,255,0.15);">Play Again</button>
+    `;
+
+    overlay.classList.remove('hidden');
+
+    document.getElementById('share-btn').addEventListener('click', () => {
+      const text = `I got "${arch.label}" on Attention Span Colosseum!\n${moved} total pixels of movement in 10 seconds.\nCan you beat me? ${pageUrl}`;
+      if (navigator.share) {
+        navigator.share({ title: 'Attention Span Colosseum', text, url: pageUrl }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(text).then(() => {
+          document.getElementById('share-btn').textContent = 'Copied!';
+        }).catch(() => {
+          prompt('Copy your result:', text);
+        });
+      }
+    });
+
+    document.getElementById('play-again-btn').addEventListener('click', () => {
+      resetToStart();
+    });
+  }
+
+  function resetToStart() {
+    phase      = 'idle';
+    totalDrift = 0;
+    lastPos    = null;
+    particles  = [];
+    driftVal.textContent = '0';
+    timerVal.textContent = '10.0';
+    meterBar.style.width = '0%';
+
+    overlayTitle.textContent = 'Hold Completely Still';
+    overlayBody.innerHTML = `
+      Move your cursor (or finger) over the orb, then hold <strong>perfectly still</strong> for <strong>10 seconds</strong>.<br><br>
+      Every pixel you move is counted against you.<br>
+      Less movement = higher rank.
+    `;
+
+    // Restore start button
+    const old = document.getElementById('start-btn-wrap');
+    if (old) old.remove();
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.id = 'start-btn';
+    btn.style.cssText = 'background:linear-gradient(135deg,#7b2fff,#c77dff);color:#fff;box-shadow:0 0 30px #7b2fff99;';
+    btn.textContent = 'Enter the Colosseum';
+    btn.addEventListener('click', () => {
+      requestAnimationFrame(ts => startGame(ts));
+    });
+    overlay.appendChild(btn);
+    overlay.classList.remove('hidden');
+  }
+
+  // ── Bootstrap ────────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', () => {
+    requestAnimationFrame(ts => startGame(ts));
+  });
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

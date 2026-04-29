@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ministry of Minor Regrets — Daily Audit</title>
+  <meta property="og:title" content="Ministry of Minor Regrets">
+  <meta property="og:description" content="Submit your mundane daily numbers. Receive an itemized audit of your regrets, stamped by the Ministry.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/ministry-of-minor-regrets/">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <section id="intake" class="form-card">
+      <header class="form-header">
+        <div class="seal-row">
+          <div class="seal seal-top">
+            <span class="seal-inner">MINISTRY<br>OF MINOR<br>REGRETS</span>
+          </div>
+          <div class="form-meta">
+            <div class="meta-row"><span>FORM</span><span>MR-17/B</span></div>
+            <div class="meta-row"><span>SECTION</span><span>DAILY AUDIT</span></div>
+            <div class="meta-row"><span>JURISDICTION</span><span>DOM. MUNDANE</span></div>
+            <div class="meta-row"><span>REV.</span><span>2026-04</span></div>
+          </div>
+        </div>
+        <h1>Declaration of Minor Regrets</h1>
+        <p class="preamble">
+          Pursuant to Sec. 4(c), all citizens shall submit, in good faith, the following numerical declarations for the preceding 24-hour cycle. Failure to declare may result in additional penalty units at the Ministry's sole discretion.
+        </p>
+      </header>
+
+      <form id="audit-form" autocomplete="off">
+        <label class="field">
+          <span class="q-num">01</span>
+          <span class="q-label">Hours slept last night</span>
+          <span class="q-hint">Ministry benchmark: 8.0 hrs</span>
+          <input type="number" inputmode="decimal" step="0.5" min="0" max="24" name="sleep" id="f-sleep" placeholder="e.g. 6.5" required>
+        </label>
+
+        <label class="field">
+          <span class="q-num">02</span>
+          <span class="q-label">Unread messages (all inboxes, estimate)</span>
+          <span class="q-hint">Ministry benchmark: 10 unread</span>
+          <input type="number" inputmode="numeric" step="1" min="0" max="99999" name="unread" id="f-unread" placeholder="e.g. 184" required>
+        </label>
+
+        <label class="field">
+          <span class="q-num">03</span>
+          <span class="q-label">Coffees consumed today</span>
+          <span class="q-hint">Ministry benchmark: 2 units</span>
+          <input type="number" inputmode="numeric" step="1" min="0" max="99" name="coffees" id="f-coffees" placeholder="e.g. 4" required>
+        </label>
+
+        <label class="field">
+          <span class="q-num">04</span>
+          <span class="q-label">Days since you called home</span>
+          <span class="q-hint">Ministry benchmark: 7 days</span>
+          <input type="number" inputmode="numeric" step="1" min="0" max="9999" name="called" id="f-called" placeholder="e.g. 22" required>
+        </label>
+
+        <label class="field">
+          <span class="q-num">05</span>
+          <span class="q-label">Minutes of aimless scrolling</span>
+          <span class="q-hint">Ministry benchmark: 30 min</span>
+          <input type="number" inputmode="numeric" step="1" min="0" max="9999" name="scroll" id="f-scroll" placeholder="e.g. 140" required>
+        </label>
+
+        <label class="field">
+          <span class="q-num">06</span>
+          <span class="q-label">Meals eaten standing up</span>
+          <span class="q-hint">Ministry benchmark: 0 meals</span>
+          <input type="number" inputmode="numeric" step="1" min="0" max="20" name="standing" id="f-standing" placeholder="e.g. 2" required>
+        </label>
+
+        <div id="error-line" class="error-line" aria-live="polite"></div>
+
+        <button id="submit-btn" type="submit" class="stamp-btn">SUBMIT FOR ASSESSMENT</button>
+        <p class="disclaimer">Submission constitutes consent to regret quantification.</p>
+      </form>
+    </section>
+
+    <section id="loading" class="loading-card" hidden>
+      <div class="loading-label">ASSESSMENT IN PROGRESS</div>
+      <div id="loading-msg" class="loading-msg">sharpening the regret pencil...</div>
+      <div class="loading-bars">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </section>
+
+    <section id="receipt-wrap" class="receipt-wrap" hidden>
+      <div id="receipt" class="receipt"></div>
+      <div id="share" class="share-row" style="display:none">
+        <button onclick="share()" class="share-btn">SHARE YOUR AUDIT</button>
+        <button id="redo-btn" type="button" class="redo-btn">FILE ANOTHER DECLARATION</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

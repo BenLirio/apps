@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You Da Birthday</title>
+  <meta property="og:title" content="You Da Birthday">
+  <meta property="og:description" content="Discover your absurd cosmic birthday destiny. Born for chaos? Queen of the solar system? Find out now.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/you-da-birthday/">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f953c6 0%, #b91d73 40%, #ff6b35 100%);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 24px 16px 48px;
+      color: #fff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .crown {
+      font-size: 56px;
+      display: block;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 12px rgba(255,255,255,0.5));
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    h1 {
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.3);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      opacity: 0.9;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 24px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    label {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    input[type="date"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.5);
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+
+    input[type="date"]:focus {
+      border-color: #fff;
+      background: rgba(255,255,255,0.3);
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 20px;
+      padding: 16px;
+      background: #fff;
+      color: #b91d73;
+      font-size: 1.15rem;
+      font-weight: 900;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      letter-spacing: 0.5px;
+    }
+
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.25); }
+    .btn:active { transform: translateY(0); }
+
+    /* Result */
+    #result-section {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    .result-card {
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 2px solid rgba(255,255,255,0.45);
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+      animation: revealIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes revealIn {
+      0%   { opacity: 0; transform: scale(0.7) rotate(-3deg); }
+      60%  { transform: scale(1.04) rotate(1deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+
+    .result-emoji {
+      font-size: 64px;
+      display: block;
+      margin-bottom: 12px;
+      animation: spinBounce 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s both;
+    }
+
+    @keyframes spinBounce {
+      0%   { transform: scale(0) rotate(-180deg); }
+      80%  { transform: scale(1.15) rotate(10deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    .result-title {
+      font-size: 1.5rem;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .result-desc {
+      font-size: 1rem;
+      line-height: 1.5;
+      opacity: 0.95;
+      margin-bottom: 20px;
+    }
+
+    .result-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 100px;
+      padding: 6px 18px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    #share-btn {
+      display: block;
+      width: 100%;
+      margin-top: 4px;
+      padding: 15px;
+      background: linear-gradient(90deg, #ffe259, #ffa751);
+      color: #7a2d00;
+      font-size: 1.1rem;
+      font-weight: 900;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      transition: transform 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.5px;
+    }
+
+    #share-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.25); }
+    #share-btn:active { transform: translateY(0); }
+
+    .again-btn {
+      margin-top: 14px;
+      background: transparent;
+      border: 2px solid rgba(255,255,255,0.5);
+      color: #fff;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.15s;
+    }
+
+    .again-btn:hover { background: rgba(255,255,255,0.15); }
+
+    .sparkles {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 9999;
+    }
+
+    .spark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      animation: sparkFly 1.2s ease-out forwards;
+    }
+
+    @keyframes sparkFly {
+      0%   { opacity: 1; transform: translate(0,0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 0.78rem;
+      opacity: 0.6;
+      text-align: center;
+    }
+  </style>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+
+  <div class="header">
+    <span class="crown">&#x1F451;</span>
+    <h1>You Da Birthday</h1>
+    <p class="subtitle">Discover your cosmic birthday destiny</p>
+  </div>
+
+  <div class="card">
+    <label for="bday">Enter your birthday</label>
+    <input type="date" id="bday" name="bday" max="2025-12-31">
+    <button class="btn" onclick="reveal()">Reveal My Destiny &#x2728;</button>
+  </div>
+
+  <div id="result-section">
+    <div class="result-card" id="result-card">
+      <span class="result-emoji" id="result-emoji"></span>
+      <div class="result-badge" id="result-badge"></div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-desc" id="result-desc"></div>
+      <div id="share" style="display:block">
+        <button id="share-btn" onclick="share()">&#x1F389; Share Your Destiny!</button>
+      </div>
+      <button class="again-btn" onclick="tryAgain()">Try a different birthday</button>
+    </div>
+  </div>
+
+  <div class="sparkles" id="sparkles"></div>
+
+  <footer>Powered by cosmic birthday forces &amp; pure chaos</footer>
+
+  <script>
+    // ---- Destiny data ----
+    // Each entry: { emoji, badge, title, desc }
+    // We have entries keyed by [dayOfWeek][monthGroup] giving 7*4 = 28 combos,
+    // plus extras keyed by special day-numbers, for 30-40+ distinct combos.
+
+    const DOW_ROLES = [
+      // Sunday
+      [
+        { emoji:'☀️', badge:'Solar Royalty', title:'You Are the Birthday Queen of the Solar System', desc:'Sunday-born legends radiate a warmth so powerful that even the sun asks you for skincare advice. The cosmos appointed you Chief Vibes Officer at the moment of your first cry.' },
+        { emoji:'🌈', badge:'Spectrum Chosen', title:'You Were Born to Make Mondays Jealous of Sundays', desc:'Your existence is a standing rebuke to every dreary workweek. Animals trot happily past you. Traffic lights go green just for you. Impossible? Cute of you to think that.' },
+        { emoji:'🦁', badge:'Mane Event', title:'Sunday Royalty — The Pride Finds You', desc:'You didn\'t choose the lion life. The lion life sent a personal courier. Every Sunday is secretly a national holiday in your honor in at least three small villages.' },
+        { emoji:'🍕', badge:'Slice of Destiny', title:'You Were Cosmically Ordained to Host Every Party', desc:'Sunday-born people are genetically engineered to make any gathering legendary. Your cheese dip alone has ended lifelong feuds.' },
+      ],
+      // Monday
+      [
+        { emoji:'🌙', badge:'Monday Mystic', title:'You Are the Chosen One Nobody Asked For — on a Monday', desc:'You arrived mid-week-dread and said "hold my cosmic juice." Mondays bow to you. Even your alarm clock respects your energy more than it should.' },
+        { emoji:'☕', badge:'Caffeine Prophet', title:'You Were Born to Caffeinate the Universe', desc:'Monday-born legends carry the gift of getting things started. Before coffee was cool, you were already ascending. The beans work for YOU.' },
+        { emoji:'🌧️', badge:'Storm Rider', title:'Your Chaotic Monday Energy Was Prophesied in 1987', desc:'Not all heroes wear capes; some were born on a Monday and the universe has been nervously watching ever since.' },
+        { emoji:'🚀', badge:'Launch Pad Legend', title:'You Are the Beginning of Every Great Week', desc:'Monday babies are runway ignitions. The rest of the week only exists because you agreed to show up first. Iconic of you.' },
+      ],
+      // Tuesday
+      [
+        { emoji:'🔥', badge:'Taco Titan', title:'You Were Born for Chaotic Tuesday Energy', desc:'Tuesday-born individuals are statistically the most underrated force in the universe. You show up when nobody expected fireworks and you ARE the fireworks.' },
+        { emoji:'🌮', badge:'Taco Tuesday Chosen', title:'You Are the Spirit of Taco Tuesday Made Flesh', desc:'The cosmos saw a gap in the taco supply chain and sent you. Spicy, unexpected, deeply necessary. You are the extra guac everyone thought they couldn\'t afford.' },
+        { emoji:'⚡', badge:'Mid-Week Voltage', title:'Your Tuesday Arrival Caused an Unexplained Power Surge', desc:'Hospital records show the lights flickered the moment you were born. That wasn\'t a maintenance issue. That was reality reacting to you.' },
+        { emoji:'🦊', badge:'Clever Fox', title:'Born Tuesday: The Strategist of the Weekdays', desc:'Tuesday babies are three moves ahead while everyone else is still googling "how to spell Wednesday." Sly, brilliant, irreplaceable.' },
+      ],
+      // Wednesday
+      [
+        { emoji:'🕸️', badge:'Wednesday Child', title:'Wednesday\'s Child Is Full of Woe — and Absolute Power', desc:'The old rhyme was half right. Yes, woe. But also: unstoppable energy, a vibe that makes rooms go quiet, and an aesthetic that intimidates lesser mortals.' },
+        { emoji:'🖤', badge:'Dark Enchantment', title:'You Are the Main Character of Every Overcast Wednesday', desc:'You were born mid-week on purpose. You wanted to split time itself in half and own both sides. Bold. Iconic. A little unhinged. We stan.' },
+        { emoji:'🌿', badge:'Hump Day Herald', title:'You Carry the Week on Your Back and Look Good Doing It', desc:'Wednesday-born legends bear the cosmic burden of hump day so the rest of us can coast to Friday. Unsung hero. Deeply cool.' },
+        { emoji:'🔮', badge:'Omen Holder', title:'Your Birth Date Is in Three Separate Prophecies', desc:'Two of them are good, one is ambiguous, and all three have your Wednesday-born fingerprints on them. The oracles requested you by name.' },
+      ],
+      // Thursday
+      [
+        { emoji:'⚡', badge:'Thor\'s Chosen', title:'You Were Born on Thor\'s Day — The Thunder Chose You', desc:'Thursday is literally named after the god of thunder. Your birth certificate doubles as a lightning rod. Electrically charismatic, cosmically overqualified.' },
+        { emoji:'🌟', badge:'Pre-Weekend Prophet', title:'You Are the Reason People Love Thursdays', desc:'Once a forgotten weekday, Thursdays ascended the moment you arrived. "Throwback Thursday" was invented specifically to honor your historical impact.' },
+        { emoji:'🍺', badge:'Thursday Legend', title:'You Are the Patron Saint of "It\'s Almost Friday"', desc:'You show up early to the party by one day and somehow become the party. Thursday babies have been carrying pre-weekend energy since before bars invented happy hour.' },
+        { emoji:'🦅', badge:'Apex Born', title:'Thursday-Born: The Eagles of the Weekday Skies', desc:'You soar where others commute. Your wingspan is metaphorical but massive. The rest of the week looks up — literally — and sees you already up there, looking majestic.' },
+      ],
+      // Friday
+      [
+        { emoji:'🎉', badge:'Eternal Weekend', title:'You Are the Human Embodiment of 5 o\'Clock on a Friday', desc:'The universe held its breath all week just to exhale the moment you were born. You are the relief everyone needed. Pure serotonin in human form.' },
+        { emoji:'💃', badge:'Dance Floor Deity', title:'You Were Born to Make Every Room a Dance Floor', desc:'Friday-born individuals are genetically incapable of walking into a venue without improving its energy by 400%. The DJ plays better when you arrive. Science.' },
+        { emoji:'🌙', badge:'Night Sovereign', title:'The Night Was Created to Showcase You', desc:'You were born as darkness approached and the weekend stirred. Every Friday night since has been a celebration of that moment. The stars? Decorations for your arrival.' },
+        { emoji:'🥂', badge:'Toast of the Cosmos', title:'Born Friday: Every Week Ends in Your Honor', desc:'The universe designed TGIF specifically for Friday-born legends. Every celebratory clink of a glass is a micro-tribute. You\'re welcome for weekends.' },
+      ],
+      // Saturday
+      [
+        { emoji:'🎂', badge:'Birthday Prime', title:'You Were Born on the Best Day of the Week — Statistically', desc:'Saturday births correlate with extremely good vibes, unexplained confidence, and the ability to find parking spots. The data is overwhelming.' },
+        { emoji:'🛌', badge:'Rest Royalty', title:'You Are the Guardian Spirit of Sleeping In', desc:'Saturday-born individuals are cosmically appointed protectors of the long breakfast, the lazy morning, and the second cup of coffee. Your mission: do nothing, perfectly.' },
+        { emoji:'🌅', badge:'Golden Hour Born', title:'Your Birth Began the Golden Hour That Never Ended', desc:'The light when you were born? Perfect. Still going. Scientists can\'t explain it but they\'ve stopped trying. Saturday babies glow in a way that isn\'t quite legal.' },
+        { emoji:'🏆', badge:'Weekend Champion', title:'Saturday\'s Child Has the Trophy — and Didn\'t Have to Ask', desc:'You arrived on the champion\'s day. Every podium, every gold medal, every "player of the match" moment traces its lineage back to the Saturday of your birth.' },
+      ],
+    ];
+
+    const MONTH_GROUPS = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3]; // 12 months -> 4 groups of 3
+
+    // Special day-number overrides (day 1-31)
+    const DAY_SPECIALS = {
+      1:  { emoji:'🥇', badge:'Day One Legend', title:'Born on the 1st: You Are Literally First in Everything', desc:'The number one picked YOU. That\'s not a coincidence, that\'s editorial control over the cosmos.' },
+      7:  { emoji:'🎲', badge:'Lucky Seventh', title:'Day 7 — The Universe\'s Favorite Number Claimed You', desc:'Seven seas, seven wonders, seven deadly sins — and you, born on the 7th, pulling all of it together effortlessly.' },
+      13: { emoji:'🖤', badge:'Luckiest Unlucky', title:'Born the 13th: You Turned Bad Luck Into a Personality', desc:'Friday the 13th fears YOU. Ladders walk under you for luck. Black cats cross the street to sit in your lap.' },
+      14: { emoji:'💝', badge:'Hearts & Chaos', title:'Day 14: Half Valentine, Half Wrecking Ball', desc:'You have the love of the 14th and the chaos of everything around it. Irresistible. Slightly dangerous to furniture.' },
+      21: { emoji:'🌸', badge:'Solstice Soul', title:'You Were Born at the Turn of the Season — A Liminal Legend', desc:'Day 21 sits at the edge of seasons. You exist between worlds. This explains why you\'re impossible to fully categorize and deeply interesting.' },
+      25: { emoji:'🎁', badge:'Gift Incarnate', title:'Day 25: You ARE the Present', desc:'Born on the 25th, you showed up as humanity\'s greatest gift. Unwrapping your personality is an annual event in at least six households.' },
+      29: { emoji:'🌀', badge:'Rare Edition', title:'Day 29: Rare, Mysterious, Possibly from Another Timeline', desc:'Not every month has a 29th. You occupy a calendar slot that sometimes doesn\'t exist. You are a glitch — an exquisite, charismatic glitch.' },
+      31: { emoji:'🏁', badge:'Final Form', title:'Day 31: You Are the Grand Finale of Every Month', desc:'You arrive last and leave the biggest impression. The month builds to you. Every month that doesn\'t have a 31st is simply unworthy.' },
+    };
+
+    // Fallback pool for any missing combo (shouldn't be needed but safety net)
+    const FALLBACK = [
+      { emoji:'🌟', badge:'Stellar Being', title:'Your Birthday Energy is Off the Charts', desc:'The cosmic council reviewed your birth date and unanimously agreed: you are a lot to handle, in the absolute best way.' },
+      { emoji:'🎈', badge:'Perpetual Celebrant', title:'You Were Born to Be Celebrated — Loudly, Often', desc:'Every room improves by 30% when you walk in. The balloons know. The balloons always know.' },
+    ];
+
+    function getDestiny(dateStr) {
+      const d = new Date(dateStr + 'T12:00:00');
+      const dow = d.getDay(); // 0=Sun, 6=Sat
+      const month = d.getMonth(); // 0-11
+      const day = d.getDate(); // 1-31
+      const mg = MONTH_GROUPS[month];
+
+      // Check day-number special first
+      if (DAY_SPECIALS[day]) return DAY_SPECIALS[day];
+
+      const rowOptions = DOW_ROLES[dow];
+      if (rowOptions && rowOptions[mg]) return rowOptions[mg];
+
+      return FALLBACK[Math.floor(Math.random() * FALLBACK.length)];
+    }
+
+    function reveal() {
+      const input = document.getElementById('bday');
+      const val = input.value;
+      if (!val) {
+        input.style.borderColor = '#ff6b6b';
+        input.focus();
+        setTimeout(() => input.style.borderColor = 'rgba(255,255,255,0.5)', 800);
+        return;
+      }
+
+      const destiny = getDestiny(val);
+
+      document.getElementById('result-emoji').textContent = destiny.emoji;
+      document.getElementById('result-badge').textContent = destiny.badge;
+      document.getElementById('result-title').textContent = destiny.title;
+      document.getElementById('result-desc').textContent = destiny.desc;
+
+      const section = document.getElementById('result-section');
+      // Reset animation
+      const card = document.getElementById('result-card');
+      card.style.animation = 'none';
+      card.offsetHeight; // reflow
+      card.style.animation = '';
+
+      section.style.display = 'block';
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      launchSparkles();
+    }
+
+    function launchSparkles() {
+      const container = document.getElementById('sparkles');
+      container.innerHTML = '';
+      const colors = ['#ffe259','#ffa751','#f953c6','#fff','#b91d73','#ff6b35','#7fff00'];
+      for (let i = 0; i < 40; i++) {
+        const s = document.createElement('div');
+        s.className = 'spark';
+        const x = Math.random() * window.innerWidth;
+        const y = Math.random() * window.innerHeight * 0.6;
+        const dx = (Math.random() - 0.5) * 300 + 'px';
+        const dy = (Math.random() * 300 + 100) + 'px';
+        s.style.cssText = `
+          left:${x}px; top:${y}px;
+          background:${colors[Math.floor(Math.random()*colors.length)]};
+          --dx:${dx}; --dy:${dy};
+          animation-delay:${Math.random()*0.4}s;
+          width:${6+Math.random()*10}px;
+          height:${6+Math.random()*10}px;
+        `;
+        container.appendChild(s);
+      }
+      setTimeout(() => container.innerHTML = '', 1800);
+    }
+
+    function tryAgain() {
+      document.getElementById('result-section').style.display = 'none';
+      document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function share() {
+      const title = document.getElementById('result-title').textContent;
+      const badge = document.getElementById('result-badge').textContent;
+      const shareText = `${badge}: ${title} — Find your birthday destiny!`;
+      if (navigator.share) {
+        navigator.share({ title: 'You Da Birthday', text: shareText, url: location.href });
+      } else {
+        navigator.clipboard.writeText(location.href)
+          .then(() => {
+            const btn = document.getElementById('share-btn');
+            btn.textContent = '✅ Link Copied!';
+            setTimeout(() => btn.innerHTML = '&#x1F389; Share Your Destiny!', 2000);
+          });
+      }
+    }
+  </script>
+</body>
+</html>

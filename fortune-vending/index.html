@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fortune Vending</title>
+  <meta property="og:title" content="Fortune Vending">
+  <meta property="og:description" content="Three fortunes pinned to today: one for the weekday, one for the moon, one for the day number. Drop a coin, peel the can, read the reveal.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/fortune-vending/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="stage">
+    <header id="intro">
+      <p class="lede">three cans. three anchors. weekday, moon, day number. one per coin.</p>
+    </header>
+
+    <div id="machine" aria-label="pixel vending machine">
+      <!-- Machine art built from styled divs (pixel art, no external images) -->
+      <div class="m-top">
+        <div class="m-sign">FORTUNES</div>
+        <div class="m-light" id="light"></div>
+      </div>
+
+      <div class="m-window">
+        <div class="shelf">
+          <div class="can c1" data-idx="1"></div>
+          <div class="can c2" data-idx="2"></div>
+          <div class="can c3" data-idx="3"></div>
+        </div>
+        <div class="glare"></div>
+        <div class="stock" id="stock">3 left</div>
+      </div>
+
+      <div class="m-panel">
+        <div class="coin-slot" id="coinSlot" aria-label="coin slot">
+          <span class="slot-label">INSERT COIN</span>
+          <div class="slot-gap"></div>
+        </div>
+        <button id="bigButton" class="big-button" aria-label="big red button" disabled>
+          <span class="btn-face">PRESS</span>
+        </button>
+      </div>
+
+      <div class="m-chute" id="chute">
+        <div class="chute-lip"></div>
+        <div class="chute-inner" id="chuteInner"></div>
+      </div>
+    </div>
+
+    <div class="coin-tray" id="coinTray">
+      <div class="coin" id="coin" draggable="true" tabindex="0" aria-label="coin — drag into slot">
+        <span class="coin-face">25</span>
+      </div>
+      <div class="coin-hint" id="coinHint">drag the coin up to the slot</div>
+    </div>
+
+    <!-- Thinking overlay -->
+    <div id="thinking" class="hidden">
+      <p class="thinking-text">the machine is thinking about it&hellip;</p>
+    </div>
+
+    <!-- Peel screen -->
+    <div id="peelScreen" class="hidden">
+      <div class="peel-wrap">
+        <div class="pulltab" id="pulltab" tabindex="0" aria-label="pull the tab to reveal">PULL &rarr;</div>
+        <div class="can-top" id="canTop"></div>
+        <div class="fortune-paper" id="fortunePaper">
+          <p class="fortune" id="fortuneText"></p>
+          <p class="fortune-meta" id="fortuneMeta"></p>
+        </div>
+      </div>
+      <button class="ghost-button" id="backButton">back to machine</button>
+    </div>
+
+    <!-- Sold out -->
+    <div id="soldOut" class="hidden">
+      <p class="sold-top">SOLD OUT</p>
+      <p class="sold-sub">restocks at midnight local</p>
+      <ul class="today-list" id="todayList"></ul>
+    </div>
+
+    <div id="share" style="display:none">
+      <button onclick="share()">Share today&apos;s can</button>
+    </div>
+
+    <footer class="foot">
+      <p>no refunds. the machine does not negotiate.</p>
+    </footer>
+  </div>
+</body>
+</html>

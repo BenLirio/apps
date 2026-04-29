@@ -1,0 +1,242 @@
+/* Aesthetic: deep space / cosmic observatory — near-black void, gold star glows, elegant serif, atmospheric grain */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a1a;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  color: #d4b896;
+}
+
+canvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+#intro-text {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(212, 184, 150, 0.55);
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.8s ease;
+  white-space: nowrap;
+}
+
+#intro-text.hidden {
+  opacity: 0;
+}
+
+#controls {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 20;
+  align-items: center;
+}
+
+#controls button {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: #d4b896;
+  background: rgba(10, 10, 26, 0.75);
+  border: 1px solid rgba(212, 184, 150, 0.35);
+  padding: 10px 22px;
+  min-height: 44px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+#controls button:hover {
+  background: rgba(212, 184, 150, 0.12);
+  border-color: rgba(212, 184, 150, 0.7);
+}
+
+#mode-toggle.active {
+  color: #f5d98b;
+  border-color: rgba(245, 217, 139, 0.7);
+  background: rgba(245, 217, 139, 0.08);
+}
+
+#name-btn {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f5d98b;
+  border-color: rgba(245, 217, 139, 0.5);
+}
+
+#name-btn:hover {
+  background: rgba(245, 217, 139, 0.14);
+  border-color: rgba(245, 217, 139, 0.9);
+}
+
+#clear-btn {
+  font-size: 0.9rem;
+  color: rgba(212, 184, 150, 0.5);
+  border-color: rgba(212, 184, 150, 0.2);
+}
+
+/* Loading overlay */
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 26, 0.85);
+}
+
+#loading-text {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.6rem;
+  font-style: italic;
+  font-weight: 300;
+  color: #f5d98b;
+  letter-spacing: 0.06em;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Result overlay */
+#result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 18, 0.92);
+}
+
+#result-card {
+  text-align: center;
+  max-width: 480px;
+  width: 90%;
+  padding: 48px 32px 36px;
+  border: 1px solid rgba(212, 184, 150, 0.25);
+  background: rgba(10, 10, 26, 0.6);
+}
+
+#constellation-name {
+  font-size: clamp(2.2rem, 8vw, 3.6rem);
+  font-weight: 300;
+  color: #f5d98b;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  margin-bottom: 14px;
+}
+
+#star-count-line {
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: rgba(212, 184, 150, 0.6);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+#myth-text {
+  font-size: 1.15rem;
+  font-style: italic;
+  font-weight: 300;
+  color: #c8aa80;
+  line-height: 1.65;
+  margin-bottom: 36px;
+}
+
+#result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+#result-actions button {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1rem;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background 0.2s, color 0.2s;
+}
+
+#result-actions button:first-child {
+  background: rgba(245, 217, 139, 0.15);
+  color: #f5d98b;
+  border: 1px solid rgba(245, 217, 139, 0.5);
+  padding: 12px 28px;
+  font-weight: 600;
+  width: 100%;
+}
+
+#result-actions button:first-child:hover {
+  background: rgba(245, 217, 139, 0.25);
+}
+
+#result-actions button:last-child {
+  background: transparent;
+  color: rgba(212, 184, 150, 0.5);
+  border: none;
+  padding: 8px 20px;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+#result-actions button:last-child:hover {
+  color: rgba(212, 184, 150, 0.85);
+}
+
+/* Error */
+#error-msg {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  color: rgba(212, 184, 150, 0.8);
+  background: rgba(10, 10, 26, 0.9);
+  border: 1px solid rgba(212, 184, 150, 0.2);
+  padding: 18px 28px;
+  text-align: center;
+  pointer-events: none;
+  animation: fadein 0.3s ease;
+}
+
+@keyframes fadein {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+#share {
+  display: none !important;
+}

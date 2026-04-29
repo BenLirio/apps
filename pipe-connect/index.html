@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pipe Connect</title>
+  <meta property="og:title" content="Pipe Connect">
+  <meta property="og:description" content="A daily pipe puzzle: connect matching colored pairs without crossing. One puzzle per day — solve it, share your result.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/pipe-connect/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div id="title-bar">
+        <span id="logo">PIPE CONNECT</span>
+        <span id="streak-display"></span>
+      </div>
+      <div id="date-label"></div>
+    </header>
+
+    <div id="pre-game">
+      <div id="intro-text">route the pipes.<br>fill every cell.<br>no crossings.</div>
+      <button id="start-btn">PLAY TODAY'S PUZZLE</button>
+    </div>
+
+    <div id="game-screen" style="display:none">
+      <div id="timer-bar">
+        <span id="timer">00:00</span>
+        <span id="cells-filled"></span>
+      </div>
+      <div id="grid-wrapper">
+        <canvas id="grid-canvas"></canvas>
+      </div>
+      <button id="reset-btn">RESET</button>
+    </div>
+
+    <div id="win-screen" style="display:none">
+      <div id="win-title">CONNECTED!</div>
+      <div id="win-time"></div>
+      <div id="win-streak"></div>
+      <div id="emoji-grid"></div>
+      <div id="share" style="display:none">
+        <button id="share-btn" onclick="share()">SHARE RESULT</button>
+      </div>
+      <button id="play-again-btn">VIEW SOLUTION</button>
+    </div>
+  </div>
+</body>
+</html>

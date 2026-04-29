@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crowd Simulator</title>
+  <meta property="og:title" content="Crowd Simulator">
+  <meta property="og:description" content="Draw walls, place exits, release the crowd. Can you engineer a perfect escape?">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/crowd-simulator/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>CROWD SIMULATOR</h1>
+      <p id="tagline">Draw the walls. Place the exits. Pray for your people.</p>
+    </header>
+
+    <div id="toolbar">
+      <button id="btn-wall" class="tool-btn active" onclick="setTool('wall')">
+        <span class="tool-icon">▬</span> WALL
+      </button>
+      <button id="btn-exit" class="tool-btn" onclick="setTool('exit')">
+        <span class="tool-icon">▶</span> EXIT
+      </button>
+      <button id="btn-clear" class="action-btn" onclick="clearCanvas()">
+        ✕ CLEAR
+      </button>
+      <button id="btn-simulate" class="action-btn simulate-btn" onclick="startSimulation()">
+        ▶ SIMULATE
+      </button>
+    </div>
+
+    <div id="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+      <div id="loading-overlay">
+        <div id="loading-text">CALCULATING OPTIMAL PANIC ROUTES...</div>
+      </div>
+    </div>
+
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">TIME</span>
+        <span id="hud-time" class="hud-value">0.0s</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">ESCAPED</span>
+        <span id="hud-escaped" class="hud-value">0 / 0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">BEST</span>
+        <span id="hud-best" class="hud-value">--</span>
+      </div>
+    </div>
+
+    <div id="result-panel" style="display:none">
+      <div id="result-title"></div>
+      <div id="result-time"></div>
+      <div id="result-copy"></div>
+      <div id="result-best"></div>
+      <div class="result-buttons">
+        <button class="action-btn" onclick="resetToEdit()">↩ REDESIGN</button>
+        <button class="action-btn simulate-btn" onclick="startSimulation()">↺ RETRY</button>
+      </div>
+    </div>
+
+    <div id="mobile-hint">Touch &amp; drag to draw walls. Tap EXIT then tap to place exits.</div>
+
+    <div id="share" style="display:none">
+      <button onclick="share()">Share your result!</button>
+    </div>
+  </div>
+</body>
+</html>

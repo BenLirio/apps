@@ -1,0 +1,756 @@
+/* Aesthetic: yellowed parchment / Victorian correspondence — aged ivory paper, iron-gall ink, wax-seal red, handwritten nib */
+
+:root {
+  --parchment: #f1e3c1;
+  --parchment-dark: #d9c49a;
+  --parchment-edge: #b39b6d;
+  --ink: #1f1a3a;
+  --ink-faded: #3a355a;
+  --wax: #7a1420;
+  --wax-shine: #c23a48;
+  --gold: #8a6a1e;
+  --page-bg: #2c221a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--page-bg);
+  color: var(--ink);
+  min-height: 100vh;
+  font-family: 'IM Fell English', 'Georgia', serif;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse at top, rgba(80,60,30,0.45), transparent 60%),
+    radial-gradient(ellipse at bottom, rgba(40,20,10,0.65), transparent 70%);
+  padding: 16px 12px 32px;
+}
+
+.parchment-frame {
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--parchment);
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(120,90,40,0.18), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(80,50,20,0.24), transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(250,240,210,0.0), rgba(160,120,70,0.12));
+  padding: 28px 22px 22px;
+  border: 1px solid var(--parchment-edge);
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.55),
+    inset 0 0 40px rgba(120,90,40,0.25),
+    inset 0 0 180px rgba(90,60,20,0.18);
+  position: relative;
+}
+
+/* torn / foxed edge simulated via subtle vignette */
+.parchment-frame::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 5% 5%, rgba(90,60,20,0.22), transparent 10%),
+    radial-gradient(ellipse at 95% 7%, rgba(90,60,20,0.22), transparent 9%),
+    radial-gradient(ellipse at 3% 95%, rgba(90,60,20,0.28), transparent 11%),
+    radial-gradient(ellipse at 97% 93%, rgba(90,60,20,0.24), transparent 10%);
+  mix-blend-mode: multiply;
+}
+
+/* masthead */
+.masthead {
+  text-align: center;
+  padding: 6px 0 22px;
+  border-bottom: 1px solid rgba(90,60,20,0.35);
+  margin-bottom: 22px;
+  position: relative;
+}
+
+.seal {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, var(--wax-shine), var(--wax) 55%, #4a0a10 100%);
+  margin: 0 auto 10px;
+  box-shadow:
+    0 2px 6px rgba(40,0,0,0.55),
+    inset 0 -6px 12px rgba(0,0,0,0.35);
+  position: relative;
+}
+
+.seal::after {
+  content: 'D P';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255,220,200,0.55);
+  font-family: 'UnifrakturCook', serif;
+  font-size: 20px;
+  letter-spacing: 2px;
+}
+
+.title {
+  font-family: 'UnifrakturCook', 'IM Fell English', serif;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 0.95;
+  margin: 4px 0 6px;
+  color: var(--ink);
+  letter-spacing: 0.5px;
+}
+
+.title em {
+  font-style: italic;
+  color: var(--ink-faded);
+}
+
+.kicker {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faded);
+  margin: 0;
+}
+
+/* screens */
+.screen {
+  min-height: 40vh;
+}
+
+.lede {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 18px 6px 14px;
+  text-align: left;
+}
+
+.lede-aside {
+  font-family: 'IM Fell English', serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-faded);
+  margin: 0 6px 24px;
+  padding: 8px 10px;
+  border-left: 2px solid rgba(120,90,40,0.5);
+  background: rgba(255,248,220,0.28);
+}
+
+.hint-label {
+  display: block;
+  font-family: 'IM Fell English', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-faded);
+  margin: 4px 0 6px;
+}
+
+#name-hint-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: 'IM Fell English', serif;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--ink);
+  background: rgba(255,248,220,0.4);
+  border: 1px solid rgba(31,26,58,0.35);
+  border-radius: 2px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+  min-height: 42px;
+}
+
+#name-hint-input:focus { outline: 2px solid rgba(31,26,58,0.3); outline-offset: 2px; }
+
+.ink-button {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  font-family: 'IM Fell English', serif;
+  font-size: 20px;
+  font-style: italic;
+  letter-spacing: 0.5px;
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, transform 60ms;
+  box-shadow: 0 2px 0 rgba(31,26,58,0.25);
+}
+
+.ink-button:hover { background: var(--ink); color: var(--parchment); }
+.ink-button:active { transform: translateY(1px); }
+
+.ink-button-ghost {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-family: 'IM Fell English', serif;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--ink-faded);
+  background: transparent;
+  border: 1px dashed rgba(31,26,58,0.45);
+  border-radius: 2px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.ink-button-ghost:hover { color: var(--ink); border-color: var(--ink); }
+
+/* quiz */
+.progress {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-faded);
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.q-title {
+  font-size: 22px;
+  font-family: 'IM Fell English', serif;
+  line-height: 1.35;
+  margin: 0 0 18px;
+  color: var(--ink);
+}
+
+.q-num {
+  font-style: italic;
+  color: var(--gold);
+  margin-right: 6px;
+}
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chip {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-family: 'IM Fell English', serif;
+  font-size: 17px;
+  text-align: left;
+  background: rgba(255,248,220,0.35);
+  color: var(--ink);
+  border: 1px solid rgba(31,26,58,0.4);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 100ms, transform 80ms, border-color 100ms;
+}
+
+.chip:hover { background: rgba(255,240,200,0.75); }
+.chip:active { transform: translateY(1px); }
+
+/* secret-miss */
+.secret-label {
+  display: block;
+  font-size: 20px;
+  line-height: 1.4;
+  margin: 8px 0 14px;
+  color: var(--ink);
+}
+
+.secret-label em {
+  font-style: italic;
+  color: var(--ink-faded);
+}
+
+#secret-input,
+#name-input,
+.fu-input {
+  width: 100%;
+  padding: 12px 14px;
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  line-height: 1.35;
+  color: var(--ink);
+  background: rgba(255,248,220,0.55);
+  border: 1px solid rgba(31,26,58,0.45);
+  border-radius: 2px;
+  resize: vertical;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+#name-input {
+  min-height: 52px;
+  font-size: 26px;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+
+#secret-input:focus,
+#name-input:focus,
+.fu-input:focus { outline: 2px solid rgba(31,26,58,0.35); outline-offset: 2px; }
+
+#seal-envelope { margin-top: 14px; }
+#register-name { margin-top: 4px; }
+
+/* archive dossier (visible name-lookup reveal) */
+.dossier-card {
+  position: relative;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 30px,
+      rgba(120,90,40,0.05) 30px,
+      rgba(120,90,40,0.05) 31px
+    ),
+    linear-gradient(180deg, #f4e5bf 0%, #e9d6a3 100%);
+  background-blend-mode: multiply;
+  border: 1px solid var(--parchment-edge);
+  border-radius: 2px;
+  padding: 22px 20px 18px;
+  margin: 8px 0 18px;
+  box-shadow:
+    0 6px 16px rgba(0,0,0,0.28),
+    inset 0 0 60px rgba(120,80,30,0.18);
+  transform: rotate(0.2deg);
+}
+
+.dossier-stamp {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1.1;
+  color: var(--wax);
+  border: 1.2px solid var(--wax);
+  border-radius: 3px;
+  padding: 4px 6px;
+  transform: rotate(8deg);
+  opacity: 0.78;
+  text-transform: uppercase;
+}
+
+.dossier-row {
+  margin-bottom: 12px;
+}
+
+.dossier-label {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 3px;
+}
+
+.dossier-text {
+  font-family: 'IM Fell English', serif;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0;
+}
+
+.dossier-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.dossier-list li {
+  position: relative;
+  font-family: 'IM Fell English', serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0 0 4px;
+  padding-left: 4px;
+}
+
+.dossier-list li::before {
+  content: '—';
+  position: absolute;
+  left: -16px;
+  color: var(--gold);
+}
+
+.dossier-ink {
+  font-family: 'Caveat', cursive;
+  font-size: 19px;
+  color: var(--ink-faded);
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(31,26,58,0.3);
+  line-height: 1.3;
+}
+
+#dossier-name {
+  font-family: 'UnifrakturCook', 'IM Fell English', serif;
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 1px;
+}
+
+/* the confirm-row that replaces the old single Continue button */
+.confirm-row {
+  margin-top: 8px;
+}
+
+.confirm-q {
+  font-family: 'IM Fell English', serif;
+  font-size: 17px;
+  font-style: italic;
+  color: var(--ink);
+  text-align: center;
+  margin: 10px 0 12px;
+  letter-spacing: 0.5px;
+}
+
+.confirm-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm-btns .ink-button,
+.confirm-btns .ink-button-ghost {
+  margin: 0;
+}
+
+.confirm-note {
+  font-family: 'IM Fell English', serif;
+  font-size: 12px;
+  color: var(--ink-faded);
+  text-align: center;
+  margin: 14px 0 0;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* compact dossier footer on the result screen */
+.result-dossier {
+  margin: 18px 0 4px;
+  padding: 14px 16px;
+  background: rgba(255,248,220,0.35);
+  border: 1px dashed rgba(31,26,58,0.35);
+  border-radius: 2px;
+  text-align: left;
+}
+
+.result-dossier-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.result-dossier-pin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--wax-shine), var(--wax) 60%, #4a0a10 100%);
+  box-shadow: 0 1px 2px rgba(40,0,0,0.5);
+}
+
+.result-dossier-title {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-faded);
+}
+
+.result-dossier-body p {
+  font-family: 'IM Fell English', serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+
+.result-dossier-body .dossier-list.compact {
+  margin: 2px 0 6px;
+  padding-left: 16px;
+}
+
+.result-dossier-body .dossier-list.compact li {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.result-dossier-body .dossier-ink {
+  font-size: 16px;
+  padding-top: 6px;
+  margin-top: 6px;
+}
+
+/* follow-up questions */
+.fu-item {
+  margin: 0 0 20px;
+}
+
+.fu-question {
+  font-family: 'IM Fell English', serif;
+  font-size: 19px;
+  line-height: 1.4;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.fu-question .q-num {
+  font-style: italic;
+  color: var(--gold);
+  margin-right: 6px;
+}
+
+.fu-input {
+  min-height: 64px;
+}
+
+/* letter salutation (the "Dear Eleanor —" line) */
+.letter-salutation {
+  font-family: 'Caveat', cursive;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.err-msg {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: var(--wax);
+  font-size: 15px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* loading */
+#loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  text-align: center;
+}
+
+.quill {
+  width: 6px;
+  height: 90px;
+  background: linear-gradient(to bottom, #2a2248 0%, #5a4a2a 40%, #1a1432 100%);
+  border-radius: 3px;
+  margin: 0 auto 24px;
+  position: relative;
+  transform-origin: bottom center;
+  animation: scribble 1.4s ease-in-out infinite;
+}
+
+.quill::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  left: -14px;
+  width: 34px;
+  height: 60px;
+  background:
+    radial-gradient(ellipse at 60% 30%, #f5ead0 0%, #c9b480 60%, #7a5a2a 100%);
+  border-radius: 50% 60% 40% 60%;
+  transform: rotate(-18deg);
+  box-shadow: inset -4px -8px 8px rgba(90,60,20,0.35);
+}
+
+.quill::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 6px;
+  height: 8px;
+  background: var(--ink);
+  border-radius: 50%;
+  filter: blur(0.6px);
+}
+
+@keyframes scribble {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50% { transform: rotate(8deg) translateY(-4px); }
+}
+
+.loading-msg {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-faded);
+  max-width: 420px;
+  line-height: 1.45;
+}
+
+/* result */
+#result { text-align: center; }
+
+.verdict {
+  margin: 4px 0 22px;
+  text-align: center;
+}
+
+.verdict-label {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--ink-faded);
+  margin: 0 0 6px;
+}
+
+#writer-name {
+  font-family: 'UnifrakturCook', 'IM Fell English', serif;
+  font-size: 44px;
+  line-height: 1.05;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+
+.writer-line {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink-faded);
+  margin: 0 auto 6px;
+  max-width: 460px;
+  line-height: 1.5;
+}
+
+/* the letter card */
+.letter {
+  position: relative;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 34px,
+      rgba(120,90,40,0.06) 34px,
+      rgba(120,90,40,0.06) 35px
+    ),
+    linear-gradient(180deg, #f6e7c4 0%, #ecd9ab 100%);
+  background-blend-mode: multiply;
+  color: var(--ink);
+  padding: 34px 26px 28px;
+  margin: 18px 0 18px;
+  text-align: left;
+  border: 1px solid var(--parchment-edge);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.35),
+    inset 0 0 80px rgba(120,80,30,0.2),
+    inset 0 0 12px rgba(120,80,30,0.35);
+  transform: rotate(-0.4deg);
+}
+
+.letter::before {
+  /* subtle inkblot */
+  content: '';
+  position: absolute;
+  bottom: 18px;
+  right: 28px;
+  width: 42px;
+  height: 28px;
+  background:
+    radial-gradient(ellipse at 60% 40%, rgba(31,26,58,0.55), rgba(31,26,58,0) 70%),
+    radial-gradient(circle at 20% 70%, rgba(31,26,58,0.45), rgba(31,26,58,0) 60%);
+  filter: blur(0.6px);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.letter-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(100,60,20,0.5), rgba(100,60,20,0) 70%);
+  pointer-events: none;
+}
+
+.letter-corner.tl { top: -4px; left: -4px; }
+.letter-corner.tr { top: -4px; right: -4px; }
+.letter-corner.bl { bottom: -4px; left: -4px; }
+.letter-corner.br { bottom: -4px; right: -4px; }
+
+.letter-body {
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.letter-body p {
+  margin: 0 0 14px;
+}
+
+.letter-signature {
+  margin-top: 18px;
+  font-family: 'Caveat', cursive;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+  opacity: 0.92;
+}
+
+.share-row {
+  margin-top: 14px;
+}
+
+.share-btn { margin-bottom: 8px; }
+
+/* colophon */
+.colophon {
+  text-align: center;
+  margin-top: 28px;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faded);
+  opacity: 0.8;
+  letter-spacing: 1px;
+}
+
+/* small screens */
+@media (max-width: 420px) {
+  .parchment-frame { padding: 20px 14px 16px; }
+  .title { font-size: 36px; }
+  #writer-name { font-size: 36px; }
+  .letter { padding: 28px 20px 24px; }
+  .letter-body { font-size: 20px; }
+}
+
+/* reveal animations — only for state transitions */
+.screen[hidden] { display: none !important; }
+
+.fade-enter {
+  animation: fadeIn 420ms ease-out both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

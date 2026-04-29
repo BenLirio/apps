@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wiki Tunnel</title>
+  <meta property="og:title" content="Wiki Tunnel">
+  <meta property="og:description" content="Daily Wikipedia race. Skim, pick a link, jump. Fewer clicks, higher rank.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/wiki-tunnel/">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="boot" class="screen">
+    <div class="boot-marquee">
+      <div class="line">// WIKI TUNNEL // DAILY TRANSIT // SKIM. PICK. JUMP. //</div>
+    </div>
+    <div class="boot-card">
+      <div class="boot-row"><span class="lbl">SYSTEM</span><span class="val">WIKI TUNNEL</span></div>
+      <div class="boot-row"><span class="lbl">DATE</span><span class="val" id="boot-date">--</span></div>
+      <div class="boot-row"><span class="lbl">SEED</span><span class="val" id="boot-seed">--</span></div>
+      <div class="boot-row"><span class="lbl">START</span><span class="val sta" id="boot-start">loading...</span></div>
+      <div class="boot-row"><span class="lbl">END</span><span class="val end" id="boot-end">loading...</span></div>
+      <div class="boot-row"><span class="lbl">HOW</span><span class="val rules">You get a one-line summary and a grid of links from each Wikipedia page. Tap a link to jump to the next page. Reach the red END station in as few jumps as you can. No reading required.</span></div>
+      <button id="boot-go" class="big-btn">BOARD THE TRAIN &gt;&gt;</button>
+      <div class="boot-foot" id="boot-foot">priming the tunnel...</div>
+    </div>
+  </div>
+
+  <div id="game" class="screen hidden">
+    <header id="console">
+      <div class="console-top">
+        <div class="brand">WIKI&nbsp;TUNNEL</div>
+        <div class="stats">
+          <span class="stat"><span class="k">JUMPS</span><span class="v" id="click-count">0</span></span>
+          <span class="stat"><span class="k">TIME</span><span class="v" id="timer">0:00</span></span>
+          <span class="stat"><span class="k">SEED</span><span class="v" id="hud-seed">--</span></span>
+        </div>
+      </div>
+      <div class="route">
+        <div class="route-row">
+          <span class="route-label">FROM</span>
+          <span class="route-pill from" id="hud-start">--</span>
+          <span class="arrow">&rarr;&rarr;&rarr;</span>
+          <span class="route-label">TO</span>
+          <span class="route-pill to" id="hud-end">--</span>
+        </div>
+        <div class="trail" id="trail"></div>
+      </div>
+      <div class="ops">
+        <button id="op-back" class="op-btn">&larr; BACK</button>
+        <button id="op-hint" class="op-btn">HINT</button>
+        <button id="op-mode" class="op-btn">FULL ARTICLE</button>
+        <button id="op-restart" class="op-btn">RESTART</button>
+        <button id="op-fold" class="op-btn op-danger">FOLD &times;</button>
+      </div>
+    </header>
+
+    <main id="tunnel">
+      <div class="tunnel-frame">
+        <div class="tunnel-bar">
+          <span class="tb-dot"></span>
+          <span class="tb-title" id="tunnel-title">--</span>
+          <span class="tb-meta" id="tunnel-meta">en.wikipedia.org</span>
+        </div>
+        <div id="article" class="article-body">
+          <div class="loader">
+            <span class="loader-dot"></span>
+            <span class="loader-dot"></span>
+            <span class="loader-dot"></span>
+            <div class="loader-text">priming the tunnel...</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="result" class="screen hidden">
+    <div class="result-card">
+      <div class="result-stamp" id="result-stamp">ARRIVED</div>
+      <div class="result-name" id="result-name">--</div>
+      <div class="result-tag" id="result-tag">--</div>
+      <div class="result-stats">
+        <div class="rs"><div class="rsk">JUMPS</div><div class="rsv" id="r-clicks">0</div></div>
+        <div class="rs"><div class="rsk">TIME</div><div class="rsv" id="r-time">0:00</div></div>
+        <div class="rs"><div class="rsk">SEED</div><div class="rsv" id="r-seed">--</div></div>
+      </div>
+      <div class="result-trail" id="result-trail"></div>
+      <div class="result-cap" id="result-cap">--</div>
+      <div id="share">
+        <button onclick="share()" class="big-btn">SHARE THIS RUN</button>
+      </div>
+      <button id="result-replay" class="op-btn">REPLAY TODAY</button>
+    </div>
+  </div>
+
+  <div id="incoming" class="screen hidden">
+    <div class="incoming-card">
+      <div class="inc-stamp">INCOMING TRANSMISSION</div>
+      <div class="inc-from">A FRIEND'S RUN</div>
+      <div class="inc-trail" id="inc-trail"></div>
+      <div class="inc-line"><span id="inc-clicks">0</span> jumps. Verdict: <span id="inc-verdict">--</span></div>
+      <div class="inc-puzzle">Today's puzzle: <span id="inc-pair">--</span></div>
+      <button id="inc-go" class="big-btn">TRY TODAY'S PUZZLE &gt;&gt;</button>
+    </div>
+  </div>
+</body>
+</html>

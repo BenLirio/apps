@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Commute, Simulated</title>
+  <meta property="og:title" content="Your Commute, Simulated">
+  <meta property="og:description" content="Pick your commute type and duration. A 60-second pixel-art micro-drama of your fellow commuters plays out — then reveals your commute archetype.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/your-commute-simulated/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <!-- Setup screen -->
+  <div id="setup-screen">
+    <h1 class="title">YOUR COMMUTE,<br>SIMULATED</h1>
+    <p class="subtitle">the micro-drama of getting somewhere</p>
+    <div class="form-block">
+      <label class="form-label">COMMUTE TYPE</label>
+      <div class="type-grid" id="type-grid">
+        <button class="type-btn" data-type="subway">🚇 SUBWAY</button>
+        <button class="type-btn" data-type="bus">🚌 BUS</button>
+        <button class="type-btn" data-type="walk">🚶 WALK</button>
+        <button class="type-btn" data-type="car">🚗 CAR</button>
+        <button class="type-btn" data-type="wfh">🏠 WFH</button>
+      </div>
+    </div>
+    <div class="form-block">
+      <label class="form-label">DURATION (MINUTES)</label>
+      <div class="duration-row">
+        <button class="dur-btn" id="dur-minus">−</button>
+        <span class="dur-val" id="dur-display">25</span>
+        <button class="dur-btn" id="dur-plus">+</button>
+      </div>
+    </div>
+    <div class="error-msg" id="error-msg"></div>
+    <button class="start-btn" id="start-btn">BOARD</button>
+  </div>
+
+  <!-- Simulation screen -->
+  <div id="sim-screen" style="display:none">
+    <div class="sim-header">
+      <span id="sim-type-label">SUBWAY</span>
+      <span id="sim-timer">0:00</span>
+    </div>
+    <canvas id="sim-canvas"></canvas>
+    <div class="event-log" id="event-log"></div>
+    <div class="computing-msg" id="computing-msg" style="display:none">COMPUTING YOUR ARCHETYPE...</div>
+  </div>
+
+  <!-- Result screen -->
+  <div id="result-screen" style="display:none">
+    <div class="result-card">
+      <div class="archetype-label">YOUR COMMUTE ARCHETYPE</div>
+      <div class="archetype-name" id="archetype-name"></div>
+      <div class="archetype-desc" id="archetype-desc"></div>
+      <div class="commute-stats" id="commute-stats"></div>
+    </div>
+    <div id="share" style="display:block">
+      <button class="share-btn" onclick="share()">SHARE YOUR COMMUTE</button>
+    </div>
+    <button class="replay-btn" onclick="restartApp()">REBOARD</button>
+  </div>
+</body>
+</html>

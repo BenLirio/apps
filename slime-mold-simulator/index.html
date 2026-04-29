@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slime Mold Simulator</title>
+  <meta name="description" content="Physarum polycephalum simulation — place food sources and watch a living network of slime mold tendrils grow, branch, and optimize paths in real time.">
+  <meta property="og:title" content="Slime Mold Simulator">
+  <meta property="og:description" content="Physarum polycephalum simulation — place food sources and watch a living network of slime mold tendrils grow, branch, and optimize paths in real time.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/slime-mold-simulator/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Physarum</h1>
+      <p class="subtitle">A living network that finds the shortest path — without a brain.</p>
+    </header>
+
+    <div id="canvas-wrapper" class="edit-on">
+      <canvas id="sim-canvas"></canvas>
+      <div id="edit-badge" aria-hidden="true">EDIT MODE: ON · tap to place food</div>
+      <div id="pre-interaction">
+        <span class="hint-icon">☞</span>
+        <p>Tap the canvas to place food.<br>The organism will find it.</p>
+      </div>
+    </div>
+
+    <div id="edit-toggle-row">
+      <button id="edit-toggle" class="btn-edit" aria-pressed="true">
+        <span class="edit-dot"></span>
+        <span id="edit-toggle-label">Edit mode: ON</span>
+      </button>
+      <p class="edit-hint">Turn off to scroll the page on mobile without placing food.</p>
+    </div>
+
+    <div id="scenarios">
+      <h2 class="section-title">Scenarios</h2>
+      <p class="section-hint">Watch the organism solve a real problem, or learn how it thinks — one rule at a time.</p>
+      <div id="scenario-buttons">
+        <button class="btn-scenario" data-scenario="tokyo">
+          <span class="scenario-title">The Tokyo Experiment</span>
+          <span class="scenario-sub">Recreate the famous 2010 study — slime mold vs. Tokyo's rail planners</span>
+        </button>
+        <button class="btn-scenario" data-scenario="lesson1">
+          <span class="scenario-title">Lesson 1 · Sense</span>
+          <span class="scenario-sub">How a brainless cell "sees" chemical trails</span>
+        </button>
+        <button class="btn-scenario" data-scenario="lesson2">
+          <span class="scenario-title">Lesson 2 · Steer</span>
+          <span class="scenario-sub">Three sensors decide which way to turn</span>
+        </button>
+        <button class="btn-scenario" data-scenario="lesson3">
+          <span class="scenario-title">Lesson 3 · Swarm</span>
+          <span class="scenario-sub">20,000 agents amplify the best paths</span>
+        </button>
+        <button class="btn-scenario" data-scenario="sandbox">
+          <span class="scenario-title">Sandbox</span>
+          <span class="scenario-sub">Free play — place your own food</span>
+        </button>
+      </div>
+      <div id="scenario-narration" class="narration-hidden">
+        <div class="narration-header">
+          <span id="narration-title">&nbsp;</span>
+          <button id="narration-close" aria-label="Dismiss">×</button>
+        </div>
+        <p id="narration-body">&nbsp;</p>
+        <div id="narration-progress">
+          <span id="narration-step-indicator">&nbsp;</span>
+          <button id="narration-next" class="btn-primary btn-narration-next">Next &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <div class="control-row">
+        <label for="agent-count-display">Agents</label>
+        <input type="range" id="agent-count" min="5000" max="60000" step="5000" value="20000">
+        <span id="agent-count-display">20k</span>
+      </div>
+      <div class="control-row">
+        <label for="decay-display">Trail decay</label>
+        <input type="range" id="decay-rate" min="1" max="6" step="1" value="3">
+        <span id="decay-display">medium</span>
+      </div>
+      <div class="button-row">
+        <button id="reset-btn" class="btn-secondary">Reset</button>
+        <button id="save-btn" class="btn-secondary">Save my organism</button>
+        <button id="share-btn" class="btn-primary">Share</button>
+      </div>
+    </div>
+
+    <div id="info">
+      <p><em>Physarum polycephalum</em> — a single-celled organism that independently rediscovered Tokyo's rail network. This simulation grows the same way: particles follow chemical trails, amplifying paths toward food until the network self-organizes.</p>
+      <p class="info-credit">In 2010, researchers Tero, Takagi, Saigusa and colleagues placed oat flakes at the locations of 36 major stations around Tokyo. The slime mold grew a transport network <em>remarkably similar</em> to the real Yamanote rail line — built by engineers over a century, rediscovered by a brainless cell in 26 hours.</p>
+    </div>
+  </div>
+</body>
+</html>

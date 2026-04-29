@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How 2016 Are You?</title>
+  <meta property="og:title" content="How 2016 Are You?">
+  <meta property="og:description" content="A nostalgia calculator that scores how deeply you lived the 2016 internet era. Vines, Tumblr, Snapchat streaks, and memes await.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/how-2016-are-you/">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #533483 100%);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 4px;
+      letter-spacing: -1px;
+      background: linear-gradient(90deg, #f7971e, #ffd200, #21d4fd, #b721ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #b0b8d1;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .year-badge {
+      font-size: 4rem;
+      text-align: center;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 18px #b721ff88);
+    }
+
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 28px 22px;
+      width: 100%;
+      max-width: 480px;
+      backdrop-filter: blur(8px);
+    }
+
+    #quiz-section .progress-bar-wrap {
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    #quiz-section .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f7971e, #b721ff);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .q-num {
+      font-size: 0.78rem;
+      color: #b0b8d1;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .q-text {
+      font-size: 1.18rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .opt-btn {
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.97rem;
+      padding: 13px 16px;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.18s, border-color 0.18s, transform 0.12s;
+      line-height: 1.35;
+    }
+    .opt-btn:hover {
+      background: rgba(183,33,255,0.25);
+      border-color: #b721ff;
+      transform: translateX(4px);
+    }
+    .opt-btn:active { transform: translateX(2px) scale(0.98); }
+    .opt-btn.selected {
+      background: linear-gradient(90deg, rgba(247,151,30,0.3), rgba(183,33,255,0.3));
+      border-color: #ffd200;
+    }
+
+    /* Result */
+    #result-section { display: none; text-align: center; }
+
+    .result-emoji { font-size: 4rem; margin-bottom: 12px; }
+
+    .score-ring-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 20px;
+    }
+    .score-ring-wrap svg { transform: rotate(-90deg); }
+    .score-ring-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 12; }
+    .score-ring-fill {
+      fill: none;
+      stroke: url(#ringGrad);
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 408;
+      stroke-dashoffset: 408;
+      transition: stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1);
+    }
+    .score-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-pct {
+      font-size: 2.6rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .score-label-sm { font-size: 0.75rem; color: #b0b8d1; margin-top: 2px; }
+
+    .archetype-name {
+      font-size: 1.55rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #21d4fd, #b721ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .archetype-desc {
+      font-size: 0.95rem;
+      color: #c5cce3;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    #share-section {
+      margin-top: 20px;
+    }
+
+    .share-btn {
+      background: linear-gradient(90deg, #f7971e, #b721ff);
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 14px 28px;
+      cursor: pointer;
+      width: 100%;
+      letter-spacing: 0.3px;
+      box-shadow: 0 4px 24px rgba(183,33,255,0.35);
+      transition: opacity 0.18s, transform 0.12s;
+    }
+    .share-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+    .share-btn:active { transform: translateY(0) scale(0.98); }
+
+    .retry-btn {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      border-radius: 14px;
+      color: #b0b8d1;
+      font-size: 0.9rem;
+      padding: 10px 22px;
+      cursor: pointer;
+      margin-top: 12px;
+      width: 100%;
+      transition: border-color 0.18s, color 0.18s;
+    }
+    .retry-btn:hover { border-color: #fff; color: #fff; }
+
+    .tag-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .tag {
+      background: rgba(255,255,255,0.08);
+      border-radius: 99px;
+      font-size: 0.75rem;
+      padding: 4px 12px;
+      color: #c5cce3;
+      letter-spacing: 0.5px;
+    }
+
+    .footer {
+      margin-top: 32px;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.2);
+      text-align: center;
+    }
+  </style>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+
+  <div class="year-badge">📅</div>
+  <h1>How 2016 Are You?</h1>
+  <p class="subtitle">8 questions. One nostalgia score. No lies allowed.</p>
+
+  <!-- QUIZ -->
+  <div class="card" id="quiz-section">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="q-num" id="q-num">Question 1 of 8</div>
+    <div class="q-text" id="q-text"></div>
+    <div class="options" id="options"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="card" id="result-section">
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#f7971e"/>
+          <stop offset="100%" stop-color="#b721ff"/>
+        </linearGradient>
+      </defs>
+    </svg>
+
+    <div class="result-emoji" id="result-emoji"></div>
+
+    <div class="score-ring-wrap">
+      <svg viewBox="0 0 140 140" width="160" height="160">
+        <circle class="score-ring-bg" cx="70" cy="70" r="65"/>
+        <circle class="score-ring-fill" id="ring-fill" cx="70" cy="70" r="65"/>
+      </svg>
+      <div class="score-text">
+        <div class="score-pct" id="score-pct">0%</div>
+        <div class="score-label-sm">2016 Score</div>
+      </div>
+    </div>
+
+    <div class="tag-row" id="tag-row"></div>
+
+    <div class="archetype-name" id="archetype-name"></div>
+    <div class="archetype-desc" id="archetype-desc"></div>
+
+    <div id="share-section">
+      <button class="share-btn" onclick="share()">Share your result! 🎯</button>
+      <button class="retry-btn" onclick="restart()">Take it again</button>
+    </div>
+  </div>
+
+  <div class="footer">entertainment-factory &middot; 2026</div>
+
+  <script>
+    const QUESTIONS = [
+      {
+        text: "🌿 Did you have an active Vine account before it shut down?",
+        options: [
+          { label: "I was making Vines, not just watching them", points: 2 },
+          { label: "I watched constantly — 'Road work ahead?' still lives in my head", points: 1 },
+          { label: "I knew what Vine was but never really used it", points: 0 },
+        ]
+      },
+      {
+        text: "👗 When you first saw 'The Dress' photo — what colors did you see?",
+        options: [
+          { label: "Blue and black — and I got into heated arguments about it", points: 2 },
+          { label: "White and gold — and I still don't believe the other side", points: 2 },
+          { label: "I vaguely remember this… it was a thing?", points: 1 },
+          { label: "What dress?", points: 0 },
+        ]
+      },
+      {
+        text: "📱 How long was your longest Snapchat streak?",
+        options: [
+          { label: "100+ days — I panicked when it was at risk", points: 2 },
+          { label: "30–99 days — it was a real commitment", points: 1 },
+          { label: "Under 30 days or I don't remember", points: 0 },
+        ]
+      },
+      {
+        text: "🎮 How far did you get in Pokémon GO in summer 2016?",
+        options: [
+          { label: "I walked miles every day and hit level 20+", points: 2 },
+          { label: "Downloaded it, caught a few Pidgeys, moved on", points: 1 },
+          { label: "I didn't play it — too mainstream", points: 0 },
+        ]
+      },
+      {
+        text: "🎭 Which of these Tumblr aesthetics were YOU?",
+        options: [
+          { label: "Pastel grunge, crystal healing, and 'protect the bees'", points: 2 },
+          { label: "I reblogged stuff but didn't have a defined aesthetic", points: 1 },
+          { label: "I was more of a lurker than a poster", points: 1 },
+          { label: "I never really used Tumblr", points: 0 },
+        ]
+      },
+      {
+        text: "🎶 Did you listen to Hamilton: An American Musical obsessively in 2016?",
+        options: [
+          { label: "I had the whole cast album memorized and couldn't stop talking about it", points: 2 },
+          { label: "I listened to it and liked it but wasn't obsessed", points: 1 },
+          { label: "I heard about it but didn't really listen", points: 0 },
+        ]
+      },
+      {
+        text: "📸 Did you participate in (or witness) the Mannequin Challenge?",
+        options: [
+          { label: "Yes — I was in a video or organized one myself", points: 2 },
+          { label: "I watched tons of them and shared a few", points: 1 },
+          { label: "I know what it is but wasn't really involved", points: 0 },
+        ]
+      },
+      {
+        text: "👟 'Damn, Daniel!' — What's your honest relationship with this meme?",
+        options: [
+          { label: "I quoted it IRL multiple times. 'Back at it again with the white Vans.'", points: 2 },
+          { label: "I saw it everywhere and found it mildly amusing", points: 1 },
+          { label: "I had to look this up just now", points: 0 },
+        ]
+      },
+    ];
+
+    const ARCHETYPES = [
+      { min: 90, emoji: "🌟", name: "Peak Tumblr Kid", tags: ["#Aesthetic", "#StayWoke", "#Reblog4Reblog"], desc: "You were chronically online in the best way. You didn't just experience 2016 internet culture — you shaped it. Your Vine drafts were art, your Tumblr was a mood board for the ages, and you probably still have Pokémon GO on your phone." },
+      { min: 75, emoji: "🎤", name: "Vine Energizer", tags: ["#420ItBlaze", "#WaterBoys", "#RoadWorkAhead"], desc: "You were loud, you were fun, and you were on every platform. You lived in a constant state of 2016 and probably introduced others to half these memes. The internet was your home and 2016 was your golden age." },
+      { min: 60, emoji: "🕺", name: "The Mannequin Challenger", tags: ["#TrueBlue2016", "#PokemonGo", "#DamnDaniel"], desc: "You were present, engaged, and definitely participated in a few of those iconic 2016 moments. Not the most online person in the room, but you knew what was happening and you weren't afraid to join in." },
+      { min: 40, emoji: "👀", name: "Casual 2016 Observer", tags: ["#Witnessed", "#PartiallyPresent", "#FacebookUser"], desc: "You were alive, you saw the memes, you may have laughed at Vine compilations on YouTube. But 2016 internet culture was more of a backdrop to your life than the main event. And that's totally fine." },
+      { min: 20, emoji: "🌫️", name: "You Were There But Barely", tags: ["#OutsiderPerspective", "#NotReallyOnline", "#NoStreaks"], desc: "2016 happened around you but mostly passed you by. You probably had a phone, maybe a Snapchat, but you weren't deep in the trenches. The Mannequin Challenge? A distant memory. The Dress? That blue/gold thing, right?" },
+      { min: 0, emoji: "❓", name: "What Even Was 2016?", tags: ["#BornTooLate", "#Offline", "#NoProblem"], desc: "Either you were very young, very offline, or very unbothered by internet culture in 2016 — and honestly, respect. The world was chaotic. You may have missed the Vine era but you also missed a lot of drama." },
+    ];
+
+    let current = 0;
+    let totalPoints = 0;
+    let shareText = "";
+
+    function renderQuestion() {
+      const q = QUESTIONS[current];
+      document.getElementById('q-num').textContent = `Question ${current + 1} of ${QUESTIONS.length}`;
+      document.getElementById('q-text').textContent = q.text;
+      document.getElementById('progress-fill').style.width = `${(current / QUESTIONS.length) * 100}%`;
+
+      const opts = document.getElementById('options');
+      opts.innerHTML = '';
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.textContent = opt.label;
+        btn.onclick = () => pickAnswer(opt.points, btn);
+        opts.appendChild(btn);
+      });
+    }
+
+    function pickAnswer(points, btn) {
+      // Prevent double-click
+      document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+      btn.classList.add('selected');
+      totalPoints += points;
+
+      setTimeout(() => {
+        current++;
+        if (current < QUESTIONS.length) {
+          renderQuestion();
+        } else {
+          showResult();
+        }
+      }, 380);
+    }
+
+    function showResult() {
+      document.getElementById('quiz-section').style.display = 'none';
+      const rs = document.getElementById('result-section');
+      rs.style.display = 'block';
+
+      const maxPoints = QUESTIONS.length * 2; // 16
+      const pct = Math.round((totalPoints / maxPoints) * 100);
+
+      // Find archetype
+      const archetype = ARCHETYPES.find(a => pct >= a.min);
+
+      document.getElementById('result-emoji').textContent = archetype.emoji;
+      document.getElementById('archetype-name').textContent = archetype.name;
+      document.getElementById('archetype-desc').textContent = archetype.desc;
+
+      // Tags
+      const tagRow = document.getElementById('tag-row');
+      tagRow.innerHTML = archetype.tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+      // Animate score
+      const pctEl = document.getElementById('score-pct');
+      const ring = document.getElementById('ring-fill');
+      const circumference = 408;
+
+      let displayed = 0;
+      const target = pct;
+      const step = () => {
+        if (displayed < target) {
+          displayed = Math.min(displayed + 2, target);
+          pctEl.textContent = displayed + '%';
+          const offset = circumference - (displayed / 100) * circumference;
+          ring.style.strokeDashoffset = offset;
+          requestAnimationFrame(step);
+        }
+      };
+      setTimeout(() => requestAnimationFrame(step), 300);
+
+      shareText = `I scored ${pct}% on "How 2016 Are You?" — I am a ${archetype.name} 🎯`;
+    }
+
+    function share() {
+      const url = location.href;
+      if (navigator.share) {
+        navigator.share({ title: 'How 2016 Are You?', text: shareText, url });
+      } else {
+        navigator.clipboard.writeText(shareText + '\n' + url)
+          .then(() => alert('Copied to clipboard!\n\n' + shareText))
+          .catch(() => alert(shareText));
+      }
+    }
+
+    function restart() {
+      current = 0;
+      totalPoints = 0;
+      shareText = "";
+      document.getElementById('result-section').style.display = 'none';
+      document.getElementById('quiz-section').style.display = 'block';
+      renderQuestion();
+    }
+
+    // Init
+    renderQuestion();
+  </script>
+</body>
+</html>

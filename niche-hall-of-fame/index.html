@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Niche Hall of Fame</title>
+  <meta property="og:title" content="Niche Hall of Fame">
+  <meta property="og:description" content="Induct yourself into the Hall for the weirdly specific thing you are unreasonably passionate about.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/niche-hall-of-fame/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <section id="intake">
+      <div class="seal">&#10070;</div>
+      <h1 class="hall-title">The Niche<br>Hall of Fame</h1>
+      <p class="preamble">Herein we enshrine the unreasonably passionate. Speak your specialty, however small, and the Committee shall rule.</p>
+      <form id="form" autocomplete="off">
+        <label for="passion">Declare your unreasonably specific passion</label>
+        <input id="passion" name="passion" type="text" maxlength="90" placeholder="ranking gas station coffee" required>
+        <button id="submit" type="submit">Petition the Committee</button>
+      </form>
+      <p id="error" class="error" aria-live="polite"></p>
+    </section>
+
+    <section id="loading" hidden>
+      <div class="seal spinning">&#10070;</div>
+      <p id="loadingMsg">convening the Committee...</p>
+    </section>
+
+    <section id="certificate" hidden>
+      <article class="cert" id="certCard">
+        <div class="cert-border">
+          <div class="cert-inner">
+            <p class="cert-kicker">By decree of the Committee on Minor Obsessions</p>
+            <h2 class="cert-name">Let it be known</h2>
+            <p class="cert-subject" id="subject">—</p>
+            <p class="cert-title-label">is formally inducted and shall bear the title</p>
+            <p class="cert-title" id="title">—</p>
+            <div class="cert-meta">
+              <div><span class="meta-label">Era of Reign</span><span class="meta-value" id="era">—</span></div>
+              <div><span class="meta-label">Patron Saint</span><span class="meta-value" id="patron">—</span></div>
+            </div>
+            <blockquote class="cert-speech">
+              <p id="speech">—</p>
+              <footer>— the Hall's emcee</footer>
+            </blockquote>
+            <div class="cert-rival">
+              <span class="meta-label">Today's fellow inductee</span>
+              <span class="meta-value" id="rival">—</span>
+            </div>
+            <div class="cert-seal">&#10070;</div>
+          </div>
+        </div>
+      </article>
+      <div id="share">
+        <button onclick="share()">Share your certificate</button>
+        <button id="againBtn" type="button" class="ghost">Induct another passion</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

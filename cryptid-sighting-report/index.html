@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptid Sighting Report</title>
+  <meta property="og:title" content="Cryptid Sighting Report">
+  <meta property="og:description" content="File an official Cryptid Field Classification Report with the Bureau of Anomalous Fauna. Describe your encounter in your own words. Receive your classification.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/cryptid-sighting-report/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Letterhead -->
+    <header id="letterhead">
+      <div class="agency-seal">
+        <div class="seal-ring">
+          <span class="seal-text-top">BUREAU OF ANOMALOUS FAUNA</span>
+          <span class="seal-center">&#9670;</span>
+          <span class="seal-text-bottom">EST. 1947 · CLASSIFIED</span>
+        </div>
+      </div>
+      <div class="agency-title">
+        <div class="agency-name">BUREAU OF ANOMALOUS FAUNA</div>
+        <div class="agency-sub">CRYPTID FIELD CLASSIFICATION DIVISION</div>
+        <div class="agency-sub2">Form BAF-7 · Witness Intake Report</div>
+      </div>
+    </header>
+
+    <!-- Pre-interaction state -->
+    <div id="intro-section">
+      <p class="intro-copy">Something has been sighted. Something that does not appear in any field guide published by this or any other agency.<br><br>This form exists for that reason.</p>
+      <p class="intro-sub">Describe your encounter in your own words. The Bureau will classify it. Do not discuss your sighting with others until the report is filed.</p>
+      <button id="begin-btn" onclick="beginForm()">BEGIN INTAKE</button>
+    </div>
+
+    <!-- Form -->
+    <form id="intake-form" style="display:none" onsubmit="submitForm(event)">
+      <div class="form-divider">SECTION I — WITNESS ACCOUNT</div>
+
+      <div class="field-group">
+        <label class="field-label" for="location">Q1. WHERE WERE YOU WHEN THE SIGHTING OCCURRED?</label>
+        <textarea id="location" required maxlength="300" placeholder="Describe the location — the place, the surroundings, what the environment felt like..."></textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="time-of-day">Q2. WHEN DID IT HAPPEN AND WHAT WERE THE CONDITIONS?</label>
+        <textarea id="time-of-day" required maxlength="300" placeholder="Time of day, weather, lighting, any unusual atmospheric conditions..."></textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="description">Q3. DESCRIBE THE ENTITY AS ACCURATELY AS POSSIBLE</label>
+        <textarea id="description" required maxlength="600" placeholder="What did it look like? How did it move? What did it do? What made it unlike anything you had seen before?"></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">FILE REPORT</button>
+      <span class="field-hint">The Bureau will classify your sighting based on your account. Be specific.</span>
+    </form>
+
+    <!-- Loading state -->
+    <div id="loading-section" style="display:none">
+      <div class="loading-stamp">PROCESSING</div>
+      <p class="loading-copy" id="loading-msg">cross-referencing witness account with restricted archives...</p>
+      <div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>
+    </div>
+
+    <!-- Report -->
+    <div id="report-section" style="display:none">
+      <div class="report-header">
+        <div class="stamp classified-stamp">CLASSIFIED</div>
+        <div class="report-title">CRYPTID FIELD CLASSIFICATION REPORT</div>
+        <div class="report-meta">
+          <span id="report-date"></span> &nbsp;·&nbsp; Case #<span id="report-case"></span>
+        </div>
+      </div>
+
+      <div class="report-body">
+        <div class="report-row">
+          <span class="report-field-label">SPECIES DESIGNATION</span>
+          <span class="report-field-value" id="species-name"></span>
+        </div>
+        <div class="report-row">
+          <span class="report-field-label">THREAT LEVEL</span>
+          <span class="report-field-value" id="threat-level"></span>
+        </div>
+        <div class="report-divider-thin"></div>
+
+        <div class="cryptid-illustration-wrap">
+          <div id="cryptid-img-container">
+            <div class="img-loading-placard" id="img-placeholder">
+              <span>generating field illustration...</span>
+            </div>
+            <img id="cryptid-img" src="" alt="Cryptid field illustration" style="display:none">
+          </div>
+          <div class="illustration-caption">FIELD ILLUSTRATION — BAF VISUAL ARCHIVES</div>
+        </div>
+
+        <div class="report-divider-thin"></div>
+
+        <div class="behavioral-section">
+          <div class="section-label">BEHAVIORAL ASSESSMENT &amp; FIELD NOTES</div>
+          <div id="behavioral-notes" class="behavioral-text"></div>
+        </div>
+
+        <div class="report-divider-thin"></div>
+
+        <div class="footer-row">
+          <div class="clearance-stamp" id="clearance-stamp"></div>
+          <div class="report-footer-text">This report is the sole property of the Bureau of Anomalous Fauna. Unauthorized disclosure is a Class III infraction under the Anomalous Entities Act of 1953.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div id="share" style="display:none">
+      <button onclick="fileAnother()">FILE ANOTHER REPORT</button>
+      <button onclick="shareReport()" class="share-btn">SHARE YOUR REPORT</button>
+    </div>
+  </div>
+</body>
+</html>

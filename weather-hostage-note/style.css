@@ -1,0 +1,443 @@
+/* Aesthetic: magazine-clipping ransom note / 1970s zine / risograph — off-white speckled paper, mismatched serif/sans letters glued from 6 source palettes, tape strips, shaky rotations */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(0,0,0,0.05), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(0,0,0,0.04), transparent 40%),
+    #e8e2d2;
+  min-height: 100vh;
+  color: #181818;
+  font-family: "Special Elite", "Courier New", monospace;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(0,0,0,0.12) 1px, transparent 1px),
+    radial-gradient(rgba(80,50,20,0.10) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+  opacity: 0.6;
+  z-index: 0;
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 12px 14px 40px;
+}
+
+.top-bar {
+  position: relative;
+  z-index: 1;
+  padding: 18px 16px 6px;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  font-family: "Archivo Black", "Arial Black", sans-serif;
+  font-size: clamp(26px, 7vw, 36px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: #111;
+  transform: rotate(-1.5deg);
+  display: inline-block;
+  background: #f4d94a;
+  padding: 6px 10px;
+  box-shadow: 2px 2px 0 #111;
+}
+
+.subtitle {
+  font-family: "Special Elite", monospace;
+  font-size: 13px;
+  margin: 4px 0 0;
+  color: #4a3a20;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- picker ---------- */
+
+.picker {
+  background: #fffdf4;
+  border: 2px solid #111;
+  box-shadow: 4px 4px 0 #111;
+  padding: 14px;
+  margin-top: 10px;
+}
+
+.picker-label {
+  display: block;
+  font-family: "Archivo Black", sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+
+#city-search {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  border: 1.5px solid #111;
+  background: #fff;
+  outline: none;
+}
+
+#city-search:focus {
+  background: #fff9d8;
+}
+
+.city-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px dashed #5a4a30;
+  background: repeating-linear-gradient(
+    to bottom,
+    #fffbea 0,
+    #fffbea 22px,
+    #f7f1d8 22px,
+    #f7f1d8 23px
+  );
+}
+
+.city-list li {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: "Special Elite", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  border-bottom: 1px dotted rgba(0,0,0,0.08);
+}
+
+.city-list li:hover,
+.city-list li.sel {
+  background: #f4d94a;
+  color: #111;
+}
+
+.city-list li .country {
+  color: #7a5c32;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.picker-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.picker-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #6e5a34;
+  font-style: italic;
+}
+
+.btn-primary, .btn-secondary {
+  font-family: "Archivo Black", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 12px 14px;
+  min-height: 44px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 2px solid #111;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.btn-primary {
+  background: #e8344e;
+  color: #fff9e0;
+  box-shadow: 3px 3px 0 #111;
+  flex: 1 1 auto;
+}
+.btn-primary:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #111; }
+.btn-primary:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #111; }
+.btn-primary:disabled {
+  background: #c9c0a6;
+  color: #6b5c3a;
+  cursor: not-allowed;
+  box-shadow: 2px 2px 0 #555;
+}
+
+.btn-secondary {
+  background: #fff9e0;
+  color: #111;
+  box-shadow: 3px 3px 0 #111;
+}
+.btn-secondary:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 #111; }
+.btn-secondary:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #111; }
+
+/* ---------- loader ---------- */
+
+.loader {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.loader-text {
+  font-family: "Special Elite", monospace;
+  font-size: 16px;
+  letter-spacing: 0.05em;
+  color: #222;
+}
+
+.dots span {
+  animation: blink 1s infinite;
+  display: inline-block;
+}
+.dots span:nth-child(2) { animation-delay: 0.2s; }
+.dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+  0%, 20% { opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+/* ---------- ransom note ---------- */
+
+.note-wrap {
+  margin-top: 14px;
+}
+
+.paper {
+  position: relative;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(120,90,40,0.06), transparent 50%),
+    radial-gradient(circle at 75% 85%, rgba(90,60,20,0.07), transparent 45%),
+    #f6eed4;
+  background-image:
+    radial-gradient(rgba(60,40,10,0.22) 1px, transparent 1px),
+    radial-gradient(rgba(120,80,30,0.18) 1px, transparent 1px),
+    linear-gradient(135deg, #f6eed4, #ece2bc);
+  background-size: 5px 5px, 11px 11px, 100% 100%;
+  background-position: 0 0, 2px 3px, 0 0;
+  padding: 22px 18px 28px;
+  border: 1px solid #baa87a;
+  box-shadow:
+    0 1px 0 rgba(0,0,0,0.05) inset,
+    4px 6px 0 rgba(60,40,10,0.25),
+    12px 14px 28px rgba(0,0,0,0.18);
+  min-height: 360px;
+  overflow: hidden;
+}
+
+.paper-error {
+  min-height: 180px;
+  padding: 18px;
+  font-family: "Special Elite", monospace;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.tape-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tape {
+  position: absolute;
+  background: rgba(255, 250, 180, 0.55);
+  border-left: 1px dashed rgba(120,100,40,0.25);
+  border-right: 1px dashed rgba(120,100,40,0.25);
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.12),
+    inset 0 0 0 1px rgba(255,255,255,0.25);
+  width: 74px;
+  height: 22px;
+}
+
+.note {
+  position: relative;
+  z-index: 1;
+  line-height: 1.9;
+  word-wrap: break-word;
+}
+
+.line {
+  margin: 0 0 8px;
+  display: block;
+}
+
+.line.demands-header {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.demand-line {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.letter {
+  display: inline-block;
+  margin: 0 0.5px;
+  padding: 1px 3px 2px;
+  line-height: 1;
+  user-select: none;
+  font-size: clamp(16px, 4.4vw, 22px);
+}
+
+/* 8 letter-source palettes */
+
+.p-1 { /* newspaper serif black on yellow */
+  font-family: "Abril Fatface", serif;
+  background: #f4d94a;
+  color: #111;
+  border-radius: 2px;
+}
+
+.p-2 { /* glossy magazine sans white on red */
+  font-family: "Archivo Black", sans-serif;
+  background: #d8273f;
+  color: #fff4db;
+  border-radius: 1px;
+}
+
+.p-3 { /* headline slab cream on navy */
+  font-family: "Bowlby One SC", "Archivo Black", sans-serif;
+  background: #18325a;
+  color: #f6e9c0;
+  border-radius: 3px;
+}
+
+.p-4 { /* tabloid thick ink black on pink */
+  font-family: "Rubik Mono One", sans-serif;
+  background: #f3a5c4;
+  color: #111;
+  border-radius: 2px;
+}
+
+.p-5 { /* typewriter mono brown on parchment */
+  font-family: "Special Elite", monospace;
+  background: #f0e4c0;
+  color: #4a2e10;
+  border: 1px solid rgba(74,46,16,0.2);
+}
+
+.p-6 { /* handwritten marker blue on lined paper */
+  font-family: "Rye", serif;
+  background:
+    repeating-linear-gradient(to bottom, #f2f6fa 0 6px, #d7e3ee 6px 7px),
+    #f2f6fa;
+  color: #1e3a7a;
+  border-radius: 2px;
+}
+
+.p-7 { /* bold bungee on mint */
+  font-family: "Bungee", sans-serif;
+  background: #a8e0c9;
+  color: #122e20;
+  border-radius: 2px;
+}
+
+.p-8 { /* gothic unifraktur on parchment orange */
+  font-family: "UnifrakturCook", serif;
+  background: #f3b56a;
+  color: #2a1400;
+  border-radius: 2px;
+}
+
+/* subtle torn-edge / slight shadow on every letter */
+.letter {
+  box-shadow:
+    1px 1px 0 rgba(0,0,0,0.12),
+    0 0 0 0.5px rgba(0,0,0,0.05);
+}
+
+.space {
+  display: inline-block;
+  width: 0.45em;
+}
+
+/* signed line inside the note */
+.signed {
+  display: block;
+  margin-top: 16px;
+  text-align: right;
+  font-family: "Special Elite", monospace;
+  font-size: 14px;
+  color: #3a2a0e;
+  letter-spacing: 0.1em;
+}
+
+/* DEMANDS header styling */
+.demands-tag {
+  display: inline-block;
+  background: #111;
+  color: #fff9e0;
+  font-family: "Archivo Black", sans-serif;
+  padding: 3px 8px;
+  letter-spacing: 0.15em;
+  font-size: 13px;
+  transform: rotate(-2deg);
+}
+
+/* share row */
+.share-row {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.footnote {
+  margin: 10px 0 0;
+  text-align: center;
+  font-family: "Special Elite", monospace;
+  font-size: 12px;
+  color: #5a4a30;
+}
+
+.atmos {
+  background: #111;
+  color: #fff9e0;
+  padding: 2px 6px;
+  letter-spacing: 0.15em;
+}
+
+.meta-line {
+  margin-top: 14px;
+  font-family: "Special Elite", monospace;
+  font-size: 11px;
+  color: #4a3a20;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  border-top: 1px dashed #7a5c32;
+  padding-top: 8px;
+}
+
+.error {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.error .btn-primary { margin-top: 12px; }
+
+/* small-screen tuning */
+@media (max-width: 420px) {
+  .letter { font-size: clamp(15px, 4.6vw, 20px); }
+  .paper { padding: 18px 12px 22px; min-height: 320px; }
+  .title { font-size: 24px; }
+}

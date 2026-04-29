@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kite String Physics</title>
+  <meta property="og:title" content="Kite String Physics">
+  <meta property="og:description" content="Fly a one-line kite on a live wind field. Pull loops, earn named tricks, stamp a flight log of your actual path.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/kite-string-physics/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="sky">
+    <canvas id="kite-canvas"></canvas>
+
+    <div id="hud">
+      <div id="wind-label">apr 19: —</div>
+      <div id="timer">60</div>
+    </div>
+
+    <div id="trick-toast"></div>
+
+    <div id="prestart">
+      <div class="prestart-inner">
+        <h1>Kite String Physics</h1>
+        <p class="tag">drag to steer the kite. the sky has opinions.</p>
+        <p class="howto">point the kite where you want. loop it for tricks. you have 60 seconds.</p>
+        <button id="start-btn">unreel the line</button>
+      </div>
+    </div>
+
+    <div id="flight-log" style="display:none">
+      <div class="card" id="card">
+        <div class="card-head">
+          <div class="card-title">flight log</div>
+          <div class="card-date" id="card-date"></div>
+        </div>
+        <div class="card-wind" id="card-wind"></div>
+        <svg id="card-path" viewBox="0 0 320 180" preserveAspectRatio="none"></svg>
+        <div class="card-tricks" id="card-tricks"></div>
+        <div class="card-meta" id="card-meta"></div>
+        <div class="card-sig">— flown from the reel, <span id="card-sig-slug">someone</span></div>
+      </div>
+      <div id="share" style="display:flex">
+        <button id="share-btn" onclick="share()">share this flight</button>
+        <button id="again-btn">fly again</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

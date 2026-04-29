@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dead Poets' Pen Pal</title>
+  <meta property="og:title" content="Dead Poets' Pen Pal">
+  <meta property="og:description" content="Give the archive your name. It consults the public record, confirms who it thinks you are, asks a few intimate questions, and sends you a handwritten letter from your epistolary twin across history.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/dead-poets-pen-pal/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=IM+Fell+English:ital@0;1&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div class="parchment-frame">
+    <header class="masthead">
+      <div class="seal" aria-hidden="true"></div>
+      <h1 class="title">Dead Poets'<br><em>Pen Pal</em></h1>
+      <p class="kicker">&mdash; a letter from history, addressed to you &mdash;</p>
+    </header>
+
+    <main id="main">
+      <!-- Intro screen -->
+      <section id="intro" class="screen">
+        <p class="lede">
+          Somewhere in the candle-smoke of the archives, a letter-writer has been waiting
+          on you. Give your full name — any public name will do. The archivist will
+          consult the public record, pull the drawer on <em>you</em> (not a definition, but
+          what the world has quietly kept on file), confirm we've drawn the right portrait,
+          ask a few intimate questions, and find your epistolary twin.
+        </p>
+        <p class="lede-aside">
+          <em>Public information only. If you're not on the record, the archive will tell you
+          so, and write from the name instead.</em>
+        </p>
+        <button id="begin" class="ink-button">Begin the correspondence</button>
+      </section>
+
+      <!-- Name screen -->
+      <section id="name-screen" class="screen" hidden>
+        <div class="progress">Your full name, please</div>
+        <label for="name-input" class="secret-label">
+          <em>Sign the register &mdash;</em><br>
+          full name as the world knows it. The archivist will try to place you
+          in the public record.
+        </label>
+        <input id="name-input" type="text" maxlength="80"
+          placeholder="Eleanor Whitfield" autocomplete="name" spellcheck="false" />
+        <label class="hint-label" for="name-hint-input">
+          <em>A hint, optional &mdash;</em> where you're from, your field,
+          or anything public that helps disambiguate.
+        </label>
+        <input id="name-hint-input" type="text" maxlength="120"
+          placeholder="e.g. the journalist in Dublin; the painter; the researcher at MIT" spellcheck="false" />
+        <button id="register-name" class="ink-button">Consult the archive</button>
+        <div id="name-error" class="err-msg" hidden></div>
+      </section>
+
+      <!-- Dossier screen (visible public-record lookup on the person) -->
+      <section id="dossier" class="screen" hidden>
+        <div class="progress">The archive's drawer on <span id="dossier-name"></span></div>
+
+        <div class="dossier-card">
+          <div class="dossier-stamp" aria-hidden="true" id="dossier-stamp">PUBLIC<br>RECORD</div>
+
+          <div class="dossier-row">
+            <div class="dossier-label" id="dossier-portrait-label">Best guess from public record</div>
+            <p id="dossier-portrait" class="dossier-text"></p>
+          </div>
+
+          <div class="dossier-row" id="dossier-notes-row">
+            <div class="dossier-label">On file</div>
+            <ul id="dossier-notes" class="dossier-list"></ul>
+          </div>
+
+          <div class="dossier-row" id="dossier-era-row">
+            <div class="dossier-label">Era &amp; feel</div>
+            <p id="dossier-era" class="dossier-text"></p>
+          </div>
+
+          <p id="dossier-ink" class="dossier-ink"></p>
+        </div>
+
+        <div class="confirm-row" id="confirm-row">
+          <p class="confirm-q">Is this you?</p>
+          <div class="confirm-btns">
+            <button id="confirm-yes" class="ink-button">That's me &mdash; continue</button>
+            <button id="confirm-no" class="ink-button-ghost">Not me &mdash; proceed from the name only</button>
+          </div>
+          <p class="confirm-note"><em>The archivist only works from public information. Private details are not looked up and not stored.</em></p>
+        </div>
+      </section>
+
+      <!-- Follow-ups screen -->
+      <section id="followups" class="screen" hidden>
+        <div class="progress" id="fu-progress">A few intimate queries</div>
+        <p class="writer-line" id="fu-preamble"></p>
+        <div id="fu-list"></div>
+        <button id="seal-envelope" class="ink-button">Seal the envelope</button>
+        <div id="fu-error" class="err-msg" hidden></div>
+      </section>
+
+      <!-- Loading screen -->
+      <section id="loading" class="screen" hidden>
+        <div class="quill" aria-hidden="true"></div>
+        <p id="loading-msg" class="loading-msg">Dipping the nib in iron-gall ink&hellip;</p>
+      </section>
+
+      <!-- Result screen -->
+      <section id="result" class="screen" hidden>
+        <div class="verdict">
+          <p class="verdict-label">Your epistolary twin is</p>
+          <h2 id="writer-name"></h2>
+          <p id="writer-line" class="writer-line"></p>
+        </div>
+
+        <article class="letter" id="letter-card">
+          <div class="letter-corner tl"></div>
+          <div class="letter-corner tr"></div>
+          <div class="letter-corner bl"></div>
+          <div class="letter-corner br"></div>
+          <div class="letter-salutation" id="letter-salutation"></div>
+          <div class="letter-body" id="letter-body"></div>
+          <div class="letter-signature" id="letter-signature"></div>
+        </article>
+
+        <aside id="result-dossier" class="result-dossier" hidden>
+          <div class="result-dossier-head">
+            <span class="result-dossier-pin" aria-hidden="true"></span>
+            <span class="result-dossier-title">From the archive's drawer</span>
+          </div>
+          <div id="result-dossier-body" class="result-dossier-body"></div>
+        </aside>
+
+        <div id="share" class="share-row" style="display:none">
+          <button onclick="share()" class="ink-button share-btn">Share your letter</button>
+          <button id="restart" class="ink-button-ghost">Write a new one</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <p>&mdash; postmarked in the quiet hours &mdash;</p>
+    </footer>
+  </div>
+</body>
+</html>

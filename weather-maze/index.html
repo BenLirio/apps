@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Maze</title>
+  <meta property="og:title" content="Weather Maze">
+  <meta property="og:description" content="Enter your city and today's weather seeds a unique procedural maze. Stormy days spawn twisting corridors. Sunny days open wide labyrinths. Solve it and share your time.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/weather-maze/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>WEATHER MAZE</h1>
+    <p class="tagline">your city's weather carves today's labyrinth</p>
+  </header>
+
+  <main>
+    <!-- Pre-interaction state -->
+    <section id="input-screen">
+      <p class="flavor-text">somewhere out there, a storm is building corridors.<br>enter your city to find out what it made for you.</p>
+      <div class="input-row">
+        <input type="text" id="city-input" placeholder="city name..." autocomplete="off" spellcheck="false" />
+        <button id="generate-btn" onclick="startMaze()">GENERATE</button>
+      </div>
+      <p id="error-msg" class="error-msg" style="display:none">that city isn't talking. check the name and try again.</p>
+    </section>
+
+    <!-- Loading state -->
+    <section id="loading-screen" style="display:none">
+      <div class="loading-spinner"></div>
+      <p id="loading-text" class="loading-text">reading the atmosphere over your city...</p>
+    </section>
+
+    <!-- Game screen -->
+    <section id="game-screen" style="display:none">
+      <div id="weather-banner" class="weather-banner"></div>
+      <div id="offline-banner" class="offline-banner" style="display:none">OFFLINE MODE — date-seeded maze</div>
+      <div id="stats-bar" class="stats-bar">
+        <span id="timer-display">00:00</span>
+        <span id="weather-label"></span>
+      </div>
+      <div id="canvas-container">
+        <canvas id="maze-canvas"></canvas>
+        <div id="touch-controls">
+          <button class="touch-btn" id="btn-up" aria-label="Up">▲</button>
+          <div class="touch-row">
+            <button class="touch-btn" id="btn-left" aria-label="Left">◄</button>
+            <button class="touch-btn" id="btn-down" aria-label="Down">▼</button>
+            <button class="touch-btn" id="btn-right" aria-label="Right">►</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Win screen -->
+    <section id="win-screen" style="display:none">
+      <div class="win-card">
+        <div class="win-header">MAZE SOLVED</div>
+        <div id="win-time" class="win-time"></div>
+        <div id="win-city" class="win-city"></div>
+        <div id="emoji-grid" class="emoji-grid"></div>
+        <div id="share" class="share-section">
+          <button class="share-btn" onclick="share()">BEAT MY TIME →</button>
+        </div>
+        <button class="play-again-btn" onclick="resetToStart()">NEW CITY</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

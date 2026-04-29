@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What MySpace Profile Were You?</title>
+  <meta property="og:title" content="What MySpace Profile Were You?">
+  <meta property="og:description" content="Enter your birth year, music taste, and vibe to generate your 2000s MySpace profile persona. Top 8, profile song, and all.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/what-myspace-profile-were-you/">
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    /* Aesthetic: Y2K MySpace nostalgia — tiled star backgrounds, hot pink and deep purple, Comic Sans energy, glitter text, marquee vibes */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #1a0030;
+      background-image:
+        radial-gradient(circle, #ff69b4 1px, transparent 1px),
+        radial-gradient(circle, #00ffff 1px, transparent 1px);
+      background-size: 40px 40px, 60px 60px;
+      background-position: 0 0, 20px 20px;
+      font-family: 'VT323', monospace;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .site-header {
+      text-align: center;
+      margin-bottom: 24px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .site-title {
+      font-family: 'Abril Fatface', serif;
+      font-size: 2rem;
+      color: #ff69b4;
+      text-shadow:
+        2px 2px 0 #00ffff,
+        4px 4px 0 #9400d3;
+      line-height: 1.1;
+    }
+
+    .site-subtitle {
+      font-size: 1.2rem;
+      color: #00ffff;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
+    .sparkle-row {
+      font-size: 1.4rem;
+      margin: 6px 0;
+      letter-spacing: 4px;
+    }
+
+    /* Form card */
+    .form-card {
+      background: rgba(80, 0, 100, 0.85);
+      border: 3px solid #ff69b4;
+      box-shadow: 0 0 20px #ff69b4, 0 0 40px #9400d3 inset;
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 0;
+    }
+
+    .form-card h2 {
+      font-family: 'Abril Fatface', serif;
+      color: #ff69b4;
+      font-size: 1.4rem;
+      margin-bottom: 18px;
+      text-align: center;
+      text-shadow: 1px 1px 0 #00ffff;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      color: #00ffff;
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .field select, .field input {
+      width: 100%;
+      background: #0d0020;
+      border: 2px solid #ff69b4;
+      color: #fff;
+      font-family: 'VT323', monospace;
+      font-size: 1.3rem;
+      padding: 10px 12px;
+      outline: none;
+      border-radius: 0;
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 44px;
+    }
+
+    .field select:focus, .field input:focus {
+      border-color: #00ffff;
+      box-shadow: 0 0 8px #00ffff;
+    }
+
+    .generate-btn {
+      width: 100%;
+      background: #ff69b4;
+      color: #1a0030;
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.5rem;
+      border: none;
+      padding: 14px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      min-height: 54px;
+      text-transform: uppercase;
+      box-shadow: 4px 4px 0 #9400d3;
+      transition: transform 0.05s;
+      margin-top: 8px;
+    }
+
+    .generate-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #9400d3;
+    }
+
+    .error-msg {
+      color: #ff0080;
+      font-size: 1.1rem;
+      text-align: center;
+      margin-top: 10px;
+      min-height: 22px;
+      display: none;
+    }
+
+    /* Loading overlay state */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 32px 20px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .loading-text {
+      font-size: 1.6rem;
+      color: #ff69b4;
+      animation: blink 0.8s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .loading-bar {
+      width: 100%;
+      height: 12px;
+      background: #0d0020;
+      border: 2px solid #ff69b4;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff69b4, #00ffff, #ff69b4);
+      background-size: 200% 100%;
+      animation: scanbar 1s linear infinite;
+      width: 60%;
+    }
+
+    @keyframes scanbar {
+      0% { background-position: 0% 0%; transform: translateX(-100%); }
+      100% { background-position: 200% 0%; transform: translateX(200%); }
+    }
+
+    /* Profile card result */
+    .profile-card {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      background: #1a0030;
+      border: 4px solid #ff69b4;
+      box-shadow: 0 0 30px #ff69b4, 0 0 60px #9400d3;
+      overflow: hidden;
+    }
+
+    .profile-header {
+      background: linear-gradient(135deg, #9400d3 0%, #ff1493 50%, #9400d3 100%);
+      padding: 16px 16px 0 16px;
+      text-align: center;
+      position: relative;
+    }
+
+    .profile-header::after {
+      content: "✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦";
+      display: block;
+      color: #ffe;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      padding: 6px 0;
+      opacity: 0.7;
+    }
+
+    .persona-name {
+      font-family: 'Abril Fatface', serif;
+      font-size: 2.2rem;
+      color: #fff;
+      text-shadow: 2px 2px 0 #1a0030, 4px 4px 0 #00ffff;
+      line-height: 1.1;
+    }
+
+    .online-badge {
+      display: inline-block;
+      background: #00cc00;
+      color: #fff;
+      font-size: 0.85rem;
+      padding: 2px 10px;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    .profile-avatar {
+      width: 90px;
+      height: 90px;
+      background: #0d0020;
+      border: 3px solid #ff69b4;
+      margin: 10px auto 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.2rem;
+      position: relative;
+    }
+
+    .profile-body {
+      padding: 14px 16px;
+    }
+
+    .section-label {
+      font-family: 'Abril Fatface', serif;
+      color: #ff69b4;
+      font-size: 1rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-bottom: 2px solid #9400d3;
+      padding-bottom: 2px;
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+
+    .about-me-text {
+      color: #e0d0ff;
+      font-size: 1.15rem;
+      line-height: 1.4;
+      padding: 8px;
+      background: rgba(148,0,211,0.2);
+      border-left: 3px solid #ff69b4;
+    }
+
+    .song-display {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0d0020;
+      border: 2px solid #9400d3;
+      padding: 10px 12px;
+    }
+
+    .song-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .song-details {
+      flex: 1;
+    }
+
+    .song-genre {
+      color: #ff69b4;
+      font-size: 1.3rem;
+    }
+
+    .song-vibe {
+      color: #aaa;
+      font-size: 1rem;
+    }
+
+    .top8-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .friend-slot {
+      background: #0d0020;
+      border: 2px solid #9400d3;
+      text-align: center;
+      padding: 6px 4px;
+    }
+
+    .friend-avatar {
+      font-size: 1.6rem;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .friend-name {
+      font-size: 0.85rem;
+      color: #e0d0ff;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .mood-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      color: #e0d0ff;
+      margin-top: 4px;
+    }
+
+    .mood-label {
+      color: #ff69b4;
+    }
+
+    .view-counter {
+      font-size: 1rem;
+      color: #888;
+      text-align: right;
+      padding: 6px 16px 12px;
+    }
+
+    .profile-footer {
+      background: #0d0020;
+      border-top: 2px solid #9400d3;
+      text-align: center;
+      padding: 10px;
+      font-size: 0.9rem;
+      color: #ff69b4;
+      letter-spacing: 2px;
+    }
+
+    /* Share section */
+    #share {
+      width: 100%;
+      max-width: 480px;
+      margin-top: 16px;
+      text-align: center;
+    }
+
+    .share-btn {
+      background: #00ffff;
+      color: #1a0030;
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.3rem;
+      border: none;
+      padding: 14px 28px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      box-shadow: 4px 4px 0 #ff69b4;
+      width: 100%;
+      min-height: 54px;
+    }
+
+    .share-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #ff69b4;
+    }
+
+    .restart-btn {
+      display: block;
+      width: 100%;
+      max-width: 480px;
+      margin-top: 12px;
+      background: transparent;
+      color: #888;
+      font-family: 'VT323', monospace;
+      font-size: 1rem;
+      border: 1px solid #444;
+      padding: 10px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+
+    .restart-btn:hover { color: #ff69b4; border-color: #ff69b4; }
+
+    /* Blinking cursor decoration */
+    .blink { animation: blink 1s step-end infinite; }
+
+    /* Marquee wrapper (CSS only) */
+    .marquee-wrap {
+      width: 100%;
+      max-width: 480px;
+      overflow: hidden;
+      background: #9400d3;
+      padding: 4px 0;
+      margin-bottom: 12px;
+      white-space: nowrap;
+    }
+
+    .marquee-inner {
+      display: inline-block;
+      animation: marquee 10s linear infinite;
+      font-size: 0.9rem;
+      color: #ffe;
+      letter-spacing: 2px;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(100vw); }
+      100% { transform: translateX(-100%); }
+    }
+  </style>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+
+  <div class="site-header">
+    <div class="sparkle-row">✨ ★ ✨ ★ ✨</div>
+    <h1 class="site-title">What MySpace Profile<br>Were You?</h1>
+    <p class="site-subtitle">ur internet past self is calling<span class="blink">_</span></p>
+    <div class="sparkle-row">✨ ★ ✨ ★ ✨</div>
+  </div>
+
+  <div class="marquee-wrap">
+    <span class="marquee-inner">💿 Top 8 Loading... ✦ Who Was Your Profile Song? ✦ ur About Me is showing ✦ 2003-2009 Never Forget ✦ 💜 MySpace Forever 💜 ✦ Add Me 2 Ur Top 8 ✦ 💿 Top 8 Loading... ✦ Who Was Your Profile Song? ✦</span>
+  </div>
+
+  <!-- Input Form -->
+  <div class="form-card" id="form-section">
+    <h2>~ fill out ur profile ~</h2>
+
+    <div class="field">
+      <label for="birth-year">ur birth year</label>
+      <input type="number" id="birth-year" placeholder="e.g. 1992" min="1975" max="2005">
+    </div>
+
+    <div class="field">
+      <label for="music">ur music taste</label>
+      <select id="music">
+        <option value="">-- pick ur vibe --</option>
+        <option value="emo">Emo / Screamo</option>
+        <option value="pop-punk">Pop Punk</option>
+        <option value="scene">Scene / Crunkcore</option>
+        <option value="indie">Indie / Hipster</option>
+        <option value="rap">Rap / Hip-Hop</option>
+        <option value="r&b">R&B / Neo-Soul</option>
+        <option value="pop">Pop / Top 40</option>
+        <option value="metal">Metal / Hardcore</option>
+        <option value="country">Country / Southern Rock</option>
+        <option value="electronica">Electronica / Dance</option>
+        <option value="alternative">Alternative / Grunge</option>
+        <option value="christian">Christian Rock</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="personality">ur #1 personality trait</label>
+      <select id="personality">
+        <option value="">-- describe urself --</option>
+        <option value="loner">loner / misunderstood</option>
+        <option value="social">social butterfly / everyone's friend</option>
+        <option value="dramatic">dramatic / always has tea</option>
+        <option value="artsy">artsy / deep</option>
+        <option value="sporty">sporty / competitive</option>
+        <option value="funny">class clown / ironic</option>
+        <option value="romantic">hopeless romantic</option>
+        <option value="spiritual">spiritual / wiccan phase</option>
+        <option value="gamer">gamer / nerd</option>
+        <option value="rebel">rebel / against the system</option>
+      </select>
+    </div>
+
+    <button class="generate-btn" onclick="generate()">Generate My Profile ✦</button>
+    <p class="error-msg" id="error-msg">omg u forgot something!! fill everything in bestie 💀</p>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" id="loading-state">
+    <div class="loading-text" id="loading-text">digging thru ur Photobucket...<span class="blink">|</span></div>
+    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  </div>
+
+  <!-- Result: Profile Card -->
+  <div class="profile-card" id="profile-card">
+
+    <div class="profile-header">
+      <div class="persona-name" id="result-persona-name"></div>
+      <div class="online-badge">● online now</div>
+      <div class="profile-avatar" id="result-avatar"></div>
+    </div>
+
+    <div class="profile-body">
+
+      <div class="mood-row">
+        <span class="mood-label">mood:</span>
+        <span id="result-mood"></span>
+      </div>
+
+      <div class="section-label">About Me</div>
+      <div class="about-me-text" id="result-about-me"></div>
+
+      <div class="section-label">Profile Song</div>
+      <div class="song-display">
+        <span class="song-icon">💿</span>
+        <div class="song-details">
+          <div class="song-genre" id="result-song-genre"></div>
+          <div class="song-vibe" id="result-song-vibe"></div>
+        </div>
+      </div>
+
+      <div class="section-label">Top 8</div>
+      <div class="top8-grid" id="result-top8"></div>
+
+    </div>
+
+    <div class="view-counter" id="result-views"></div>
+
+    <div class="profile-footer">
+      ~ myspace.com/ur2000spast ~
+    </div>
+  </div>
+
+  <!-- Share -->
+  <div id="share" style="display:none">
+    <button class="share-btn" onclick="share()">Share ur Profile ✦</button>
+  </div>
+  <button class="restart-btn" id="restart-btn" style="display:none" onclick="restart()">← start over</button>
+
+  <script>
+    // --- Seeded randomness ---
+    function hash(str) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    }
+
+    function seededRng(seed) {
+      let s = seed;
+      return function() {
+        s = (Math.imul(1664525, s) + 1013904223) | 0;
+        return (s >>> 0) / 4294967296;
+      };
+    }
+
+    function pick(arr, rng) {
+      return arr[Math.floor(rng() * arr.length)];
+    }
+
+    // --- Data ---
+
+    const PERSONAS = {
+      'emo+loner':       { name: 'xXDarkHeartXx', emoji: '🖤', views: '12,847' },
+      'emo+dramatic':    { name: 'CryingInTheRain93', emoji: '🌧️', views: '9,321' },
+      'emo+artsy':       { name: 'PaintedInBlack', emoji: '🎨', views: '7,443' },
+      'emo+romantic':    { name: 'Hopelessly_Devoted2Pain', emoji: '💔', views: '18,002' },
+      'emo+rebel':       { name: 'FallOutFan4Ever', emoji: '⚡', views: '23,110' },
+      'emo+spiritual':   { name: 'MidnightWitchVibes', emoji: '🌙', views: '5,882' },
+      'emo+social':      { name: 'TheSceneQueen', emoji: '👑', views: '31,557' },
+      'emo+funny':       { name: 'SarcasticSidekick', emoji: '😈', views: '14,209' },
+      'emo+sporty':      { name: 'AngryAthlete666', emoji: '🏃', views: '6,771' },
+      'emo+gamer':       { name: 'GameOverMyHeart', emoji: '🎮', views: '8,990' },
+
+      'pop-punk+loner':     { name: 'AloneInThePit', emoji: '🤘', views: '10,441' },
+      'pop-punk+social':    { name: 'EveryoneKnowsMe', emoji: '🎉', views: '44,882' },
+      'pop-punk+dramatic':  { name: 'MyChemicalDrama', emoji: '💥', views: '22,003' },
+      'pop-punk+rebel':     { name: 'AntiHomeroomHero', emoji: '✊', views: '17,766' },
+      'pop-punk+romantic':  { name: 'PunkInLuv', emoji: '💚', views: '9,008' },
+      'pop-punk+funny':     { name: 'BracesMoshPit', emoji: '😬', views: '13,555' },
+      'pop-punk+artsy':     { name: 'ZineKidSupreme', emoji: '📰', views: '5,341' },
+      'pop-punk+sporty':    { name: 'SkateOrCroak', emoji: '🛹', views: '19,884' },
+      'pop-punk+spiritual': { name: 'GodHatesMyBand', emoji: '✝️', views: '7,210' },
+      'pop-punk+gamer':     { name: 'LevelUpThenDie', emoji: '🕹️', views: '8,113' },
+
+      'scene+loner':       { name: 'NeonHeartBleed', emoji: '🌈', views: '6,667' },
+      'scene+social':      { name: 'RainbowRaverQueen', emoji: '✨', views: '55,123' },
+      'scene+dramatic':    { name: 'CrunkCoreDiva', emoji: '🦄', views: '33,441' },
+      'scene+artsy':       { name: 'TutuAndTeardropz', emoji: '🎀', views: '14,009' },
+      'scene+funny':       { name: 'LOLzKidSupreme', emoji: '🤪', views: '28,773' },
+      'scene+rebel':       { name: 'RuleBreaker4Life', emoji: '⚡', views: '11,882' },
+      'scene+romantic':    { name: 'FallinInNeon', emoji: '💜', views: '20,334' },
+      'scene+sporty':      { name: 'CheerleadingBanshee', emoji: '📣', views: '9,005' },
+      'scene+spiritual':   { name: 'WitchySceneKid', emoji: '🔮', views: '7,654' },
+      'scene+gamer':       { name: 'GamingAndGlitter', emoji: '🎮', views: '12,002' },
+
+      'indie+loner':      { name: 'WristbandCollector', emoji: '🎵', views: '4,521' },
+      'indie+artsy':      { name: 'FixieAndFilm', emoji: '📷', views: '8,002' },
+      'indie+dramatic':   { name: 'TragiclyUnheard', emoji: '🌿', views: '6,774' },
+      'indie+funny':      { name: 'WrySmirkGuy', emoji: '😏', views: '5,009' },
+      'indie+romantic':   { name: 'CoffeeShopCrush', emoji: '☕', views: '11,337' },
+      'indie+social':     { name: 'LocalSceneVet', emoji: '🎸', views: '17,448' },
+      'indie+rebel':      { name: 'AntiMainstream4Eva', emoji: '🚫', views: '3,881' },
+      'indie+spiritual':  { name: 'TaoOfThrift', emoji: '🌱', views: '2,990' },
+      'indie+sporty':     { name: 'CriticalMassRider', emoji: '🚲', views: '4,112' },
+      'indie+gamer':      { name: 'NintendoDSHipster', emoji: '👾', views: '6,330' },
+
+      'rap+loner':       { name: 'SoloOnTheBlock', emoji: '🎤', views: '14,002' },
+      'rap+social':      { name: 'ThrowingParties247', emoji: '🎊', views: '62,009' },
+      'rap+dramatic':    { name: 'DramaCryptKing', emoji: '👑', views: '21,554' },
+      'rap+artsy':       { name: 'GraffitiAndBeats', emoji: '🎨', views: '9,771' },
+      'rap+funny':       { name: 'ClownPrinceOfRap', emoji: '🤡', views: '33,882' },
+      'rap+rebel':       { name: 'FTheSystem08', emoji: '✊', views: '18,441' },
+      'rap+romantic':    { name: 'SmoothCriminalLuv', emoji: '💋', views: '25,003' },
+      'rap+sporty':      { name: 'HustleAndBall', emoji: '🏀', views: '44,117' },
+      'rap+spiritual':   { name: 'GodBodyKnowledge', emoji: '🌟', views: '7,993' },
+      'rap+gamer':       { name: 'MLGRapGod2006', emoji: '🕹️', views: '11,228' },
+
+      'r&b+loner':      { name: 'SoulfulAndAlone', emoji: '🎶', views: '8,112' },
+      'r&b+social':     { name: 'EveryoneLovesMe', emoji: '💕', views: '39,884' },
+      'r&b+dramatic':   { name: 'NeosoulNightmare', emoji: '🌊', views: '14,552' },
+      'r&b+artsy':      { name: 'CanvasSoulChild', emoji: '🎨', views: '5,993' },
+      'r&b+romantic':   { name: 'ForeverYourBoo', emoji: '💞', views: '28,007' },
+      'r&b+funny':      { name: 'LaybackLaughtrack', emoji: '😂', views: '17,665' },
+      'r&b+rebel':      { name: 'SmoothRevolt', emoji: '🔥', views: '9,334' },
+      'r&b+sporty':     { name: 'FieldDayDiva', emoji: '🌟', views: '12,009' },
+      'r&b+spiritual':  { name: 'ChurchSoloist4Ever', emoji: '✝️', views: '6,441' },
+      'r&b+gamer':      { name: 'DDRChampion', emoji: '💿', views: '7,882' },
+
+      'pop+loner':      { name: 'SecretPopFan', emoji: '🎀', views: '5,223' },
+      'pop+social':     { name: 'EveryonesGirlNextDoor', emoji: '🌸', views: '71,004' },
+      'pop+dramatic':   { name: 'BritneyStanAccount', emoji: '💔', views: '44,118' },
+      'pop+artsy':      { name: 'CollageAndCatchy', emoji: '✂️', views: '8,779' },
+      'pop+romantic':   { name: 'HopelesslyTaylorish', emoji: '🦋', views: '36,991' },
+      'pop+funny':      { name: 'SNLAudienceOfOne', emoji: '😄', views: '22,445' },
+      'pop+rebel':      { name: 'MainstreamAntiHero', emoji: '⚠️', views: '14,332' },
+      'pop+sporty':     { name: 'PomPomAndPerfect', emoji: '📣', views: '29,003' },
+      'pop+spiritual':  { name: 'GodAndGossip', emoji: '🙏', views: '10,221' },
+      'pop+gamer':      { name: 'HannahMontanaTrophy', emoji: '🏆', views: '9,114' },
+
+      'metal+loner':     { name: 'SolitudeShredder', emoji: '🤘', views: '7,334' },
+      'metal+social':    { name: '1000FriendsPitBoss', emoji: '🤘', views: '19,112' },
+      'metal+dramatic':  { name: '5AlarmMeltdown', emoji: '🔥', views: '11,003' },
+      'metal+artsy':     { name: 'SkullandCanvas', emoji: '💀', views: '6,887' },
+      'metal+funny':     { name: 'BrutallyHilarious', emoji: '😂', views: '13,002' },
+      'metal+rebel':     { name: 'DieHardDissident', emoji: '✊', views: '22,009' },
+      'metal+romantic':  { name: 'GothHeartbrkr', emoji: '🖤', views: '8,774' },
+      'metal+sporty':    { name: 'Deathgrip4x4', emoji: '🏋️', views: '5,009' },
+      'metal+spiritual': { name: 'BaptizedInBlast', emoji: '⚔️', views: '4,882' },
+      'metal+gamer':     { name: 'HaloAndHatecore', emoji: '🎮', views: '12,334' },
+
+      'country+loner':     { name: 'PorchSitterPro', emoji: '🤠', views: '4,112' },
+      'country+social':    { name: 'RodeoQueenBff', emoji: '🐴', views: '28,007' },
+      'country+dramatic':  { name: 'DirtRoadHeartbreak', emoji: '💔', views: '9,881' },
+      'country+artsy':     { name: 'BarnwoodArtist', emoji: '🎨', views: '3,553' },
+      'country+romantic':  { name: 'TailgateLoveNote', emoji: '💌', views: '14,009' },
+      'country+funny':     { name: 'MudbogComedian', emoji: '😂', views: '11,334' },
+      'country+rebel':     { name: 'OutlawCowpunk', emoji: '🚬', views: '7,002' },
+      'country+sporty':    { name: 'RopingChamp05', emoji: '🏅', views: '5,774' },
+      'country+spiritual': { name: 'GodAndGarth', emoji: '🙏', views: '8,441' },
+      'country+gamer':     { name: 'FarmGamerHybrid', emoji: '🌽', views: '2,993' },
+
+      'electronica+loner':     { name: 'AloneOnTheDancefloor', emoji: '🎧', views: '7,882' },
+      'electronica+social':    { name: 'RaveOrganizer2007', emoji: '🎉', views: '41,009' },
+      'electronica+dramatic':  { name: '4AMEmotionalDrop', emoji: '💧', views: '13,447' },
+      'electronica+artsy':     { name: 'GlitchArtCore', emoji: '🌀', views: '6,002' },
+      'electronica+funny':     { name: 'IronyOnTheDeck', emoji: '😎', views: '9,774' },
+      'electronica+rebel':     { name: 'UndergroundEDM', emoji: '⚡', views: '11,339' },
+      'electronica+romantic':  { name: 'FeelingLoveinBeats', emoji: '💜', views: '18,003' },
+      'electronica+sporty':    { name: 'RunnersHighDJ', emoji: '🏃', views: '7,112' },
+      'electronica+spiritual': { name: 'PsychedelicSoul', emoji: '🔮', views: '5,334' },
+      'electronica+gamer':     { name: 'LanPartyDJ', emoji: '🎮', views: '14,009' },
+
+      'alternative+loner':     { name: 'NirvanaWallpaper', emoji: '🌧️', views: '9,334' },
+      'alternative+social':    { name: 'ShowGoer2004', emoji: '🎸', views: '22,007' },
+      'alternative+dramatic':  { name: 'CobainTears', emoji: '💔', views: '14,003' },
+      'alternative+artsy':     { name: 'SilkscreenAndSorrow', emoji: '🎨', views: '5,881' },
+      'alternative+funny':     { name: 'WeirdAlFan4Ever', emoji: '😂', views: '8,003' },
+      'alternative+rebel':     { name: 'PunkNotDead2006', emoji: '✊', views: '16,009' },
+      'alternative+romantic':  { name: 'MixedTapeRomantic', emoji: '💌', views: '13,441' },
+      'alternative+sporty':    { name: 'SkaAndSoccer', emoji: '⚽', views: '6,992' },
+      'alternative+spiritual': { name: 'ZenAndZeppelin', emoji: '🌿', views: '4,002' },
+      'alternative+gamer':     { name: 'GeekRockDuality', emoji: '🎮', views: '7,334' },
+
+      'christian+loner':     { name: 'QuietlyDevoted', emoji: '✝️', views: '3,441' },
+      'christian+social':    { name: 'YouthGroupSocialChair', emoji: '🙌', views: '19,002' },
+      'christian+dramatic':  { name: 'WeptAtAltar', emoji: '😭', views: '8,112' },
+      'christian+artsy':     { name: 'FaithAndPapercraft', emoji: '✂️', views: '4,002' },
+      'christian+funny':     { name: 'ChurchJokeSpreader', emoji: '😄', views: '7,009' },
+      'christian+rebel':     { name: 'JesusAndJeepcore', emoji: '✝️', views: '5,334' },
+      'christian+romantic':  { name: 'CourthshipNotDating', emoji: '💍', views: '11,002' },
+      'christian+sporty':    { name: 'FCA_Captain', emoji: '🏈', views: '14,882' },
+      'christian+spiritual': { name: 'PurePurityRing', emoji: '💍', views: '6,007' },
+      'christian+gamer':     { name: 'VeggieTalesGamer', emoji: '🎮', views: '3,778' },
+    };
+
+    const DEFAULT_PERSONA = { name: 'CrypticInternet Kid', emoji: '🌐', views: '4,200' };
+
+    const ABOUT_ME = {
+      loner: [
+        "ur probably not gonna get me. that's fine. i'm used to it.\ni like music more than i like most people. my cat agrees.",
+        "some people have 500 friends on here. i have 12 and they ACTUALLY KNOW ME. quality > quantity always.",
+        "if u found this page ur either stalking me (hi) or lost. either way. stay a while i guess.",
+      ],
+      social: [
+        "omg i luv EVERYONE!! if u add me i will 100% add u back!! my top 8 changes like every week no offense to anyone lol.",
+        "my phone is always on. always. text me. or myspace me. or both. i'm literally everywhere all the time.",
+        "i've met more ppl this summer than i have in my entire life and i wouldn't change a single thing. u know who u r 💕",
+      ],
+      dramatic: [
+        "this week has been ALOT. i can't even get into it on here but some ppl rly showed their true colors and i'm DONE.",
+        "i cried twice today and it wasn't even about anything serious which is honestly so on brand for me rn.",
+        "if ur name starts with a J and u know what u did... yeah. don't bother commenting.",
+      ],
+      artsy: [
+        "i draw. i photograph. i write poetry that no one will ever read bc it's too personal and also probably bad.",
+        "i'm working on a zine abt the feeling u get at 2am when everything is quiet and ur brain won't shut up. it's going great.",
+        "currently: listening to the same song on repeat, ignoring my homework, sketching something that might be a bird or a feeling.",
+      ],
+      sporty: [
+        "SEASON STARTS IN 3 WEEKS. we r so gonna win state this year i can feel it. our team is built different fr.",
+        "practice every day. two-a-days. coach is gonna run us into the ground and i love it. this is literally my whole identity.",
+        "off-season me and in-season me are two different people and in-season me doesn't have time for drama. just reps.",
+      ],
+      funny: [
+        "my hobbies include: making people spit their drink, quoting The Office wrong on purpose, and disappointing my parents.",
+        "if i ever seem serious it's because i'm about to say something even more ridiculous. just wait for it.",
+        "i failed my driving test bc i laughed during the parallel park. i regret nothing. the instructor was less chill.",
+      ],
+      romantic: [
+        "i believe in mix CDs, handwritten notes, and long drives with no destination. sue me i'm a hopeless case.",
+        "i have a whole playlist for a person i haven't even met yet. is that weird? that might be weird.",
+        "currently re-reading the same part of a book where they almost kiss for the 7th time. send help. or flowers.",
+      ],
+      spiritual: [
+        "mercury is in retrograde and my whole week makes sense now. also i think my room is haunted but like. respectfully.",
+        "i read tarot for friends. i light candles when i'm anxious. my mom thinks i'm going through 'a phase'. blessed be.",
+        "energy doesn't lie. i knew something was off and guess what. i was right. i'm always right. the universe backs me.",
+      ],
+      gamer: [
+        "i will challenge u to any game and probably win. don't test me. i have gamertag receipts.",
+        "my away message is always a quote from a game and no one ever asks what it's from and that's honestly fine with me.",
+        "LAN party at my place friday. BYOC. snacks provided. don't bring mountain dew i already have 4 cases.",
+      ],
+      rebel: [
+        "i don't follow rules i didn't help make. that includes ur little dress code, mr. henderson.",
+        "they told me to take the band shirt off for picture day. i did not take the band shirt off. worth it.",
+        "i have strong opinions about everything and i will share them unprompted. u either love it or u don't add me.",
+      ],
+    };
+
+    const SONGS = {
+      emo:          { genre: "Screamo / Post-Hardcore", song: "My Chemical Romance — Helena", vibe: "plays on loop. always. without apology." },
+      'pop-punk':   { genre: "Pop Punk", song: "Paramore — Misery Business", vibe: "was definitely ur AIM away message lyric." },
+      scene:        { genre: "Crunkcore / Electronicore", song: "Brokencyde — Freaxxx", vibe: "u had this at full volume. ur neighbors hate you." },
+      indie:        { genre: "Indie Folk / Lo-Fi", song: "Bright Eyes — Lua", vibe: "burned onto a CD with a sharpie title." },
+      rap:          { genre: "Southern Hip-Hop / Snap", song: "Lil Wayne — A Milli", vibe: "u rapped every word perfectly in ur head." },
+      'r&b':        { genre: "Neo-Soul / R&B", song: "Beyoncé — Irreplaceable", vibe: "ur going-out song. and ur driving-home song." },
+      pop:          { genre: "Bubblegum Pop", song: "Rihanna — Umbrella", vibe: "u knew every single word before anyone else did." },
+      metal:        { genre: "Metalcore / Deathcore", song: "Bring Me The Horizon — Suicide Season", vibe: "ur ringtone. ur mom did not approve." },
+      country:      { genre: "Country / Alt-Country", song: "Taylor Swift — Tim McGraw", vibe: "this was ur slow-dance dream song. it still is." },
+      electronica:  { genre: "Progressive Trance / Electro", song: "Daft Punk — Harder Better Faster Stronger", vibe: "ur profile song doubles as ur workout anthem." },
+      alternative:  { genre: "Alternative / Indie Rock", song: "The Killers — Mr. Brightside", vibe: "this is playing in ur head right now. always." },
+      christian:    { genre: "Christian Rock / Worship", song: "Relient K — Be My Escape", vibe: "church camp approved. also genuinely a banger." },
+    };
+
+    const TOP8_POOLS = {
+      emo: [
+        { name: "The Misfit", emoji: "🖤" }, { name: "xX_DepressedPoet_Xx", emoji: "📝" },
+        { name: "Band Tee Bestie", emoji: "🎸" }, { name: "The One Who Gets It", emoji: "💙" },
+        { name: "Crying Buddy", emoji: "😭" }, { name: "Concert Partner", emoji: "🎤" },
+        { name: "Fellow Insomniac", emoji: "🌙" }, { name: "RP Soulmate", emoji: "⚡" },
+        { name: "The Aesthetic Twin", emoji: "🎨" }, { name: "Secret-Keeper", emoji: "🔒" },
+      ],
+      'pop-punk': [
+        { name: "The Drummer", emoji: "🥁" }, { name: "Merch Table BFF", emoji: "👕" },
+        { name: "Van Passenger 1", emoji: "🚐" }, { name: "Pit Crew Bestie", emoji: "✊" },
+        { name: "Garage Band Groupie", emoji: "🎵" }, { name: "Hook-Line-Sinker", emoji: "🎣" },
+        { name: "Anti-Prom Date", emoji: "🚫" }, { name: "The Bassist Gf", emoji: "🎸" },
+        { name: "All-Ages Ally", emoji: "🎟️" }, { name: "Couch-Surfer #4", emoji: "🛋️" },
+      ],
+      scene: [
+        { name: "RainbowHairTwin", emoji: "🌈" }, { name: "Photobooth Bestie", emoji: "📸" },
+        { name: "GlitterBomb BFF", emoji: "✨" }, { name: "Warped Tour Crew", emoji: "⚡" },
+        { name: "Tutu Soulmate", emoji: "🎀" }, { name: "MySpace Top 1", emoji: "👑" },
+        { name: "The Photog", emoji: "📷" }, { name: "Mall Hangout Fam", emoji: "🛍️" },
+        { name: "Bandana Twinning", emoji: "💜" }, { name: "Comment Queen", emoji: "💬" },
+      ],
+      indie: [
+        { name: "Record Store BFF", emoji: "💿" }, { name: "Fixed-Gear Friend", emoji: "🚲" },
+        { name: "Coffee Shop Regular", emoji: "☕" }, { name: "Zine Collaborator", emoji: "📰" },
+        { name: "Show-Go Partner", emoji: "🎟️" }, { name: "The Film Dev Pal", emoji: "📷" },
+        { name: "Secret Band Homie", emoji: "🤫" }, { name: "Thrift Twin", emoji: "♻️" },
+        { name: "Rooftop Talker", emoji: "🌃" }, { name: "Pretentious Endearingly", emoji: "🎵" },
+      ],
+      rap: [
+        { name: "Studio Session Ride", emoji: "🎤" }, { name: "Hype Man 4Life", emoji: "🔊" },
+        { name: "Freestyle Partner", emoji: "🎵" }, { name: "Block Rep", emoji: "🏙️" },
+        { name: "The Plug", emoji: "🔌" }, { name: "Ride-or-Die", emoji: "🚗" },
+        { name: "Label Dreams Crew", emoji: "💿" }, { name: "Trap Kingpin Jr.", emoji: "👑" },
+        { name: "Crib Hangout King", emoji: "🏠" }, { name: "Feature Verse Bro", emoji: "🎙️" },
+      ],
+      'r&b': [
+        { name: "Singing Shower Duet", emoji: "🎶" }, { name: "Slow Jam Bestie", emoji: "🕯️" },
+        { name: "Club Bathroom BFF", emoji: "💄" }, { name: "Secret Admirer Crew", emoji: "💌" },
+        { name: "Destiny's Sidechild", emoji: "✨" }, { name: "Late Night Texter", emoji: "📱" },
+        { name: "NSYNC Debater", emoji: "💬" }, { name: "Cardi's Understudy", emoji: "💅" },
+        { name: "The Harmonizer", emoji: "🎵" }, { name: "Video Choreographer", emoji: "💃" },
+      ],
+      pop: [
+        { name: "Sleepover BFF", emoji: "🌸" }, { name: "Disney Channel Fan", emoji: "⭐" },
+        { name: "Lip Gloss Twin", emoji: "💋" }, { name: "The Accessory Bff", emoji: "💍" },
+        { name: "Mall Speed-Dial", emoji: "📱" }, { name: "Note-Passer Partner", emoji: "📝" },
+        { name: "Gossip Vault", emoji: "🔐" }, { name: "Matching Hoodie Twin", emoji: "👯" },
+        { name: "Squad Photographer", emoji: "📸" }, { name: "The Crush's Friend", emoji: "😬" },
+      ],
+      metal: [
+        { name: "Wall-Of-Death Wingman", emoji: "💀" }, { name: "Circle Pit Buddy", emoji: "🤘" },
+        { name: "Band Shirt Critic", emoji: "👕" }, { name: "Headbang Partner", emoji: "🤘" },
+        { name: "Merch Snob Friend", emoji: "🛍️" }, { name: "Drum Trigger Bro", emoji: "🥁" },
+        { name: "7-String Convert", emoji: "🎸" }, { name: "The Breakdown Caller", emoji: "📣" },
+        { name: "Sticker Swap Crew", emoji: "🪄" }, { name: "Van Sleeper #2", emoji: "🚐" },
+      ],
+      country: [
+        { name: "Tailgate Ride-or-Die", emoji: "🚗" }, { name: "Two-Step Partner", emoji: "👢" },
+        { name: "Truck Bed BFF", emoji: "🌾" }, { name: "Bonfire Crew #1", emoji: "🔥" },
+        { name: "4-H Buddy", emoji: "🐄" }, { name: "Sweet Tea Bestie", emoji: "🍵" },
+        { name: "Church Youth Co-Lead", emoji: "✝️" }, { name: "Rodeo Rival Friend", emoji: "🤠" },
+        { name: "Levi's Twin", emoji: "👖" }, { name: "Dirt Road Gossip", emoji: "🌻" },
+      ],
+      electronica: [
+        { name: "Rave Carpool BFF", emoji: "🎧" }, { name: "The Glowstick Crew", emoji: "✨" },
+        { name: "Soundcloud Homie", emoji: "🎵" }, { name: "Drop-Counter Twin", emoji: "⚡" },
+        { name: "Bassline Decoder", emoji: "🎚️" }, { name: "Sneaker Dance Partner", emoji: "👟" },
+        { name: "Set List Memorizer", emoji: "📋" }, { name: "After-Party VIP", emoji: "🌟" },
+        { name: "Synth Nerd Crew", emoji: "🎹" }, { name: "LAN Afterparty Pal", emoji: "💻" },
+      ],
+      alternative: [
+        { name: "90s Mixtape BFF", emoji: "📼" }, { name: "Flannel Twinsie", emoji: "🎸" },
+        { name: "Show-Up-Late Crew", emoji: "🕐" }, { name: "B-Side Evangelizer", emoji: "💿" },
+        { name: "Basement Show Vet", emoji: "🎟️" }, { name: "Used CD Store Twin", emoji: "💰" },
+        { name: "Kurt Cobain Arguer", emoji: "🤔" }, { name: "Detached Friend", emoji: "😑" },
+        { name: "Vinyl Gatekeeper", emoji: "📀" }, { name: "Ironic T-shirt Fan", emoji: "👕" },
+      ],
+      christian: [
+        { name: "Accountability Partner", emoji: "🙏" }, { name: "VBS Co-Leader", emoji: "✝️" },
+        { name: "Youth Group Bestie", emoji: "🏕️" }, { name: "Purity Ring Pal", emoji: "💍" },
+        { name: "Worship Band Member", emoji: "🎸" }, { name: "Bible Study Crush", emoji: "📖" },
+        { name: "Chaperone's Fav", emoji: "😊" }, { name: "WWJD Twin", emoji: "❓" },
+        { name: "Bake Sale Captain", emoji: "🧁" }, { name: "Mission Trip Homie", emoji: "✈️" },
+      ],
+    };
+
+    const MOODS = [
+      "💀 deathcore and denial",
+      "💕 obsessed with someone (u know who u r)",
+      "🎶 if this song was a person id marry it",
+      "😤 don't ask me how I'm doing",
+      "✨ literally glowing rn idk why",
+      "🌧️ watching rain on the window for the 4th hour",
+      "🔥 unstoppable. seriously. try me.",
+      "🤡 clown behavior but like, intentionally",
+      "🍕 carbs and chaos",
+      "🌙 up way too late, no regrets",
+    ];
+
+    const LOADING_MESSAGES = [
+      "digging thru ur Photobucket...",
+      "scanning ur Limewire downloads...",
+      "loading ur top 8 drama...",
+      "parsing ur emo phase...",
+      "checking ur away message history...",
+      "recovering ur 2007 selfies...",
+    ];
+
+    // --- Generate function ---
+    function generate() {
+      const birthYear = document.getElementById('birth-year').value.trim();
+      const music = document.getElementById('music').value;
+      const personality = document.getElementById('personality').value;
+      const errEl = document.getElementById('error-msg');
+
+      if (!birthYear || !music || !personality) {
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+
+      // Show loading
+      const loadingMessages = LOADING_MESSAGES;
+      const seed = hash(birthYear + music + personality);
+      const rng = seededRng(seed);
+
+      const msgEl = document.getElementById('loading-text');
+      msgEl.textContent = loadingMessages[seed % loadingMessages.length] + ' ';
+      const cursor = document.createElement('span');
+      cursor.className = 'blink';
+      cursor.textContent = '|';
+      msgEl.appendChild(cursor);
+
+      document.getElementById('form-section').style.display = 'none';
+      document.getElementById('loading-state').style.display = 'block';
+
+      setTimeout(() => {
+        buildResult(birthYear, music, personality, seed, rng);
+      }, 900);
+    }
+
+    function buildResult(birthYear, music, personality, seed, rng) {
+      // Look up persona by music+personality, fall back to default
+      const key = music + '+' + personality;
+      const persona = PERSONAS[key] || DEFAULT_PERSONA;
+
+      // About me
+      const aboutPool = ABOUT_ME[personality] || ABOUT_ME['loner'];
+      const aboutMe = aboutPool[seed % aboutPool.length];
+
+      // Song
+      const song = SONGS[music] || SONGS['alternative'];
+
+      // Mood
+      const mood = MOODS[seed % MOODS.length];
+
+      // Top 8: pick 8 from the pool for this music genre
+      const top8Pool = TOP8_POOLS[music] || TOP8_POOLS['alternative'];
+      const shuffled = [...top8Pool];
+      // Deterministic shuffle via seeded rng
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const top8 = shuffled.slice(0, 8);
+
+      // View count: use the persona's view count + birth year modifier
+      const viewCount = persona.views;
+
+      // Populate DOM
+      document.getElementById('result-persona-name').textContent = persona.name;
+      document.getElementById('result-avatar').textContent = persona.emoji;
+      document.getElementById('result-mood').textContent = mood;
+      document.getElementById('result-about-me').textContent = aboutMe;
+      document.getElementById('result-song-genre').textContent = song.genre;
+      document.getElementById('result-song-vibe').textContent = song.song + ' · ' + song.vibe;
+      document.getElementById('result-views').textContent = viewCount + ' profile views';
+
+      const top8El = document.getElementById('result-top8');
+      top8El.innerHTML = '';
+      top8.forEach(friend => {
+        const slot = document.createElement('div');
+        slot.className = 'friend-slot';
+        slot.innerHTML = `<span class="friend-avatar">${friend.emoji}</span><div class="friend-name">${friend.name}</div>`;
+        top8El.appendChild(slot);
+      });
+
+      // Show result
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('profile-card').style.display = 'block';
+      document.getElementById('share').style.display = 'block';
+      document.getElementById('restart-btn').style.display = 'block';
+    }
+
+    function restart() {
+      document.getElementById('profile-card').style.display = 'none';
+      document.getElementById('share').style.display = 'none';
+      document.getElementById('restart-btn').style.display = 'none';
+      document.getElementById('form-section').style.display = 'block';
+    }
+
+    function share() {
+      if (navigator.share) {
+        navigator.share({ title: "What MySpace Profile Were You?", url: location.href });
+      } else {
+        navigator.clipboard.writeText(location.href)
+          .then(() => alert('link copied! send it to ur top 8 💕'));
+      }
+    }
+  </script>
+</body>
+</html>

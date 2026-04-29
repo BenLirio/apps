@@ -1,0 +1,95 @@
+/* Aesthetic: deep-space night sky — rich indigo→black gradient, vibrant neon boid trails, no muddy residue */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Radial gradient backdrop — prevents the flat muddy-grey-over-navy look.
+     The canvas draws a matching opaque backdrop each frame so trails fade
+     cleanly to this color rather than accumulating as grey haze. */
+  background: radial-gradient(ellipse at 50% 40%, #141735 0%, #07081a 55%, #030410 100%);
+  font-family: 'Space Mono', monospace;
+}
+
+canvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+#ui {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 24px 24px;
+  z-index: 10;
+}
+
+#title-area {
+  pointer-events: none;
+}
+
+h1 {
+  font-size: clamp(14px, 3vw, 20px);
+  font-weight: 700;
+  color: #f2ebff;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-shadow: 0 0 16px rgba(180, 140, 255, 0.7);
+  line-height: 1.2;
+}
+
+#hint {
+  font-size: clamp(10px, 2vw, 13px);
+  color: rgba(210, 200, 250, 0.55);
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+  font-weight: 400;
+  max-width: 42ch;
+}
+
+#controls {
+  display: flex;
+  gap: 12px;
+  pointer-events: all;
+  flex-wrap: wrap;
+}
+
+button {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 159, 216, 0.5);
+  border-radius: 999px;
+  cursor: pointer;
+  background: rgba(10, 13, 30, 0.55);
+  color: #ffc2e6;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+button:hover, button:focus {
+  background: rgba(255, 159, 216, 0.15);
+  border-color: rgba(255, 159, 216, 0.9);
+  color: #ffe0f0;
+}

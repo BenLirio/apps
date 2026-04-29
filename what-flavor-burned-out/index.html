@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>What Flavor of Burned Out Are You</title>
+  <meta property="og:title" content="What Flavor of Burned Out Are You">
+  <meta property="og:description" content="A clinically-adjacent diagnosis of your specific burnout archetype. Results may be shared with HR (they won't help).">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/what-flavor-burned-out/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Pre-interaction state -->
+    <div id="intro-screen">
+      <div class="header-badge">DIAGNOSTIC INTAKE FORM</div>
+      <h1>What Flavor of<br>Burned Out<br>Are You?</h1>
+      <p class="intro-sub">A 10-question assessment developed by no one with medical credentials.<br>Results are non-binding but eerily accurate.</p>
+      <p class="intake-note">⚠ Do not attempt this quiz if you are currently "in a meeting" or "fine."</p>
+      <button id="start-btn" onclick="startQuiz()">Begin Assessment</button>
+    </div>
+
+    <!-- Quiz screen -->
+    <div id="quiz-screen" style="display:none">
+      <div class="progress-bar-wrap">
+        <div id="progress-bar"></div>
+      </div>
+      <div class="question-counter" id="q-counter">SYMPTOM 1 OF 10</div>
+      <div id="question-text" class="question-text"></div>
+      <div id="options-list" class="options-list"></div>
+    </div>
+
+    <!-- Loading screen -->
+    <div id="loading-screen" style="display:none">
+      <div class="loading-inner">
+        <div class="loading-spinner"></div>
+        <p id="loading-msg" class="loading-msg">cross-referencing your symptoms with the DSM-5 (unlicensed edition)...</p>
+      </div>
+    </div>
+
+    <!-- Result screen -->
+    <div id="result-screen" style="display:none">
+      <div class="result-card">
+        <div class="diagnosis-label">OFFICIAL DIAGNOSIS</div>
+        <h2 id="result-name"></h2>
+        <p id="result-prognosis" class="prognosis"></p>
+        <div id="treatment-wrap" class="treatment-wrap" style="display:none">
+          <div class="treatment-label">TREATMENT PLAN</div>
+          <p id="treatment-text" class="treatment-text"></p>
+        </div>
+        <div id="treatment-loading" class="treatment-loading" style="display:none">
+          <span class="dot-anim">consulting the specialist</span>
+        </div>
+      </div>
+      <div id="share" style="display:none">
+        <button onclick="share()" class="share-btn">Share Your Diagnosis</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

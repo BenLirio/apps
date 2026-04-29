@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outfit Archetypes — Your Style Oracle</title>
+  <meta property="og:title" content="Outfit Archetypes — Your Style Oracle">
+  <meta property="og:description" content="Take a photo of your outfit. The oracle reads color, silhouette, and vibe to reveal your fashion archetype. Eerily accurate.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/outfit-archetypes/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+
+    <!-- PRE STATE: Oracle Intro -->
+    <section id="pre-state" class="pre-state">
+      <div class="oracle-header">
+        <div class="oracle-label">THE STYLE ORACLE</div>
+        <h1 class="oracle-title">Outfit<br>Archetypes</h1>
+        <div class="oracle-rule"></div>
+        <p class="oracle-kicker">Your outfit speaks.<br>What does it say?</p>
+        <p class="oracle-sub">Upload a photo of what you're wearing today. The oracle reads color blocking, silhouette, and vibe to assign your named fashion archetype. Results are eerily accurate. They're supposed to be.</p>
+      </div>
+
+      <div class="upload-area" id="upload-area">
+        <label for="photo-input" class="upload-label" id="upload-label">
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="40" cy="40" r="38" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M28 52 L28 36 L22 36 L40 20 L58 36 L52 36 L52 52 Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+              <line x1="34" y1="52" x2="46" y2="52" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="upload-text">Photograph your outfit</span>
+          <span class="upload-hint">Camera on mobile · File picker on desktop</span>
+        </label>
+        <input type="file" id="photo-input" accept="image/*" capture="user" class="visually-hidden">
+      </div>
+
+      <p class="oracle-disclaimer">Photo stays on your device. The oracle only sees your style.</p>
+    </section>
+
+    <!-- LOADING STATE -->
+    <section id="loading-state" class="loading-state hidden">
+      <div class="loading-sigil" aria-hidden="true">
+        <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="60" cy="60" r="55" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4" class="spin-slow"/>
+          <circle cx="60" cy="60" r="40" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M60 20 L64 50 L60 60 L56 50 Z" fill="currentColor" opacity="0.8" class="spin-reverse"/>
+          <circle cx="60" cy="60" r="4" fill="currentColor"/>
+        </svg>
+      </div>
+      <p class="loading-line" id="loading-line">Reading your outfit&hellip;</p>
+      <p class="loading-sub">The oracle is consulting the archive of silhouettes</p>
+    </section>
+
+    <!-- RESULT STATE -->
+    <section id="result-state" class="result-state hidden">
+      <div class="result-card" id="result-card">
+        <div class="result-overline">THE ORACLE SPEAKS</div>
+        <div class="archetype-badge" id="archetype-badge">
+          <div class="badge-inner">
+            <div class="badge-name" id="badge-name">—</div>
+          </div>
+        </div>
+        <div class="archetype-tagline" id="archetype-tagline">—</div>
+
+        <div class="ai-diagnosis" id="ai-diagnosis-block">
+          <div class="diagnosis-rule"></div>
+          <p class="diagnosis-label">YOUR STYLE DIAGNOSIS</p>
+          <p class="diagnosis-text" id="diagnosis-text">—</p>
+          <div class="diagnosis-rule"></div>
+        </div>
+
+        <div class="vision-note" id="vision-note-block" style="display:none;">
+          <p class="vision-label">WHAT THE ORACLE SAW</p>
+          <p class="vision-text" id="vision-text">—</p>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button class="share-btn" id="share-btn" onclick="shareResult()">Copy your archetype to share</button>
+        <button class="restart-btn" onclick="restart()">Read another outfit</button>
+      </div>
+
+      <p class="result-footnote">A verdict from <em>The Style Oracle</em>. Final. Irrevocable.</p>
+    </section>
+
+  </main>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhythm Tap</title>
+  <meta name="description" content="A canvas-based rhythm game where colored note tiles fall in sync with a generated beat. Tap to hit, don't miss." />
+  <meta property="og:title" content="Rhythm Tap" />
+  <meta property="og:description" content="Can you feel the beat? Tap the tiles. Don't miss." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://benlirio.com/rhythm-tap/">
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Rhythm Tap" />
+  <meta name="twitter:description" content="Can you feel the beat? Tap the tiles. Don't miss." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen active">
+    <h1 class="game-title">RHYTHM TAP</h1>
+    <p class="tagline">Can you feel the beat?<br>Tap the tiles. Don't miss.</p>
+    <div class="key-hints">
+      <span class="key cyan">D</span>
+      <span class="key magenta">F</span>
+      <span class="key yellow">J</span>
+      <span class="key green">K</span>
+    </div>
+    <button id="start-btn" class="btn-primary pulse">START</button>
+    <p class="sub-hint">Desktop: D F J K keys &nbsp;|&nbsp; Mobile: tap lanes</p>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="screen">
+    <p class="loading-text">tuning the synths...</p>
+    <div class="loading-bar-wrap"><div id="loading-bar"></div></div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen">
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">SCORE</span>
+        <span id="hud-score" class="hud-value">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">COMBO</span>
+        <span id="hud-combo" class="hud-value">×0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">MISSES</span>
+        <span id="hud-misses" class="hud-value">0/10</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">BPM</span>
+        <span id="hud-bpm" class="hud-value">120</span>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameover-screen" class="screen">
+    <h2 class="grade-label">GRADE</h2>
+    <div id="grade-display" class="grade-display">S</div>
+    <div class="result-details">
+      <div class="result-row">
+        <span class="result-label">ACCURACY</span>
+        <span id="result-accuracy" class="result-value">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">BEST COMBO</span>
+        <span id="result-combo" class="result-value">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">SCORE</span>
+        <span id="result-score" class="result-value">—</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">HIGH SCORE</span>
+        <span id="result-high" class="result-value">—</span>
+      </div>
+    </div>
+    <p id="result-micro" class="result-micro"></p>
+    <div class="gameover-btns">
+      <button id="share-btn" class="btn-share">SHARE</button>
+      <button id="retry-btn" class="btn-primary">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

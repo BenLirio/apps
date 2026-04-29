@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Melody Guesser</title>
+  <meta property="og:title" content="Melody Guesser">
+  <meta property="og:description" content="Daily melody puzzle — guess the song in as few clues as possible. New puzzle every day.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/melody-guesser/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="logo">MELODY GUESSER</div>
+    <div class="streak-display" id="streak-display"></div>
+  </header>
+
+  <main id="app">
+    <!-- Pre-interaction state -->
+    <section id="intro-screen">
+      <p class="tagline">A melody is hiding in plain sound.<br>How few notes do you need?</p>
+      <div class="puzzle-date" id="puzzle-date"></div>
+      <button id="start-btn" class="primary-btn">Play Today's Puzzle</button>
+    </section>
+
+    <!-- Game screen -->
+    <section id="game-screen" style="display:none">
+      <div class="clip-bar">
+        <div class="clip-steps" id="clip-steps"></div>
+        <div class="clip-label" id="clip-label">Clip 1 of 6 — 0.5 seconds</div>
+      </div>
+
+      <div class="player-area">
+        <button id="play-btn" class="play-btn" aria-label="Play audio clip">
+          <span class="play-icon">&#9654;</span>
+          <span class="play-text">Play Clip</span>
+        </button>
+        <div class="loading-msg" id="loading-msg" style="display:none">generating waveform...</div>
+      </div>
+
+      <div class="guess-area">
+        <div class="guess-options" id="guess-options"></div>
+        <button id="skip-btn" class="skip-btn">Skip — hear longer clip</button>
+      </div>
+
+      <div class="give-up-area">
+        <button id="give-up-btn" class="give-up-btn">Give Up</button>
+      </div>
+    </section>
+
+    <!-- Result screen -->
+    <section id="result-screen" style="display:none">
+      <div class="result-card">
+        <div class="result-status" id="result-status"></div>
+        <div class="result-song" id="result-song"></div>
+        <div class="result-detail" id="result-detail"></div>
+        <div class="result-grid" id="result-grid"></div>
+      </div>
+
+      <div id="share" class="share-area">
+        <button onclick="share()" class="share-btn">Share Result</button>
+      </div>
+
+      <div class="next-puzzle">
+        <div class="next-label">Next puzzle in</div>
+        <div class="countdown" id="countdown"></div>
+      </div>
+    </section>
+
+    <!-- Already played screen -->
+    <section id="played-screen" style="display:none">
+      <div class="already-card">
+        <div class="already-title">You already played today!</div>
+        <div class="already-result" id="already-result"></div>
+        <div class="already-grid" id="already-grid"></div>
+      </div>
+      <div id="share-played" class="share-area">
+        <button onclick="share()" class="share-btn">Share Result</button>
+      </div>
+      <div class="next-puzzle">
+        <div class="next-label">Next puzzle in</div>
+        <div class="countdown" id="countdown-played"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Which Houseplant Are You Killing</title>
+  <meta property="og:title" content="Which Houseplant Are You Killing">
+  <meta property="og:description" content="Three taps. One verdict. The exact houseplant you'd inevitably murder, and a flattering name for the kind of plant-killer you are.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/which-houseplant-killing/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <header class="masthead">
+      <div class="cataloged">CATALOGUED FROM THE WINDOWSILL</div>
+      <h1>Which Houseplant<br>Are You Killing?</h1>
+      <p class="kicker">A five-tap diagnosis from <em>The Posthumous Botanist</em>. No shame, only certainty.</p>
+    </header>
+
+    <section id="quiz" class="quiz">
+      <!-- Question screens injected by app.js -->
+    </section>
+
+    <section id="loading" class="loading hidden">
+      <div class="pot-bones loading-bones">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <ellipse cx="100" cy="170" rx="55" ry="9" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M50 90 L60 170 L140 170 L150 90 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="50" y1="100" x2="150" y2="100" stroke="currentColor" stroke-width="1.5"/>
+          <g class="bones-group">
+            <line x1="85" y1="80" x2="115" y2="80" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="83" cy="80" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="117" cy="80" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="92" y1="55" x2="108" y2="55" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="90" cy="55" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="110" cy="55" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+      <p id="loading-text" class="loading-text">consulting the windowsill morgue&hellip;</p>
+    </section>
+
+    <section id="result" class="result hidden">
+      <article class="card">
+        <div class="card-meta">FILED THIS MORNING</div>
+        <div class="pot-bones">
+          <svg viewBox="0 0 240 260" aria-hidden="true">
+            <!-- shelf -->
+            <ellipse cx="120" cy="232" rx="78" ry="6" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.45"/>
+            <!-- pot rim -->
+            <path d="M50 110 L190 110 L182 120 L58 120 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <!-- pot body -->
+            <path d="M58 120 L72 230 L168 230 L182 120" fill="none" stroke="currentColor" stroke-width="2"/>
+            <!-- crackle -->
+            <path d="M80 150 Q90 175 78 200" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+            <path d="M155 145 Q150 180 162 215" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.5"/>
+            <!-- soil line -->
+            <path d="M62 130 Q120 138 178 130" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+            <!-- bones poking out -->
+            <g>
+              <!-- skull -->
+              <path d="M100 70 Q100 50 120 50 Q140 50 140 70 Q140 82 132 88 L132 96 L108 96 L108 88 Q100 82 100 70 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="113" cy="72" r="3" fill="currentColor"/>
+              <circle cx="127" cy="72" r="3" fill="currentColor"/>
+              <path d="M118 80 L122 80" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M112 92 L114 96 M118 92 L120 96 M124 92 L126 96 M128 92 L130 96" stroke="currentColor" stroke-width="1.2"/>
+              <!-- crossed bones behind skull -->
+              <line x1="60" y1="40" x2="100" y2="80" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              <circle cx="58" cy="38" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="102" cy="82" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <line x1="180" y1="40" x2="140" y2="80" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              <circle cx="182" cy="38" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="138" cy="82" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <!-- a wilting leaf -->
+              <path d="M150 110 Q175 95 178 75" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M178 75 Q185 80 188 90" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M70 115 Q55 100 52 85" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M52 85 Q47 92 48 100" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            </g>
+          </svg>
+        </div>
+        <div class="archetype-label">YOU ARE</div>
+        <h2 id="archetype" class="archetype">&mdash;</h2>
+        <div class="killing-label">CURRENTLY KILLING</div>
+        <h3 id="plant" class="plant">&mdash;</h3>
+        <p id="death" class="death">&mdash;</p>
+        <div class="stamp">CASE CLOSED &middot; <span id="case-no">№ 0000</span></div>
+      </article>
+
+      <div id="share" class="share-block">
+        <button class="share-btn" onclick="share()">Copy a confession to share</button>
+        <button class="restart-btn" onclick="restart()">Re-diagnose</button>
+      </div>
+
+      <p class="footnote">A specimen of <em>The Posthumous Botanist</em>, kept for the records.</p>
+    </section>
+  </main>
+</body>
+</html>

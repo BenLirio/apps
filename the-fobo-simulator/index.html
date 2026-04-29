@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The FOBO Simulator</title>
+  <meta property="og:title" content="The FOBO Simulator">
+  <meta property="og:description" content="Watch your pixel-art job get slowly replaced by an AI robot in real time. Tap to fight back. The robot always wins.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/the-fobo-simulator/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <!-- Intro screen -->
+  <div id="screen-intro" class="screen active">
+    <div class="crt-overlay"></div>
+    <div class="container">
+      <h1 class="title blink-slow">FOBO</h1>
+      <p class="subtitle">Fear Of Being Obsolete</p>
+      <p class="flavor-text">Your job is safe.<br><span class="red">It is not safe.</span></p>
+      <div class="input-group">
+        <label for="job-input">YOUR JOB TITLE:</label>
+        <input type="text" id="job-input" placeholder="e.g. Senior Synergy Manager" maxlength="40" autocomplete="off">
+      </div>
+      <button id="start-btn" class="btn btn-primary">CLOCK IN →</button>
+      <p class="hint-text">* may cause existential dread</p>
+    </div>
+  </div>
+
+  <!-- Game screen -->
+  <div id="screen-game" class="screen">
+    <div class="crt-overlay"></div>
+    <div class="game-hud">
+      <div class="hud-item">
+        <span class="hud-label">HUMANITY</span>
+        <div class="bar-container">
+          <div id="humanity-bar" class="bar bar-human"></div>
+        </div>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">ROBOT</span>
+        <div class="bar-container">
+          <div id="robot-bar" class="bar bar-robot"></div>
+        </div>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div class="game-footer">
+      <div id="upskill-btn-wrapper">
+        <button id="upskill-btn" class="btn btn-upskill">UPSKILL!</button>
+        <span id="upskill-label" class="upskill-label">TAP TO FIGHT BACK</span>
+      </div>
+      <div id="status-msg" class="status-msg"></div>
+    </div>
+  </div>
+
+  <!-- Certificate screen -->
+  <div id="screen-cert" class="screen">
+    <div class="crt-overlay"></div>
+    <div class="container cert-container">
+      <div id="generating-msg" class="generating-msg">
+        <span class="blink-fast">■</span> GENERATING CERTIFICATE... <span class="blink-fast">■</span>
+        <p class="gen-sub">calibrating your obsolescence...</p>
+      </div>
+      <div id="certificate" class="certificate" style="display:none">
+        <div class="cert-header">
+          <p class="cert-org">OFFICE OF WORKFORCE DISPLACEMENT</p>
+          <p class="cert-org">BUREAU OF AUTOMATED REDUNDANCY</p>
+          <hr class="cert-hr">
+          <h2 class="cert-title">CERTIFICATE OF OBSOLESCENCE</h2>
+          <hr class="cert-hr">
+        </div>
+        <div class="cert-body">
+          <p class="cert-text">This certifies that the position of</p>
+          <p id="cert-job" class="cert-job"></p>
+          <p class="cert-text">has been permanently assumed by</p>
+          <p id="cert-ai" class="cert-ai"></p>
+          <p class="cert-text cert-small">due to the following cause of displacement:</p>
+          <p id="cert-cause" class="cert-cause"></p>
+          <p class="cert-text cert-small">effective immediately and retroactively</p>
+        </div>
+        <div class="cert-footer">
+          <div class="cert-seal">◈ OFFICIALLY SEALED ◈</div>
+          <p id="cert-date" class="cert-date"></p>
+        </div>
+      </div>
+      <div id="share" style="display:none" class="share-section">
+        <button onclick="share()" class="btn btn-primary">SHARE YOUR FATE</button>
+        <button id="play-again-btn" class="btn btn-secondary">PLAY AGAIN</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Arcade</title>
+  <meta property="og:title" content="Decision Arcade">
+  <meta property="og:description" content="10 lightning-fast moral dilemmas. 3 seconds each. Discover your decision archetype.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/decision-arcade/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Intro Screen -->
+    <div id="screen-intro" class="screen active">
+      <div class="arcade-header">
+        <div class="coin-slot">INSERT COIN</div>
+        <h1>DECISION<br>ARCADE</h1>
+        <p class="tagline">10 dilemmas. 3 seconds each.<br>No overthinking allowed.</p>
+      </div>
+      <div class="intro-rules">
+        <div class="rule">← SWIPE LEFT or tap LEFT option</div>
+        <div class="rule">SWIPE RIGHT or tap RIGHT option →</div>
+        <div class="rule">⏱ 3 SECONDS OR YOU HESITATE</div>
+      </div>
+      <button id="start-btn" class="arcade-btn" onclick="startGame()">START GAME</button>
+      <div class="credit-count">CREDITS: 1</div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="screen-game" class="screen">
+      <div class="hud">
+        <div class="question-counter">
+          <span id="q-current">1</span><span class="q-sep">/</span><span>10</span>
+        </div>
+        <div class="axis-label" id="axis-label">PRACTICAL vs ADVENTUROUS</div>
+        <div class="timer-bar-wrap">
+          <div class="timer-bar" id="timer-bar"></div>
+        </div>
+      </div>
+      <div class="scenario-box" id="scenario-box">
+        <p class="scenario-text" id="scenario-text">Loading scenario...</p>
+      </div>
+      <div class="choice-zone">
+        <button class="choice-btn left" id="btn-left" onclick="choose('left')">
+          <span class="choice-emoji" id="emoji-left">🔥</span>
+          <span class="choice-label" id="label-left">Option A</span>
+        </button>
+        <div class="vs-divider">OR</div>
+        <button class="choice-btn right" id="btn-right" onclick="choose('right')">
+          <span class="choice-emoji" id="emoji-right">💧</span>
+          <span class="choice-label" id="label-right">Option B</span>
+        </button>
+      </div>
+      <div id="hesitate-flash" class="hesitate-flash">HESITATION RECORDED</div>
+    </div>
+
+    <!-- Computing Screen -->
+    <div id="screen-computing" class="screen">
+      <div class="computing-inner">
+        <div class="spinner-block">
+          <div class="pixel-spinner" id="pixel-spinner"></div>
+        </div>
+        <p class="computing-msg" id="computing-msg">cross-referencing your chaos with the archives...</p>
+      </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="screen-result" class="screen">
+      <div class="result-card">
+        <div class="result-rank">YOUR ARCHETYPE</div>
+        <h2 class="archetype-name" id="archetype-name">THE CALCULATED HEDONIST</h2>
+        <p class="archetype-desc" id="archetype-desc">You optimize for pleasure but always read the fine print first.</p>
+        <div class="axis-chart" id="axis-chart"></div>
+        <p class="result-flavor" id="result-flavor"></p>
+      </div>
+      <div id="share" style="display:none">
+        <button class="arcade-btn share-btn" onclick="share()">SHARE YOUR RESULT</button>
+      </div>
+      <button class="arcade-btn replay-btn" onclick="restartGame()">PLAY AGAIN</button>
+    </div>
+
+  </div>
+</body>
+</html>

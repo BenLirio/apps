@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Gravity Doodle</title>
+  <meta property="og:title" content="Gravity Doodle">
+  <meta property="og:description" content="Invent new elements with AI and watch them fight gravity. A tiny falling-sand sandbox where the rules are yours.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/gravity-doodle/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>gravity doodle</h1>
+      <p id="tagline">explosive physics sandbox. paint. detonate. chain-react.</p>
+    </header>
+
+    <div id="controls">
+      <div id="action-row">
+        <button id="btn-drop" onclick="startDrop()">pour sand</button>
+        <button id="btn-reset" onclick="clearAll()">reset</button>
+      </div>
+
+      <div id="tool-row" role="group" aria-label="material palette">
+        <div class="palette-label">paint:</div>
+        <div id="palette-buttons">
+          <!-- material buttons rendered by JS — three seed materials + invented ones -->
+        </div>
+        <button id="btn-invent" class="invent-btn" onclick="openInvent()" aria-label="invent new element">
+          <span class="invent-plus">+</span>
+          <span class="invent-label">invent element</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="main-canvas"></canvas>
+      <div id="overlay-msg" class="hidden"></div>
+    </div>
+
+    <p id="hint">paint explosive (red) or nitro (orange) then drop sand or water on them — they detonate on contact! sparks shoot in every direction, ejecting material cells and chain-detonating nearby explosives. build walls to redirect sparks. invent more elements in plain words. long-press any invented element to flag it.</p>
+  </div>
+
+  <!-- Element feedback modal -->
+  <div id="elfb-overlay" class="invent-overlay hidden" role="dialog" aria-labelledby="elfb-title">
+    <div class="invent-modal">
+      <h3 id="elfb-title">flag element</h3>
+      <p class="invent-hint" id="elfb-target">what's wrong with <strong id="elfb-name">this element</strong>? flagging it tells the builder what to fix.</p>
+      <div class="elfb-chips" id="elfb-chips" role="group" aria-label="quick reasons">
+        <button type="button" class="elfb-chip" data-reason="doesn't fall / flow correctly">doesn't fall right</button>
+        <button type="button" class="elfb-chip" data-reason="wrong color / invisible on background">wrong color</button>
+        <button type="button" class="elfb-chip" data-reason="doesn't react the way it should">wrong reactions</button>
+        <button type="button" class="elfb-chip" data-reason="should be a different kind (gas/liquid/powder/solid)">wrong kind</button>
+        <button type="button" class="elfb-chip" data-reason="too sticky / not sticky enough">stickiness off</button>
+        <button type="button" class="elfb-chip" data-reason="too thick / too runny">viscosity off</button>
+      </div>
+      <label for="elfb-note" class="invent-field-label">more detail <span class="invent-optional">(optional)</span></label>
+      <textarea id="elfb-note" maxlength="500" placeholder="e.g. 'honey should stick to walls and barely flow, but it ran like water'"></textarea>
+      <p id="elfb-status" class="invent-status"></p>
+      <div class="invent-row">
+        <button type="button" id="elfb-cancel">cancel</button>
+        <button type="button" id="elfb-submit" class="primary">send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invent modal -->
+  <div id="invent-overlay" class="invent-overlay hidden" role="dialog" aria-labelledby="invent-title">
+    <div class="invent-modal">
+      <h3 id="invent-title">invent an element</h3>
+      <p class="invent-hint">give it a name. describe how it should behave in plain words. the AI invents the physics.</p>
+      <label for="invent-name" class="invent-field-label">name</label>
+      <input id="invent-name" type="text" maxlength="24" placeholder="e.g. honey, lava, glitter, acid">
+      <label for="invent-desc" class="invent-field-label">what it does <span class="invent-optional">(optional but recommended)</span></label>
+      <textarea id="invent-desc" maxlength="280" placeholder="e.g. thick golden honey, very viscous, barely flows, sticky, dissolves slowly in water"></textarea>
+      <div class="invent-examples" id="invent-examples">
+        <span class="invent-examples-label">try:</span>
+        <button type="button" class="invent-example" data-name="honey" data-desc="thick golden honey, very viscous, barely flows, sticky, traps fire and dissolves slowly in water">honey</button>
+        <button type="button" class="invent-example" data-name="lava" data-desc="molten rock, slow heavy lava that ignites plants and oil, hardens water into steam">lava</button>
+        <button type="button" class="invent-example" data-name="acid" data-desc="bright green acid that eats through walls and plants and dilutes in water">acid</button>
+        <button type="button" class="invent-example" data-name="tnt" data-desc="EXPLODES!! a red powder that blasts everything nearby when touched by fire">tnt</button>
+        <button type="button" class="invent-example" data-name="mold" data-desc="spreading green mold that grows like a cellular automaton, eating organic material">mold</button>
+        <button type="button" class="invent-example" data-name="snow" data-desc="soft white snow, falls slow and fluffy, melts on contact with fire">snow</button>
+        <button type="button" class="invent-example" data-name="smoke" data-desc="grey smoke that rises and slowly fades">smoke</button>
+      </div>
+      <p id="invent-status" class="invent-status"></p>
+      <div class="invent-row">
+        <button type="button" id="invent-cancel" onclick="closeInvent()">cancel</button>
+        <button type="button" id="invent-submit" class="primary" onclick="submitInvent()">invent</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

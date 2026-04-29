@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ransom Note Forge</title>
+  <meta property="og:title" content="Ransom Note Forge">
+  <meta property="og:description" content="Type any short message. Get it back as a classic cut-out-letters ransom note you can save and send.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/ransom-note-forge/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@400;700&family=Merriweather:ital,wght@0,400;0,900;1,700&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,900;1,700&family=Shadows+Into+Light&family=Special+Elite&family=UnifrakturCook:wght@700&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <header class="header">
+      <h1>RANSOM NOTE FORGE</h1>
+      <p class="tagline">Type something cursed. Get a cut-out-letters ransom note.</p>
+    </header>
+
+    <section class="controls">
+      <label for="msg" class="sr-only">Your message</label>
+      <textarea
+        id="msg"
+        maxlength="80"
+        rows="2"
+        placeholder="GIVE ME BACK MY CHARGER OR ELSE"
+        aria-label="Message to forge as a ransom note"
+      >GIVE ME BACK MY CHARGER</textarea>
+      <div class="meter">
+        <span id="count">23</span>/80
+      </div>
+
+      <div class="btn-row">
+        <button type="button" id="forge-btn" class="primary">Forge it</button>
+        <button type="button" id="reroll-btn">Re-roll</button>
+        <button type="button" id="save-btn">Save PNG</button>
+      </div>
+      <p class="error" id="error" aria-live="polite"></p>
+    </section>
+
+    <section class="stage">
+      <div
+        class="note-surface"
+        id="note"
+        role="img"
+        aria-label="Ransom note reading: GIVE ME BACK MY CHARGER"
+      ></div>
+    </section>
+
+    <div id="share" style="display:none">
+      <button onclick="share()">Share this note</button>
+    </div>
+
+    <footer class="footer">
+      <p>not affiliated with actual ransom activity.</p>
+    </footer>
+  </main>
+</body>
+</html>

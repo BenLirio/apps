@@ -1,0 +1,477 @@
+/* Aesthetic: Pixel art / lo-fi retro — 8-bit color palette, chunky Press Start 2P font, CRT scanlines, intentional aliasing, government-document pixel brutalism */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  image-rendering: pixelated;
+}
+
+:root {
+  --bg: #0a0a0a;
+  --panel: #111820;
+  --green: #39ff14;
+  --red: #ff2222;
+  --yellow: #ffe900;
+  --cyan: #00e5ff;
+  --white: #e8e8e8;
+  --gray: #444;
+  --robot-color: #ff4444;
+  --human-color: #39ff14;
+  --pixel-border: 3px solid var(--green);
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  overflow-x: hidden;
+}
+
+/* CRT overlay effect */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.18) 2px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+}
+
+/* Screens */
+.screen {
+  display: none;
+  min-height: 100vh;
+  position: relative;
+}
+
+.screen.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Title */
+.title {
+  font-size: clamp(36px, 12vw, 56px);
+  color: var(--green);
+  text-shadow:
+    0 0 10px var(--green),
+    0 0 30px var(--green),
+    4px 4px 0 #005500;
+  letter-spacing: 4px;
+}
+
+.subtitle {
+  font-size: clamp(8px, 2.5vw, 11px);
+  color: var(--yellow);
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.flavor-text {
+  font-size: clamp(8px, 2.5vw, 10px);
+  color: var(--gray);
+  text-align: center;
+  line-height: 2.2;
+  border: 2px solid var(--gray);
+  padding: 12px 16px;
+  width: 100%;
+}
+
+.flavor-text .red {
+  color: var(--red);
+  text-shadow: 0 0 8px var(--red);
+}
+
+/* Input */
+.input-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-group label {
+  font-size: 9px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+}
+
+input[type="text"] {
+  width: 100%;
+  background: #000;
+  border: var(--pixel-border);
+  color: var(--green);
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(8px, 2.5vw, 10px);
+  padding: 12px 10px;
+  outline: none;
+  caret-color: var(--green);
+  min-height: 44px;
+}
+
+input[type="text"]::placeholder {
+  color: #2a4a2a;
+}
+
+input[type="text"]:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 8px var(--yellow);
+}
+
+/* Buttons */
+.btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(9px, 2.5vw, 11px);
+  padding: 14px 20px;
+  border: none;
+  cursor: pointer;
+  min-height: 44px;
+  letter-spacing: 1px;
+  transition: transform 0.07s, box-shadow 0.07s;
+  width: 100%;
+}
+
+.btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none !important;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: #000;
+  box-shadow: 4px 4px 0 #005500;
+}
+
+.btn-primary:hover {
+  background: var(--yellow);
+  box-shadow: 4px 4px 0 #886600;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--gray);
+  border: 2px solid var(--gray);
+  box-shadow: 4px 4px 0 #222;
+}
+
+.btn-secondary:hover {
+  color: var(--white);
+  border-color: var(--white);
+}
+
+.hint-text {
+  font-size: 8px;
+  color: var(--gray);
+  text-align: center;
+}
+
+/* Game screen */
+#screen-game {
+  display: none;
+  flex-direction: column;
+  padding: 0;
+}
+
+#screen-game.active {
+  display: flex;
+}
+
+.game-hud {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-label {
+  font-size: 8px;
+  color: var(--white);
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.bar-container {
+  flex: 1;
+  height: 12px;
+  background: #1a1a1a;
+  border: 2px solid var(--gray);
+}
+
+.bar {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.bar-human {
+  background: var(--human-color);
+  box-shadow: 0 0 6px var(--human-color);
+}
+
+.bar-robot {
+  background: var(--robot-color);
+  box-shadow: 0 0 6px var(--robot-color);
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #0a0a14;
+  border-top: 2px solid #1e1e1e;
+  border-bottom: 2px solid #1e1e1e;
+  image-rendering: pixelated;
+}
+
+.game-footer {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+#upskill-btn-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-upskill {
+  background: var(--cyan);
+  color: #000;
+  box-shadow: 4px 4px 0 #004455;
+  font-size: clamp(10px, 3vw, 13px);
+  width: 100%;
+  max-width: 300px;
+  padding: 16px;
+}
+
+.btn-upskill:hover {
+  background: var(--yellow);
+  box-shadow: 4px 4px 0 #886600;
+}
+
+.btn-upskill:disabled {
+  background: var(--gray);
+  color: #222;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.upskill-label {
+  font-size: 8px;
+  color: var(--gray);
+}
+
+.status-msg {
+  font-size: 8px;
+  color: var(--yellow);
+  text-align: center;
+  min-height: 24px;
+  line-height: 1.8;
+}
+
+/* Certificate screen */
+.cert-container {
+  max-width: 480px;
+  justify-content: flex-start;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+.generating-msg {
+  text-align: center;
+  color: var(--green);
+  font-size: 10px;
+  line-height: 2.5;
+}
+
+.gen-sub {
+  font-size: 8px;
+  color: var(--gray);
+  margin-top: 8px;
+}
+
+.certificate {
+  width: 100%;
+  border: 3px solid var(--yellow);
+  box-shadow:
+    0 0 20px rgba(255, 233, 0, 0.2),
+    inset 0 0 30px rgba(0,0,0,0.5);
+  background: #05080a;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cert-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cert-org {
+  font-size: 7px;
+  color: var(--gray);
+  letter-spacing: 1px;
+}
+
+.cert-hr {
+  border: none;
+  border-top: 2px solid var(--yellow);
+  margin: 4px 0;
+}
+
+.cert-title {
+  font-size: clamp(9px, 2.8vw, 12px);
+  color: var(--yellow);
+  text-shadow: 0 0 10px var(--yellow);
+  letter-spacing: 1px;
+  line-height: 1.8;
+}
+
+.cert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.cert-text {
+  font-size: 8px;
+  color: var(--gray);
+  line-height: 1.8;
+}
+
+.cert-text.cert-small {
+  font-size: 7px;
+}
+
+.cert-job {
+  font-size: clamp(10px, 3vw, 13px);
+  color: var(--cyan);
+  text-shadow: 0 0 8px var(--cyan);
+  line-height: 1.8;
+  padding: 8px;
+  border: 1px solid var(--cyan);
+}
+
+.cert-ai {
+  font-size: clamp(10px, 3vw, 13px);
+  color: var(--red);
+  text-shadow: 0 0 8px var(--red);
+  line-height: 1.8;
+  padding: 8px;
+  border: 1px solid var(--red);
+}
+
+.cert-cause {
+  font-size: clamp(8px, 2.5vw, 10px);
+  color: var(--yellow);
+  line-height: 2;
+  padding: 8px;
+  border: 1px solid #443300;
+  background: #0a0800;
+}
+
+.cert-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cert-seal {
+  font-size: 8px;
+  color: var(--yellow);
+  border: 2px solid var(--yellow);
+  padding: 6px 12px;
+  letter-spacing: 2px;
+}
+
+.cert-date {
+  font-size: 7px;
+  color: var(--gray);
+}
+
+.share-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Animations */
+@keyframes blink-slow {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.3; }
+}
+
+@keyframes blink-fast {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.blink-slow {
+  animation: blink-slow 1.5s infinite;
+}
+
+.blink-fast {
+  animation: blink-fast 0.5s infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+.shake {
+  animation: shake 0.3s;
+}
+
+@keyframes flash-green {
+  0% { background: var(--green); }
+  100% { background: var(--cyan); }
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stop The Line — The Daily Replica</title>
+  <meta property="og:title" content="Stop The Line — The Daily Replica">
+  <meta property="og:description" content="Stop the press at the right word. 10 rounds. Daily seeded. Earn a Printer Title.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.github.io/stop-the-line/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;700&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div class="paper">
+
+    <!-- START SCREEN -->
+    <section id="start-screen" class="screen">
+      <header class="masthead">
+        <div class="masthead-rule"></div>
+        <h1 class="masthead-title">THE DAILY REPLICA</h1>
+        <div class="masthead-rule"></div>
+        <div class="masthead-meta">
+          <span id="start-date">—</span>
+          <span class="bullet">&bull;</span>
+          <span>VOL. I &mdash; NO. 1</span>
+          <span class="bullet">&bull;</span>
+          <span>PRICE: ONE TAP</span>
+        </div>
+      </header>
+
+      <h2 class="kicker">TONIGHT'S EDITION</h2>
+      <h1 class="feature-head">STOP<br>THE LINE</h1>
+      <p class="feature-sub">Watch the press roll by. When your target word enters the red guillotine &mdash; <em>tap</em>. Closer to center, cleaner the cut.</p>
+
+      <div class="tutorial">
+        <p><strong>HOW TO PRINT:</strong> a headline ribbon scrolls left. Each round names one target word. Tap the screen when that word sits between the red brackets at center. Ten rounds. One daily press run. Every reader gets the same seed.</p>
+      </div>
+
+      <button id="start-btn" class="big-btn">ENTER THE PRESS ROOM</button>
+
+      <div id="returning" class="returning" style="display:none">
+        <div class="returning-row"><span>YOUR BEST TODAY:</span> <span id="best-today">&mdash;</span></div>
+        <div class="returning-row"><span>STREAK:</span> <span id="streak-badge">&mdash;</span></div>
+      </div>
+    </section>
+
+    <!-- GAME SCREEN -->
+    <section id="game-screen" class="screen" style="display:none">
+      <div class="hud">
+        <div class="hud-kicker">ROUND</div>
+        <div class="hud-round"><span id="round-n">1</span><span class="slash">/</span>10</div>
+      </div>
+      <div class="target-wrap">
+        <div class="target-label">TARGET WORD</div>
+        <div class="target-word" id="target-word">&mdash;</div>
+      </div>
+      <canvas id="press" aria-label="Scrolling headline press. Tap to stop."></canvas>
+      <div class="hud-hint">tap anywhere on the ribbon to stop the press</div>
+      <div id="stamp-overlay" class="stamp-overlay"></div>
+    </section>
+
+    <!-- END SCREEN -->
+    <section id="end-screen" class="screen" style="display:none">
+      <article id="clipping" class="clipping">
+        <div class="clip-masthead">
+          <div class="clip-rule"></div>
+          <div class="clip-title">THE DAILY REPLICA</div>
+          <div class="clip-rule"></div>
+          <div class="clip-meta">
+            <span id="clip-date">—</span>
+            <span class="bullet">&bull;</span>
+            <span>LATE EDITION</span>
+          </div>
+        </div>
+        <div class="clip-kicker">LOCAL NEWS / TYPESETTING</div>
+        <h1 class="clip-head" id="clip-head">LOCAL READER CROWNED PAMPHLETEER</h1>
+        <h2 class="clip-sub" id="clip-sub">All 10 presses stopped within 47 px of the mark today.</h2>
+        <div class="clip-columns">
+          <div class="clip-col">
+            <p class="clip-lede"><span class="dropcap" id="clip-drop">T</span><span id="clip-lede-body">he press did not lie this morning. By the tenth bell, our reader had found the mark again, and this clipping is the receipt.</span></p>
+            <p class="clip-body" id="clip-body-1">Best round of the run:</p>
+            <div class="clip-headline-inset" id="clip-best">&mdash;</div>
+            <p class="clip-body" id="clip-body-2">Tomorrow: a new set of ten.</p>
+          </div>
+        </div>
+        <div class="clip-footer">
+          <span id="clip-streak">&mdash;</span>
+          <span class="bullet">&bull;</span>
+          <span>DAILY SEED: <span id="clip-seed">—</span></span>
+        </div>
+      </article>
+
+      <div class="end-actions">
+        <button id="share-btn" class="big-btn">SHARE TODAY'S EDITION</button>
+        <button id="replay-btn" class="ghost-btn">PLAY A PRACTICE PRESS</button>
+      </div>
+
+      <div id="share" style="display:none">
+        <button onclick="share()">Share your result!</button>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
