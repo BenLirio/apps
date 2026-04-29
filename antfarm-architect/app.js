@@ -179,6 +179,7 @@ function initGrid() {
   tickCount = 0;
   tapHintHidden = false;
   lastFoodDrop = -999;
+  foodDeliveryCounter = 0;
   const hint = document.getElementById('tap-hint');
   if (hint) hint.classList.remove('hidden');
 }
@@ -187,10 +188,15 @@ function initAnts() {
   ants = [];
   const nestX = Math.floor(COLS / 2);
   const nestY = 6;
-  for (let i = 0; i < 60; i++) {
+  // Start small so the colony feels readable; ants are spawned at the nest
+  // when food is delivered (see depositFoodAtNest()).
+  for (let i = 0; i < 18; i++) {
     ants.push(createAnt(nestX, nestY));
   }
 }
+
+// Maximum colony size — prevents runaway growth on long sessions
+const MAX_ANTS = 80;
 
 function createAnt(x, y) {
   return {
@@ -244,18 +250,27 @@ function stepAnt(ant, rng) {
 
   const cell = inBounds(ant.x, ant.y) ? grid[idx(ant.x, ant.y)] : 'soil';
 
-  // Pick up food if standing on it
+  // Pick up food if standing on it — actually consumes a unit from the source
   if (!ant.carryFood && (cell === 'food') && ant.mode !== 'toNest') {
-    ant.carryFood = true;
-    ant.mode = 'toNest';
+    const src = foodSourceAt(ant.x, ant.y);
+    if (src && src.units > 0) {
+      src.units -= 1;
+      ant.carryFood = true;
+      ant.mode = 'toNest';
+      // If this cell just emptied, clear it visually next tick
+      if (src.units <= 0) {
+        grid[idx(ant.x, ant.y)] = 'tunnel';
+      }
+    }
   }
 
-  // Deposit food at nest
+  // Deposit food at nest — feeds the colony, occasionally hatches a new ant
   if (ant.carryFood && cell === 'nest') {
     ant.carryFood = false;
     ant.mode = 'scout';
     ant.scoutTimer = 0;
     stats.food++;
+    depositFoodAtNest();
   }
 
   // Dig if on soil and scouting
@@ -335,6 +350,25 @@ function stepAnt(ant, rng) {
   }
 }
 
+// Find the food source record at a grid position (if any)
+function foodSourceAt(x, y) {
+  for (const f of foodSources) {
+    if (f.x === x && f.y === y && f.units > 0) return f;
+  }
+  return null;
+}
+
+// Each food delivery feeds the colony; every 4th delivery hatches a new ant
+let foodDeliveryCounter = 0;
+function depositFoodAtNest() {
+  foodDeliveryCounter++;
+  if (foodDeliveryCounter % 4 === 0 && ants.length < MAX_ANTS) {
+    const nestX = Math.floor(COLS / 2);
+    const nestY = 6;
+    ants.push(createAnt(nestX, nestY));
+  }
+}
+
 // ──────────────────────────────────────────────
 //  Pheromone decay
 // ──────────────────────────────────────────────
@@ -397,14 +431,18 @@ function render() {
     ctx.stroke();
   }
 
-  // Food sources (pulsing)
+  // Food sources (pulsing) — radius and opacity scale with remaining units
+  // so the player sees their food piles shrink as ants harvest them.
   const pulse = 0.5 + 0.5 * Math.sin(tickCount * 0.08);
   for (const f of foodSources) {
+    if (f.units <= 0) continue;
+    const fullness = Math.min(1, f.units / 6); // 6 = UNITS_PER_CELL
     const px = f.x * CELL + CELL / 2;
     const py = f.y * CELL + CELL / 2;
-    const r = CELL * (1.8 + pulse * 0.8);
+    const r = CELL * (0.8 + fullness * (1.0 + pulse * 0.8));
+    const alpha = 0.4 + fullness * 0.55;
     const grad = ctx.createRadialGradient(px, py, 0, px, py, r);
-    grad.addColorStop(0, 'rgba(255,210,80,0.95)');
+    grad.addColorStop(0, `rgba(255,210,80,${alpha})`);
     grad.addColorStop(1, 'rgba(232,160,32,0)');
     ctx.beginPath();
     ctx.arc(px, py, r, 0, Math.PI * 2);
@@ -437,8 +475,20 @@ function tick() {
 
   if (tickCount % 3 === 0) decayPheromones();
 
-  for (const f of foodSources) {
-    if (inBounds(f.x, f.y) && grid[idx(f.x, f.y)] !== 'nest') {
+  // Maintain food cells only while their source still has units;
+  // drop depleted sources from the list so food visibly disappears.
+  for (let i = foodSources.length - 1; i >= 0; i--) {
+    const f = foodSources[i];
+    if (f.units <= 0) {
+      // Clear lingering food cell if it somehow remained
+      if (inBounds(f.x, f.y) && grid[idx(f.x, f.y)] === 'food') {
+        grid[idx(f.x, f.y)] = 'tunnel';
+      }
+      foodSources.splice(i, 1);
+      continue;
+    }
+    if (inBounds(f.x, f.y) && grid[idx(f.x, f.y)] !== 'nest' && grid[idx(f.x, f.y)] !== 'food') {
+      // Re-paint food cell only if the ant just left it (still has units)
       grid[idx(f.x, f.y)] = 'food';
     }
   }
@@ -482,13 +532,15 @@ function canvasClick(e) {
 
   if (!inBounds(gx, gy)) return;
 
-  // Drop 3×3 food blob
+  // Drop 3×3 food blob — each cell carries a finite unit count so the food
+  // visibly depletes as ants harvest it (one unit per ant-trip).
+  const UNITS_PER_CELL = 6;
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const fx = gx + dx, fy = gy + dy;
-      if (inBounds(fx, fy) && grid[idx(fx, fy)] !== 'rock') {
+      if (inBounds(fx, fy) && grid[idx(fx, fy)] !== 'rock' && grid[idx(fx, fy)] !== 'nest') {
         grid[idx(fx, fy)] = 'food';
-        foodSources.push({ x: fx, y: fy });
+        foodSources.push({ x: fx, y: fy, units: UNITS_PER_CELL });
       }
     }
   }

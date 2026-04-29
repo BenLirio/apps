@@ -76,7 +76,7 @@
 
       <div id="canvas-wrap">
         <canvas id="antfarm"></canvas>
-        <div id="tap-hint">tap anywhere on the colony to drop a food source</div>
+        <div id="tap-hint">tap anywhere to drop food — ants will haul it home, piece by piece</div>
         <div id="action-msg"></div>
       </div>
 
@@ -131,10 +131,12 @@
           <ul>
             <li><strong>Scouts</strong> wander downward, digging through soil. Your colony's personality shapes how long they scout before switching modes.</li>
             <li><strong>Food-seekers</strong> follow the cyan pheromone trail — a chemical gradient laid by ants returning from the nest.</li>
-            <li>When a food-seeker finds food, it switches to <strong>returning home</strong> and lays an amber pheromone trail. The stronger the trail, the more ants follow it — this is <em>stigmergy</em>.</li>
+            <li>When a food-seeker finds food, it picks up <em>one piece</em> and switches to <strong>returning home</strong>, laying an amber pheromone trail along the way. More ants follow that trail — this is <em>stigmergy</em>.</li>
+            <li><strong>Food piles deplete.</strong> Each cell of food holds about 6 pieces. Every ant that visits carries one piece back, the pile visibly shrinks, and once it's empty the food disappears. That's why food doesn't stick around forever — the colony eats it.</li>
+            <li>Every 4 pieces delivered to the nest <strong>hatches a new ant</strong>. Feed the colony and it grows; let it starve and growth stalls.</li>
             <li>Pheromones evaporate over time. If you stop dropping food in one spot, the trail fades and the colony naturally disperses.</li>
           </ul>
-          <p><strong>Your control:</strong> tapping drops food AND immediately floods the area with pheromone signal, so the entire colony pivots toward your target at once. You're not just placing bait — you're rewriting the gradient the whole swarm reads from.</p>
+          <p><strong>Your control:</strong> tapping drops a food pile AND floods the area with pheromone signal, so the entire colony pivots toward your target at once. You're not just placing bait — you're rewriting the gradient the whole swarm reads from.</p>
         </div>
       </details>
 
