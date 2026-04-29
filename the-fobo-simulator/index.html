@@ -5,94 +5,162 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The FOBO Simulator</title>
   <meta property="og:title" content="The FOBO Simulator">
-  <meta property="og:description" content="Watch your pixel-art job get slowly replaced by an AI robot in real time. Tap to fight back. The robot always wins.">
+  <meta property="og:description" content="A mid-century labor bureau processes the automation of your job. You fight back with paperwork. Real 2025-2026 AI model releases keep reopening your case.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/the-fobo-simulator/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IM+Fell+English+SC&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
   <script src="feedback.js" defer></script>
 </head>
 <body>
-  <!-- Intro screen -->
-  <div id="screen-intro" class="screen active">
-    <div class="crt-overlay"></div>
-    <div class="container">
-      <h1 class="title blink-slow">FOBO</h1>
-      <p class="subtitle">Fear Of Being Obsolete</p>
-      <p class="flavor-text">Your job is safe.<br><span class="red">It is not safe.</span></p>
-      <div class="input-group">
-        <label for="job-input">YOUR JOB TITLE:</label>
-        <input type="text" id="job-input" placeholder="e.g. Senior Synergy Manager" maxlength="40" autocomplete="off">
-      </div>
-      <button id="start-btn" class="btn btn-primary">CLOCK IN →</button>
-      <p class="hint-text">* may cause existential dread</p>
-    </div>
-  </div>
+  <div class="paper-grain"></div>
 
-  <!-- Game screen -->
-  <div id="screen-game" class="screen">
-    <div class="crt-overlay"></div>
-    <div class="game-hud">
-      <div class="hud-item">
-        <span class="hud-label">HUMANITY</span>
-        <div class="bar-container">
-          <div id="humanity-bar" class="bar bar-human"></div>
+  <!-- Intro screen: an in-take form from the Bureau -->
+  <main id="screen-intro" class="screen active">
+    <article class="dossier">
+      <header class="dossier-head">
+        <div class="stamp stamp-confidential">CONFIDENTIAL</div>
+        <p class="dept-line">UNITED STATES DEPARTMENT OF LABOR</p>
+        <p class="dept-sub">BUREAU OF AUTOMATED REDUNDANCY &mdash; Form FOBO-1</p>
+        <hr class="rule">
+        <h1 class="dossier-title">EMPLOYEE DISPLACEMENT INTAKE</h1>
+        <p class="dossier-subtitle">"For the orderly transition of human labor to machine."</p>
+      </header>
+
+      <section class="form-body">
+        <p class="form-instruction">
+          Section A &mdash; please type your <em>current</em> occupation in the field below.
+          A clerk will assess your replacement risk and open a case file.
+        </p>
+
+        <div class="form-row">
+          <label for="job-input" class="form-label">1. JOB TITLE</label>
+          <div class="form-fill">
+            <input type="text" id="job-input" placeholder="Senior Synergy Manager" maxlength="48" autocomplete="off">
+            <span class="form-underline"></span>
+          </div>
+        </div>
+
+        <p class="form-disclaimer">
+          By submitting this form, you acknowledge that automation is a natural
+          and inevitable consequence of progress. The Bureau cannot reverse a
+          determination of obsolescence once filed.
+        </p>
+
+        <button id="start-btn" class="paper-btn paper-btn-primary">FILE INTAKE FORM</button>
+
+        <p class="form-footnote">FOBO &mdash; <em>Fear Of Being Obsolete</em>. Est. 1953. Updated for the present moment.</p>
+      </section>
+    </article>
+  </main>
+
+  <!-- Game screen: case file in progress -->
+  <main id="screen-game" class="screen">
+    <article class="case-file">
+      <header class="case-head">
+        <div class="case-meta">
+          <span class="case-no" id="case-no">CASE&nbsp;#&mdash;</span>
+          <span class="case-stamp stamp-pending">CASE OPEN</span>
+        </div>
+        <p class="case-subject">SUBJECT: <span id="case-subject-name">&mdash;</span></p>
+        <hr class="rule">
+      </header>
+
+      <section class="gauges">
+        <div class="gauge">
+          <div class="gauge-label">HUMAN LABOR REMAINING</div>
+          <div class="meter">
+            <div id="humanity-bar" class="meter-fill meter-human"></div>
+            <div class="meter-ticks"></div>
+          </div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">MACHINE ENCROACHMENT</div>
+          <div class="meter">
+            <div id="robot-bar" class="meter-fill meter-robot"></div>
+            <div class="meter-ticks"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ticker-wrap">
+        <div class="ticker-label">FIELD REPORT</div>
+        <div id="ticker" class="ticker">case opened. clerks reviewing.</div>
+      </section>
+
+      <section class="actions">
+        <p class="actions-label" id="actions-label">RECOMMENDED COUNTERMEASURES</p>
+        <div id="actions-grid" class="actions-grid">
+          <!-- 4 action buttons inserted by JS, AI-generated for the job title -->
+        </div>
+        <p class="actions-hint">Each filing temporarily slows the encroachment.</p>
+      </section>
+
+      <!-- News bulletin overlay (AI model release event) -->
+      <div id="bulletin" class="bulletin hidden" aria-hidden="true">
+        <div class="bulletin-card">
+          <div class="bulletin-tape">&#x25A0;&nbsp; INCOMING WIRE &nbsp;&#x25A0;</div>
+          <p class="bulletin-date" id="bulletin-date">&mdash;</p>
+          <h2 class="bulletin-headline" id="bulletin-headline">&mdash;</h2>
+          <p class="bulletin-body" id="bulletin-body">&mdash;</p>
+          <p class="bulletin-impact" id="bulletin-impact">&mdash;</p>
         </div>
       </div>
-      <div class="hud-item">
-        <span class="hud-label">ROBOT</span>
-        <div class="bar-container">
-          <div id="robot-bar" class="bar bar-robot"></div>
-        </div>
-      </div>
-    </div>
-    <canvas id="game-canvas"></canvas>
-    <div class="game-footer">
-      <div id="upskill-btn-wrapper">
-        <button id="upskill-btn" class="btn btn-upskill">UPSKILL!</button>
-        <span id="upskill-label" class="upskill-label">TAP TO FIGHT BACK</span>
-      </div>
-      <div id="status-msg" class="status-msg"></div>
-    </div>
-  </div>
+    </article>
+  </main>
 
-  <!-- Certificate screen -->
-  <div id="screen-cert" class="screen">
-    <div class="crt-overlay"></div>
-    <div class="container cert-container">
+  <!-- Certificate / case-closed screen -->
+  <main id="screen-cert" class="screen">
+    <article class="cert-container">
       <div id="generating-msg" class="generating-msg">
-        <span class="blink-fast">■</span> GENERATING CERTIFICATE... <span class="blink-fast">■</span>
-        <p class="gen-sub">calibrating your obsolescence...</p>
+        <span class="typewriter-line">PROCESSING TERMINATION PAPERWORK</span>
+        <span class="typewriter-dots"><span>.</span><span>.</span><span>.</span></span>
+        <p class="gen-sub">A clerk is sealing your file.</p>
       </div>
+
       <div id="certificate" class="certificate" style="display:none">
-        <div class="cert-header">
+        <div class="cert-corner cert-corner-tl">No. <span id="cert-no">0001</span></div>
+        <div class="cert-corner cert-corner-tr">FILE CLOSED</div>
+
+        <div class="cert-stamp" id="cert-stamp">REPLACED</div>
+
+        <header class="cert-header">
           <p class="cert-org">OFFICE OF WORKFORCE DISPLACEMENT</p>
           <p class="cert-org">BUREAU OF AUTOMATED REDUNDANCY</p>
           <hr class="cert-hr">
           <h2 class="cert-title">CERTIFICATE OF OBSOLESCENCE</h2>
           <hr class="cert-hr">
-        </div>
-        <div class="cert-body">
+        </header>
+
+        <section class="cert-body">
           <p class="cert-text">This certifies that the position of</p>
-          <p id="cert-job" class="cert-job"></p>
+          <p id="cert-job" class="cert-job">&mdash;</p>
           <p class="cert-text">has been permanently assumed by</p>
-          <p id="cert-ai" class="cert-ai"></p>
+          <p id="cert-ai" class="cert-ai">&mdash;</p>
+          <p class="cert-text cert-small">following the release of</p>
+          <p id="cert-event" class="cert-event">&mdash;</p>
           <p class="cert-text cert-small">due to the following cause of displacement:</p>
-          <p id="cert-cause" class="cert-cause"></p>
-          <p class="cert-text cert-small">effective immediately and retroactively</p>
-        </div>
-        <div class="cert-footer">
-          <div class="cert-seal">◈ OFFICIALLY SEALED ◈</div>
-          <p id="cert-date" class="cert-date"></p>
-        </div>
+          <p id="cert-cause" class="cert-cause">&mdash;</p>
+          <p class="cert-text cert-small">effective immediately and retroactively.</p>
+        </section>
+
+        <footer class="cert-footer">
+          <div class="cert-signoff">
+            <span class="cert-sig">~ Office of the Commissioner ~</span>
+            <span class="cert-seal">&#x25C8; OFFICIALLY SEALED &#x25C8;</span>
+          </div>
+          <p id="cert-date" class="cert-date">&mdash;</p>
+        </footer>
       </div>
+
       <div id="share" style="display:none" class="share-section">
-        <button onclick="share()" class="btn btn-primary">SHARE YOUR FATE</button>
-        <button id="play-again-btn" class="btn btn-secondary">PLAY AGAIN</button>
+        <button onclick="share()" class="paper-btn paper-btn-primary">SHARE YOUR FATE</button>
+        <button id="play-again-btn" class="paper-btn paper-btn-secondary">FILE A NEW CASE</button>
       </div>
-    </div>
-  </div>
+    </article>
+  </main>
 </body>
 </html>
