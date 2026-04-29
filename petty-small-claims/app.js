@@ -117,20 +117,23 @@
     'Granted, Begrudgingly'
   ];
 
-  // 12 findings templates for the local fallback — each echoes the defendant / grievance / aggravator verbatim.
+  // Local fallback findings — these run only when the LLM fails or is offline.
+  // They MUST NOT echo the grievance text back at the user verbatim; that was
+  // the long-standing complaint about this app. Templates here paraphrase
+  // the conduct in clerk-register and lean on the defendant + aggravator only.
   const FINDINGS_TEMPLATES = [
-    (c) => `The court finds it uncontested that ${c.defendant} did, in fact, ${c.grievance.toLowerCase()}.`,
-    (c) => `Witness testimony corroborates the plaintiff's claim that ${c.defendant} committed the act described: "${c.grievance}".`,
-    (c) => `The aggravating factors on record (${c.aggName}) weigh against ${c.defendant}.`,
-    (c) => `No plausible defense was offered by ${c.defendant} for the incident: "${c.grievance}".`,
-    (c) => `The plaintiff, ${c.plaintiff}, has appeared in good faith; ${c.defendant} has not.`,
-    (c) => `The grievance — "${c.grievance}" — constitutes a pattern this court finds persuasive.`,
-    (c) => `${c.defendant}'s conduct, given ${c.aggName}, constitutes aggravated nuisance under local custom.`,
-    (c) => `The court takes judicial notice that "${c.grievance}" is, on its face, rude.`,
-    (c) => `Damages assessed by the clerk are found to be reasonable under the circumstances.`,
-    (c) => `The plaintiff demonstrated admirable restraint in not escalating "${c.grievance}" further.`,
-    (c) => `${c.defendant}'s silence on the matter of "${c.grievance}" is itself instructive.`,
-    (c) => `The court acknowledges the plaintiff's emotional investment in the specific detail: "${c.grievance}".`
+    (c) => `The court finds the conduct alleged by the plaintiff against ${c.defendant} to be uncontested on this record.`,
+    (c) => `The defendant ${c.defendant} has produced no evidence to disturb the plaintiff's account, which the court therefore takes as settled.`,
+    (c) => `It is stipulated that the matter, while domestic in scale, falls squarely within the customary jurisdiction of this court.`,
+    (c) => `The aggravation found on the record — ${c.aggName} — is folded into the weight assigned to the defendant's conduct.`,
+    (c) => `The plaintiff ${c.plaintiff} has comported themselves throughout with a restraint the record does not show was reciprocated.`,
+    (c) => `The defendant's silence in the face of plain facts is itself a posture this court has seen many times before.`,
+    (c) => `No plausible defense having been offered, the court treats the plaintiff's account as the operative version of events.`,
+    (c) => `This court takes judicial notice that conduct of this character, however small in stakes, is not without civic cost.`,
+    (c) => `The plaintiff is not required to relitigate matters the defendant has already declined to contest.`,
+    (c) => `The defendant's bearing throughout the proceeding has weighed, quietly, against them.`,
+    (c) => `In the matter before the court, the plaintiff's patience is noted and the defendant's lack of one is more so.`,
+    (c) => `The record reflects a pattern the court is unwilling to pretend it has not already seen.`
   ];
 
   const SILLY_COUNTIES = [
@@ -347,6 +350,55 @@
     };
   }
 
+  // ---------- Echo / quote detector ----------
+  //
+  // Returns true if any finding "quotes" the grievance — either via
+  // explicit quotation marks wrapping a slice that appears in the
+  // grievance, or by reproducing 4+ consecutive grievance words in a
+  // row. Used to reject judgments that fail the no-echo rule.
+  function findingsEchoGrievance(findings, grievance) {
+    const normalize = (s) => String(s || '')
+      .toLowerCase()
+      .replace(/[‘’“”]/g, "'")
+      .replace(/[^a-z0-9' ]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const gWords = normalize(grievance).split(' ').filter(Boolean);
+    if (gWords.length < 4) {
+      // Grievance is too short to form a 4-gram; only flag explicit quoting.
+      const slice = normalize(grievance);
+      for (const f of findings) {
+        const m = String(f).match(/['"‘’“”]([^'"‘’“”]{4,})['"‘’“”]/);
+        if (m && slice && normalize(m[1]).includes(slice.slice(0, Math.max(8, Math.floor(slice.length * 0.6))))) {
+          return true;
+        }
+      }
+      return false;
+    }
+    // Build the set of 4-word shingles from the grievance.
+    const shingles = new Set();
+    for (let i = 0; i + 4 <= gWords.length; i++) {
+      shingles.add(gWords.slice(i, i + 4).join(' '));
+    }
+    for (const f of findings) {
+      const fNorm = normalize(f);
+      // Any 4-gram in common = echo.
+      const fWords = fNorm.split(' ').filter(Boolean);
+      for (let i = 0; i + 4 <= fWords.length; i++) {
+        if (shingles.has(fWords.slice(i, i + 4).join(' '))) return true;
+      }
+      // Any quoted slice that appears in the grievance = echo.
+      const quoted = String(f).match(/['"‘’“”]([^'"‘’“”]{6,})['"‘’“”]/g);
+      if (quoted) {
+        for (const q of quoted) {
+          const inner = normalize(q.replace(/^['"‘’“”]|['"‘’“”]$/g, ''));
+          if (inner && normalize(grievance).includes(inner)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   // ---------- LLM call: main judgment ----------
 
   // Judgment prompt — see knowledge-base/pages/concepts/{humor-mechanics,
@@ -375,9 +427,14 @@ CRAFT:
     "The defendant offers no defense to ..." / "The plaintiff is not required to ..." /
     "This court takes notice of ..." / "In the matter of ..." / "No evidence has been produced that ..."
 
-  Every finding must reference a CONCRETE detail from the grievance (specific object, time, number, action, phrase). Abstraction is failure ("the incident", "this behavior" — banned).
+  Every finding must reference a CONCRETE detail from the grievance (specific object, time, number, action) — but NEVER as a verbatim quoted slice of the user's text. Abstraction is failure ("the incident", "this behavior" — banned). Quoting is also failure.
 
-  Do NOT simply restate the grievance in fancy type. INTERPRET it — characterize the defendant's conduct, weigh the plaintiff's bearing. If the input is "keeps eating my leftovers", the finding characterizes ("has failed to respect the plaintiff's labeled vessels"), it does not echo. A reader who can spot "keyword + formal template" lost the magic.
+  ABSOLUTE QUOTE BAN — this is the single most important rule:
+    - DO NOT quote the grievance text. No quotation marks around the user's words. No "the grievance — '...'" structure. No appositive that drops the user's phrasing in raw.
+    - DO NOT echo the grievance as a clause. Reader test: if any finding contains 4+ consecutive words that appear in the grievance, you have failed and must rewrite.
+    - You may NAME a concrete object/time/action from the grievance in your own clerk-register words. ("a labeled container", "an hour past midnight", "the matter of the missing leftovers") — these REFER to the grievance without ECHOING it.
+
+  Do NOT simply restate the grievance in fancy type. INTERPRET it — characterize the defendant's conduct, weigh the plaintiff's bearing. If the input is "keeps eating my leftovers", the finding characterizes ("has failed to respect the plaintiff's labeled vessels"), it does not echo. A reader who can spot "keyword + formal template" lost the magic. A reader who sees their own words quoted back lost it twice.
 
   Each finding has a different JOB:
     1. ESTABLISH — state the offense as uncontested fact. Treat disputed facts as settled in the plaintiff's favor. Matter-of-fact.
@@ -407,6 +464,8 @@ FORBIDDEN:
   - Listing aggravators verbatim. Fold one in organically.
   - Fabricated facts contradicting the grievance.
   - A flourish in ESTABLISH.
+  - QUOTING the grievance. No quotation marks around any phrase the plaintiff wrote. Translate every detail into the clerk's own register.
+  - Constructions like "the incident: '...'", "the act described: '...'", "the matter of '...'", which drop the user's text in raw — these are the defining failure mode of this app.
 
 ═══ OTHER FIELDS (don't fuss, but do VARY) ═══
 case_number:       "26-04-NNNN", 4 digits. Pick new digits each call — do not default to a handful you've seen; pick what feels organic for THIS grievance.
@@ -416,25 +475,32 @@ base_damages:      0.25 < x < 2.99, ODD CENTS (1.73 / 2.19 / 0.87). Never .00 / 
 
 ═══ EXAMPLES ═══
 
-EX1 — leftovers (flourish "the vessel", SEAL)
+EX1 — leftovers (flourish "the vessel", SEAL). Note how no finding quotes the grievance; each names details in clerk-register.
 IN: P=Jordan P. Reeves  D=my roommate Dan  G="ate my clearly labeled pad thai at 2am, denied it the next morning"  Aggs=labeled, denied (×1.38)
 OUT:
 {"case_number":"26-04-3162","county":"Circuit Court of Muttontown County",
 "findings":[
- "The court finds it uncontested that a labeled pad thai was consumed by the defendant Dan at or about 2:00 a.m.",
- "The defendant's morning denial, delivered in the continued presence of the empty container, is taken as aggravation and not defense.",
+ "The court finds it uncontested that the defendant Dan, in the small hours, helped himself to a meal that was not his to take.",
+ "The denial offered the following morning, delivered alongside an empty container that spoke for itself, is taken as aggravation and not defense.",
  "The plaintiff Reeves labeled the vessel — a courtesy the record does not show was returned."],
 "verdict_archetype":"Ruled In Your Favor, With Pettiness","base_damages":2.17}
 
-EX2 — late Slack (flourish "the sabbath of personal hours", SEAL; different verdict)
+EX2 — late Slack (flourish "the sabbath of personal hours", SEAL; different verdict). Again: no quoting, no echo.
 IN: P=Morgan Ito  D=my coworker Priya  G="sent a critical slack at 11:47pm Saturday, ruined my sleep"  Aggs=weekend, no urgency (×1.30)
 OUT:
 {"case_number":"26-04-0755","county":"Circuit Court of Loameland County",
 "findings":[
- "The record reflects that a critical Slack communication was dispatched at 11:47 p.m. on a Saturday evening.",
+ "The court finds the defendant Priya dispatched workplace correspondence at an hour the plaintiff was entitled to consider their own.",
  "No evidence has been produced that the timing was required by any workflow; the court treats it as chosen, not imposed.",
  "The plaintiff Ito observed the sabbath of personal hours — a practice this court commends and seldom sees reciprocated."],
 "verdict_archetype":"Granted, Begrudgingly","base_damages":1.89}
+
+EX3 — quoting failure (DO NOT produce findings shaped like this):
+{"findings":[
+ "The court takes notice of the grievance: 'ate my clearly labeled pad thai at 2am, denied it the next morning.'",
+ "The defendant's actions, as described — 'denied it the next morning' — weigh against them.",
+ "The plaintiff's account stands."]}
+Why it fails: literal quoting back of the user's words is the exact thing this app must avoid. Translate, don't transcribe.
 
 ═══ NEGATIVE EXAMPLE — never produce this ═══
 {"findings":["Plaintiff has been wronged in a heartbreaking manner.","This is not cool behavior from the defendant — order in this court!","Justice demands the highest damages possible."]}
@@ -445,11 +511,16 @@ ${VERDICTS.map((v) => '  - ' + v).join('\n')}
 
 Return ONLY the JSON object.`;
 
-  async function callLLM(ctx) {
+  async function callLLM(ctx, opts) {
+    const isRepair = !!(opts && opts.repair);
     const itemsContext = (ctx.items && ctx.items.length)
       ? ('Plaintiff-selected line items (context only — you do NOT assess these): ' +
          selectedItemLines(ctx.items).map((l) => l.label + ' ' + fmt$(l.amount)).join('; '))
       : 'Plaintiff-selected line items: (none)';
+
+    const baseInstruction = 'Produce the judgment JSON. Every finding must reference a concrete detail from the grievance and INTERPRET it (characterize the defendant, weigh the plaintiff), not just restate it. CRITICAL: do not quote any portion of the grievance text verbatim — no quotation marks around the user\'s words, no "the act described: ..." style appositive, no four-word run that appears in the grievance. Translate every detail into the clerk\'s own register. Include exactly ONE earned flourish across the three findings, placed in SEAL (or AGGRAVATE), never in ESTABLISH. Pick a verdict_archetype that actually matches this grievance shape — do not default. Do NOT add damage line items; only assess base_damages (0.25..2.99, odd cents).';
+
+    const repairInstruction = 'YOUR PREVIOUS ATTEMPT QUOTED OR ECHOED THE GRIEVANCE TEXT. That is the single forbidden failure mode. Rewrite from scratch. Constraints: zero quotation marks of any kind in the findings. Zero four-word runs that also appear in the grievance. Refer to objects/times/actions only by paraphrase in the clerk\'s own register (e.g. "a labeled container" instead of "my clearly labeled pad thai", "an hour past midnight" instead of "2am"). All other rules from the system prompt still apply.';
 
     const userPrompt = [
       'Plaintiff: ' + ctx.plaintiff,
@@ -458,13 +529,16 @@ Return ONLY the JSON object.`;
       'Aggravating factors on record: ' + ctx.aggName + ' (combined multiplier ×' + ctx.aggMult.toFixed(2) + ')',
       itemsContext,
       '',
-      'Produce the judgment JSON. Every finding must reference a concrete detail from the grievance and INTERPRET it (characterize the defendant, weigh the plaintiff), not just restate it. Include exactly ONE earned flourish across the three findings, placed in SEAL (or AGGRAVATE), never in ESTABLISH. Pick a verdict_archetype that actually matches this grievance shape — do not default. Do NOT add damage line items; only assess base_damages (0.25..2.99, odd cents).'
+      isRepair ? repairInstruction : baseInstruction
     ].join('\n');
 
     const body = {
       slug: SLUG,
       model: 'gpt-5.4',
-      temperature: 0.55,
+      // Slight temperature bump on the repair pass — the model needs more
+      // freedom to walk away from its first phrasing rather than nudge
+      // it. Initial pass stays at 0.55.
+      temperature: isRepair ? 0.7 : 0.55,
       max_tokens: 700,
       response_format: 'json_object',
       messages: [
@@ -494,6 +568,20 @@ Return ONLY the JSON object.`;
     if (typeof parsed.verdict_archetype !== 'string') throw new Error('bad_verdict');
 
     parsed.findings = parsed.findings.slice(0, 3).map((s) => String(s));
+
+    // Reject findings that quote the grievance verbatim. This was the
+    // long-standing complaint about this app — the model would echo the
+    // user's words back inside quotation marks or as an appositive ("the
+    // matter of '...'"), which makes the judgment feel clunky and
+    // unearned. We detect two failure shapes:
+    //   (1) any quoted run that overlaps the grievance,
+    //   (2) any 4+ consecutive-word run from the grievance appearing
+    //       verbatim inside a finding (case-insensitive).
+    // Either tells the caller to retry; the orchestrator will rerun the
+    // LLM once with a repair nudge before falling back to the local set.
+    if (findingsEchoGrievance(parsed.findings, ctx.grievance)) {
+      throw new Error('echoed_grievance');
+    }
 
     if (VERDICTS.indexOf(parsed.verdict_archetype) < 0) {
       parsed.verdict_archetype = VERDICTS[inputHash(ctx) % VERDICTS.length];
@@ -561,7 +649,22 @@ Return ONLY the JSON object.`;
       writeCache(ctx, payload);
       return payload;
     } catch (err) {
-      console.warn('[petty] LLM failed, using local fallback:', err && err.message);
+      const msg = err && err.message;
+      // One repair pass for the specific case where the model echoed the
+      // grievance back. Other failures (network, parse, schema) skip the
+      // retry and go straight to local fallback — those don't get better
+      // by asking again.
+      if (msg === 'echoed_grievance') {
+        try {
+          const payload = await callLLM(ctx, { repair: true });
+          writeCache(ctx, payload);
+          return payload;
+        } catch (e2) {
+          console.warn('[petty] repair pass also failed, falling back:', e2 && e2.message);
+        }
+      } else {
+        console.warn('[petty] LLM failed, using local fallback:', msg);
+      }
       const payload = fallbackPayload(ctx);
       writeCache(ctx, payload);
       return payload;
