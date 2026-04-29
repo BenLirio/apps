@@ -69,6 +69,20 @@
         <hr class="rule">
       </header>
 
+      <!-- Inline news wire (AI model release events). Slides in, never blocks input. -->
+      <aside id="wire" class="wire wire-empty" aria-live="polite">
+        <div class="wire-tape">
+          <span class="wire-tape-text">&#x25A0;&nbsp; INCOMING WIRE &nbsp;&#x25A0;</span>
+          <span class="wire-date" id="wire-date">&mdash;</span>
+          <button type="button" id="wire-dismiss" class="wire-dismiss" aria-label="dismiss wire">&times;</button>
+        </div>
+        <div class="wire-body-wrap">
+          <h2 class="wire-headline" id="wire-headline">&mdash;</h2>
+          <p class="wire-body" id="wire-body">&mdash;</p>
+          <p class="wire-impact" id="wire-impact">&mdash;</p>
+        </div>
+      </aside>
+
       <section class="gauges">
         <div class="gauge">
           <div class="gauge-label">HUMAN LABOR REMAINING</div>
@@ -92,23 +106,12 @@
       </section>
 
       <section class="actions">
-        <p class="actions-label" id="actions-label">RECOMMENDED COUNTERMEASURES</p>
-        <div id="actions-grid" class="actions-grid">
-          <!-- 4 action buttons inserted by JS, AI-generated for the job title -->
+        <p class="actions-label" id="actions-label">DISPATCH BOARD &mdash; FILE A COUNTERMEASURE</p>
+        <div id="actions-list" class="actions-list">
+          <!-- ~12 action buttons inserted by JS, AI-generated for the job title -->
         </div>
-        <p class="actions-hint">Each filing temporarily slows the encroachment.</p>
+        <p class="actions-hint">Stamp them as fast as the clerks can re-stock the rack. Each filing slows the encroachment a little.</p>
       </section>
-
-      <!-- News bulletin overlay (AI model release event) -->
-      <div id="bulletin" class="bulletin hidden" aria-hidden="true">
-        <div class="bulletin-card">
-          <div class="bulletin-tape">&#x25A0;&nbsp; INCOMING WIRE &nbsp;&#x25A0;</div>
-          <p class="bulletin-date" id="bulletin-date">&mdash;</p>
-          <h2 class="bulletin-headline" id="bulletin-headline">&mdash;</h2>
-          <p class="bulletin-body" id="bulletin-body">&mdash;</p>
-          <p class="bulletin-impact" id="bulletin-impact">&mdash;</p>
-        </div>
-      </div>
     </article>
   </main>
 

@@ -174,6 +174,14 @@ const GENERIC_ACTIONS = [
   { label: 'File an HR grievance', flavor: 'forwarded to /dev/null' },
   { label: 'Add "AI-adjacent" to bio', flavor: 'six new recruiters DM you' },
   { label: 'Pivot to consulting', flavor: 'business cards being printed' },
+  { label: 'Volunteer for the AI ethics committee', flavor: 'meets quarterly, no quorum' },
+  { label: 'Launch a Substack about your craft', flavor: 'three subscribers, all bots' },
+  { label: 'Petition the Department of Labor', flavor: 'form QD-44, in triplicate' },
+  { label: 'Train the model that will replace you', flavor: '$22/hr, contract role' },
+  { label: 'Acquire a second certification', flavor: 'PDF will be emailed shortly' },
+  { label: 'Forward a thinkpiece to the team', flavor: '"AI Will Never Replace ___."' },
+  { label: 'Schedule a strategic offsite', flavor: 'catering: tepid sandwiches' },
+  { label: 'Quietly learn another industry', flavor: 'in case this one folds' },
 ];
 
 // Generic fallback ticker lines while clerks "review the case"
@@ -196,14 +204,19 @@ const state = {
   running: false,
   baselineTimer: null,
   eventTimer: null,
+  wireTimer: null,
   actions: GENERIC_ACTIONS.slice(),
-  actionsCooldown: [false, false, false, false],
+  actionsCooldown: [], // sized to actions.length on render
   eventsQueue: [],
   triggeringEvent: null,  // the AI release that finally seals the file
   finalAiName: null,
   finalCause: null,
   finalEvent: null,
 };
+
+// Cooldown per individual button after it's filed. Long enough to push players
+// to scan the whole board, short enough that the rack feels alive.
+const ACTION_COOLDOWN_MS = 3200;
 
 // ---- Wiring ----
 document.addEventListener('DOMContentLoaded', () => {
@@ -212,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') startGame();
   });
   document.getElementById('play-again-btn').addEventListener('click', resetToIntro);
+  const wireDismiss = document.getElementById('wire-dismiss');
+  if (wireDismiss) wireDismiss.addEventListener('click', hideWire);
 });
 
 function showScreen(name) {
@@ -241,7 +256,7 @@ async function startGame() {
   state.humanPct = 100;
   state.robotPct = 0;
   state.actions = GENERIC_ACTIONS.slice();
-  state.actionsCooldown = [false, false, false, false];
+  state.actionsCooldown = state.actions.map(() => false);
   state.triggeringEvent = null;
   state.finalAiName = null;
   state.finalCause = null;
@@ -314,15 +329,17 @@ function setTicker(text) {
 
 // ---- Actions (countermeasure buttons) ----
 function renderActions(actions) {
-  const grid = document.getElementById('actions-grid');
-  grid.innerHTML = '';
-  actions.slice(0, 4).forEach((a, i) => {
+  const list = document.getElementById('actions-list');
+  list.innerHTML = '';
+  state.actionsCooldown = actions.map(() => false);
+  actions.forEach((a, i) => {
     const btn = document.createElement('button');
     btn.className = 'action-btn';
     btn.dataset.idx = String(i);
-    btn.innerHTML = `<span class="action-label">${escapeHtml(a.label)}</span>`;
+    const flavor = a.flavor ? `<span class="action-flavor">${escapeHtml(a.flavor)}</span>` : '';
+    btn.innerHTML = `<span class="action-label">${escapeHtml(a.label)}</span>${flavor}`;
     btn.addEventListener('click', () => fileCountermeasure(i));
-    grid.appendChild(btn);
+    list.appendChild(btn);
   });
 }
 
@@ -335,8 +352,9 @@ function fileCountermeasure(idx) {
   if (state.actionsCooldown[idx]) return;
 
   const action = state.actions[idx];
-  // Push back the robot a meaningful chunk so it actually feels like winning early on.
-  const push = 7 + Math.random() * 4; // 7-11
+  // Smaller per-filing push than before — there are now ~12 buttons, so the
+  // game wants the player tapping a steady rhythm rather than landing one big move.
+  const push = 3 + Math.random() * 3; // 3-6
   state.robotPct = Math.max(0, state.robotPct - push);
   state.humanPct = Math.min(100, 100 - state.robotPct);
   updateGauges();
@@ -345,8 +363,8 @@ function fileCountermeasure(idx) {
 
   // Mark cooldown on this button only
   state.actionsCooldown[idx] = true;
-  const grid = document.getElementById('actions-grid');
-  const btn = grid.children[idx];
+  const list = document.getElementById('actions-list');
+  const btn = list.children[idx];
   if (btn) {
     btn.disabled = true;
     btn.classList.add('filed');
@@ -355,8 +373,9 @@ function fileCountermeasure(idx) {
     state.actionsCooldown[idx] = false;
     if (state.running && btn) {
       btn.disabled = false;
+      btn.classList.remove('filed');
     }
-  }, 2200);
+  }, ACTION_COOLDOWN_MS);
 
   // Once any countermeasure is filed and you're below ~25% encroachment, occasional encouragement.
   if (state.robotPct < 25 && Math.random() < 0.5) {
@@ -382,8 +401,9 @@ function startBaselineTick() {
   clearInterval(state.baselineTimer);
   state.baselineTimer = setInterval(() => {
     if (!state.running) return;
-    // Slow grind so player can briefly feel like they're winning.
-    const advance = 0.45 + (state.robotPct / 100) * 0.7;
+    // Slightly faster grind than before — the per-tap push is also smaller, so the
+    // dispatch board has to be worked, not glanced at.
+    const advance = 0.65 + (state.robotPct / 100) * 0.85;
     state.robotPct = Math.min(100, state.robotPct + advance);
     state.humanPct = Math.max(0, 100 - state.robotPct);
     updateGauges(true);
@@ -418,7 +438,7 @@ function fireNextEvent() {
   if (!ev) return;
 
   const isFinal = state.eventsQueue.length === 0;
-  showBulletin(ev, isFinal);
+  showWire(ev, isFinal);
 
   // The event reverses your gains. Bigger severity = bigger blow.
   const blow = 18 + ev.severity * (isFinal ? 80 : 28);
@@ -435,36 +455,40 @@ function fireNextEvent() {
 
   state.triggeringEvent = ev;
 
-  // Auto-dismiss bulletin
-  setTimeout(() => {
-    hideBulletin();
-    if (!state.running) return;
-    if (isFinal || state.robotPct >= 100) {
-      sealFile(ev);
-    } else {
-      setTicker(`AFTERSHOCK: "${ev.actor}" lands. Public confidence in human labor falls ${Math.round(blow)}%.`);
-      scheduleNextEvent();
-    }
-  }, 3200);
+  // Wire stays visible while the player keeps filing — non-blocking.
+  if (isFinal || state.robotPct >= 100) {
+    // For the case-sealing event, hold the wire on screen briefly, then seal.
+    setTimeout(() => sealFile(ev), 2800);
+  } else {
+    setTicker(`AFTERSHOCK: "${ev.actor}" lands. Public confidence in human labor falls ${Math.round(blow)}%.`);
+    // Auto-tuck the wire after a few seconds; player can also dismiss it manually.
+    clearTimeout(state.wireTimer);
+    state.wireTimer = setTimeout(() => hideWire(), 5800);
+    scheduleNextEvent();
+  }
 }
 
-// ---- Bulletin overlay ----
-function showBulletin(ev, isFinal) {
-  document.getElementById('bulletin-date').textContent = ev.date;
-  document.getElementById('bulletin-headline').textContent = ev.headline;
-  document.getElementById('bulletin-body').textContent = ev.body;
-  const impact = document.getElementById('bulletin-impact');
+// ---- Inline news wire ----
+function showWire(ev, isFinal) {
+  document.getElementById('wire-date').textContent = ev.date;
+  document.getElementById('wire-headline').textContent = ev.headline;
+  document.getElementById('wire-body').textContent = ev.body;
+  const impact = document.getElementById('wire-impact');
   impact.textContent = isFinal ? `IMPACT: ${ev.impact_phrase} — case sealed.` : `IMPACT: ${ev.impact_phrase}.`;
 
-  const wrap = document.getElementById('bulletin');
-  wrap.classList.remove('hidden');
-  wrap.setAttribute('aria-hidden', 'false');
+  const wire = document.getElementById('wire');
+  wire.classList.remove('wire-empty');
+  // Re-trigger the slide-in animation if a new wire fires while one is already up.
+  wire.classList.remove('wire-in');
+  void wire.offsetWidth;
+  wire.classList.add('wire-in');
 }
 
-function hideBulletin() {
-  const wrap = document.getElementById('bulletin');
-  wrap.classList.add('hidden');
-  wrap.setAttribute('aria-hidden', 'true');
+function hideWire() {
+  clearTimeout(state.wireTimer);
+  const wire = document.getElementById('wire');
+  wire.classList.remove('wire-in');
+  wire.classList.add('wire-empty');
 }
 
 // ---- End-of-game ----
@@ -472,7 +496,8 @@ function stopGame() {
   state.running = false;
   clearInterval(state.baselineTimer);
   clearTimeout(state.eventTimer);
-  hideBulletin();
+  clearTimeout(state.wireTimer);
+  hideWire();
 }
 
 function sealFile(ev) {
@@ -480,12 +505,14 @@ function sealFile(ev) {
   state.running = false;
   clearInterval(state.baselineTimer);
   clearTimeout(state.eventTimer);
+  clearTimeout(state.wireTimer);
 
   state.robotPct = 100;
   state.humanPct = 0;
   updateGauges(true);
 
   setTimeout(() => {
+    hideWire();
     showScreen('cert');
     generateCertificate(ev);
   }, 1400);
@@ -493,25 +520,27 @@ function sealFile(ev) {
 
 // ---- AI integrations ----
 
-// Tailored 4-button countermeasure list, specific to job title.
+// Tailored countermeasure list, specific to job title — a full dispatch board's worth.
 async function fetchTailoredActions(jobTitle) {
   const prompt = `You are issuing real-feeling but darkly comic "countermeasures" to a worker whose
 job is being automated away by AI. Their job title: "${jobTitle}".
 
-Return EXACTLY four (4) short, specific actions a person with that job title might
+Return EXACTLY twelve (12) short, specific actions a person with that job title might
 plausibly take to avoid being replaced. Each action should be 4-9 words, witty, and
-job-specific (mention tools, certifications, jargon, or rituals true to the field).
+job-specific (mention tools, certifications, jargon, processes, or rituals true to the field).
+Vary the register: some pragmatic upskilling, some petty bureaucratic stalling, some absurd
+performative gestures, some quiet exit-ramp planning. No two actions should solve the same
+problem the same way.
+
 Each gets a one-line "flavor" — a deadpan parenthetical aside (3-10 words).
 
 Respond with ONLY valid JSON in this exact shape (no markdown, no prose):
 {
   "actions": [
-    { "label": "string", "flavor": "string" },
-    { "label": "string", "flavor": "string" },
-    { "label": "string", "flavor": "string" },
     { "label": "string", "flavor": "string" }
   ]
-}`;
+}
+The "actions" array must contain exactly 12 entries.`;
 
   const resp = await fetch(AI_ENDPOINT, {
     method: 'POST',
@@ -519,7 +548,7 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no prose):
     body: JSON.stringify({
       prompt,
       system: 'You are a darkly comic mid-century labor-bureau clerk. Always respond with valid JSON only.',
-      max_tokens: 320,
+      max_tokens: 800,
     }),
   });
   if (!resp.ok) return null;
@@ -535,9 +564,9 @@ Respond with ONLY valid JSON in this exact shape (no markdown, no prose):
     .map(a => ({
       label: String(a.label).slice(0, 60),
       flavor: a.flavor ? String(a.flavor).slice(0, 80) : '',
-    }))
-    .slice(0, 4);
-  return cleaned.length === 4 ? cleaned : null;
+    }));
+  // Accept anything from 8 to 12 — be lenient with model output.
+  return cleaned.length >= 8 ? cleaned.slice(0, 12) : null;
 }
 
 // Certificate text — names the actual AI release event that sealed the file.
