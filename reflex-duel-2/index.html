@@ -21,14 +21,17 @@
   <div id="screen-landing">
     <div class="landing-inner">
       <h1 class="game-title">REFLEX<br>DUEL <span class="two">II</span></h1>
+      <p id="invited-banner" class="invited-banner" style="display:none">
+        you were challenged to arena <span id="invited-code-label"></span>
+      </p>
       <p class="tagline">Receipts this time.<br>Server-adjudicated. No ties.</p>
       <input id="player-name" type="text" placeholder="enter your name" maxlength="20" autocomplete="off">
-      <button class="btn-primary" onclick="createRoom()">Create Arena</button>
+      <button id="btn-create" class="btn-primary" onclick="createRoom()">Create Arena</button>
       <div class="divider"><span>or join one</span></div>
       <div id="join-section">
-        <input id="join-code" type="text" placeholder="ROOM CODE" maxlength="6" autocomplete="off"
+        <input id="join-code" type="text" placeholder="ROOM CODE" maxlength="4" autocomplete="off"
                oninput="this.value=this.value.toUpperCase()">
-        <button class="btn-secondary" onclick="joinRoom()">Enter Arena</button>
+        <button id="btn-join" class="btn-secondary" onclick="joinRoom()">Enter Arena</button>
       </div>
       <p id="error-msg" class="error-msg" style="display:none"></p>
     </div>
@@ -39,8 +42,13 @@
     <div class="waiting-inner">
       <p class="waiting-label">your arena code</p>
       <h2 id="room-code-display" class="room-code"></h2>
+      <div id="qr-wrap" class="qr-wrap">
+        <img id="qr-img" alt="scan to join arena" />
+        <small class="qr-caption">scan to enter the arena</small>
+      </div>
+      <button class="btn-secondary btn-share" onclick="copyChallengeLink()">Copy challenge link</button>
       <p class="waiting-copy">warming up the reflex cannons...</p>
-      <small class="waiting-hint">send this code — they pick "Enter Arena"</small>
+      <small class="waiting-hint">they scan the QR — or punch the code in</small>
     </div>
   </div>
 
@@ -78,10 +86,12 @@
       <div id="result-badge" class="superhuman-badge" style="display:none">⚡ SUPERHUMAN REFLEX</div>
       <h2 id="result-headline" class="result-headline"></h2>
       <p id="result-detail" class="result-detail"></p>
-      <div id="share" class="share-section">
-        <button class="btn-primary" onclick="shareChallenge()">Challenge a Friend</button>
+      <div id="rematch-wrap" class="share-section">
+        <button id="btn-rematch" class="btn-primary" onclick="requestRematch()">Run It Back</button>
+        <p id="rematch-pending" class="rematch-pending" style="display:none">waiting for opponent...</p>
       </div>
-      <button class="btn-secondary" onclick="location.reload()">Play Again</button>
+      <button class="btn-secondary" onclick="shareChallenge()">Challenge someone else</button>
+      <button class="btn-tertiary" onclick="location.reload()">Leave arena</button>
     </div>
   </div>
 

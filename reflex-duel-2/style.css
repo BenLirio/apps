@@ -161,6 +161,37 @@ input::placeholder {
   letter-spacing: 0.05em;
 }
 
+.invited-banner {
+  width: 100%;
+  background: rgba(255,230,0,0.08);
+  border: 1px solid rgba(255,230,0,0.4);
+  color: var(--yellow);
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+}
+
+.invited-banner span {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.25em;
+  margin-left: 6px;
+}
+
+/* When the user arrived via ?room= invite, lean the UI toward joining. */
+.btn-deemphasized {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+
+.btn-promoted {
+  background: var(--yellow);
+  color: var(--black);
+}
+.btn-promoted:active { background: #e6cf00; }
+
 /* ─── WAITING ────────────────────────────────────────────────── */
 
 #screen-waiting {
@@ -207,6 +238,40 @@ input::placeholder {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-top: 8px;
+}
+
+.qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#qr-img {
+  width: 200px;
+  height: 200px;
+  background: var(--white);
+  padding: 10px;
+  border: 2px solid var(--yellow);
+  box-shadow: 0 0 30px rgba(255,230,0,0.25);
+  transition: opacity 0.2s ease-in;
+  display: block;
+}
+
+.qr-caption {
+  font-size: 10px;
+  color: #666;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.btn-share {
+  max-width: 280px;
+  font-size: 14px;
+  padding: 10px 0;
+  min-height: 40px;
+  letter-spacing: 0.12em;
 }
 
 @keyframes pulse {
@@ -452,3 +517,56 @@ input::placeholder {
 }
 
 .share-section { width: 100%; }
+
+.rematch-pending {
+  font-size: 12px;
+  color: #888;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 8px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.btn-tertiary {
+  background: transparent;
+  color: #666;
+  border: none;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 8px 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-tertiary:hover { color: var(--white); }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ef-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 80px;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--yellow);
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  padding: 10px 18px;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+  z-index: 2147483002;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.ef-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

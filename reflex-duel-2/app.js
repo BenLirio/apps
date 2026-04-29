@@ -25,11 +25,23 @@ let showTimer       = null;
 let safetyTimer     = null;
 
 // ── Utils ─────────────────────────────────────────────────────
+const ROOM_CODE_LEN = 4;
+
 function generateRoomCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  // 4-letter codes only — easier to type, easier to read off a QR.
+  // 26^4 = 456,976 combos, plenty for concurrent rooms.
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let c = '';
-  for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < ROOM_CODE_LEN; i++) c += chars[Math.floor(Math.random() * chars.length)];
   return c;
+}
+
+function joinUrlForCode(code) {
+  // Stable absolute URL so a scanned QR works even if the host's tab is gone.
+  const url = new URL(location.href);
+  url.search = '?room=' + encodeURIComponent(code);
+  url.hash = '';
+  return url.toString();
 }
 
 function show(screenId) {
@@ -84,7 +96,10 @@ function joinRoom() {
   playerName = document.getElementById('player-name').value.trim();
   const code = document.getElementById('join-code').value.trim().toUpperCase();
   if (!playerName) { showError("can't fight without a name, champ"); return; }
-  if (code.length !== 6) { showError("that code looks wrong — 6 characters, all caps"); return; }
+  if (code.length !== ROOM_CODE_LEN) {
+    showError(`that code looks wrong — ${ROOM_CODE_LEN} letters, all caps`);
+    return;
+  }
 
   currentRoomCode = code;
   playerRole      = 'guest';
@@ -94,11 +109,40 @@ function joinRoom() {
   });
 }
 
+// ── URL invite flow ───────────────────────────────────────────
+// If the page was loaded with ?room=XXXX (e.g. via QR scan or shared link),
+// pre-fill the join input and bias the UI toward joining instead of creating.
+function applyInviteFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const raw = (params.get('room') || '').trim().toUpperCase().slice(0, ROOM_CODE_LEN);
+  if (!raw) return;
+
+  const codeInput  = document.getElementById('join-code');
+  const banner     = document.getElementById('invited-banner');
+  const codeLabel  = document.getElementById('invited-code-label');
+  const createBtn  = document.getElementById('btn-create');
+  const joinBtn    = document.getElementById('btn-join');
+
+  if (codeInput) codeInput.value = raw;
+  if (codeLabel) codeLabel.textContent = raw;
+  if (banner)    banner.style.display = '';
+  // Visually de-emphasize "Create Arena" — they were invited to a specific arena.
+  if (createBtn) createBtn.classList.add('btn-deemphasized');
+  if (joinBtn)   joinBtn.classList.add('btn-promoted');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', applyInviteFromUrl);
+} else {
+  applyInviteFromUrl();
+}
+
 // ── Message handler ───────────────────────────────────────────
 function handleMessage(msg) {
   switch (msg.type) {
     case 'room_created':
       document.getElementById('room-code-display').textContent = msg.roomCode;
+      renderJoinQr(msg.roomCode);
       show('screen-waiting');
       break;
 
@@ -122,6 +166,10 @@ function handleMessage(msg) {
 
     case 'reflex_verdict':
       applyVerdict(msg);
+      break;
+
+    case 'game_update':
+      handlePeerEvent(msg.state || {});
       break;
 
     case 'opponent_disconnected':
@@ -155,8 +203,11 @@ function initGameUI() {
   hideRoundResult();
 
   const arena = document.getElementById('arena');
-  arena.addEventListener('click', onArenaTap);
-  arena.addEventListener('touchstart', onArenaTap, { passive: false });
+  if (!arena._reflexBound) {
+    arena.addEventListener('click', onArenaTap);
+    arena.addEventListener('touchstart', onArenaTap, { passive: false });
+    arena._reflexBound = true;
+  }
 }
 
 function updateScoreboard() {
@@ -367,6 +418,13 @@ function endGame() {
   const myWins  = playerRole === 'host' ? hostWins : guestWins;
   const oppWins = playerRole === 'host' ? guestWins : hostWins;
 
+  // Reset rematch UI state — the previous run is done.
+  rematchPending = false;
+  const rmBtn = document.getElementById('btn-rematch');
+  if (rmBtn) rmBtn.disabled = false;
+  const rmPending = document.getElementById('rematch-pending');
+  if (rmPending) rmPending.style.display = 'none';
+
   show('screen-result');
 
   if (iWon) {
@@ -384,19 +442,119 @@ function endGame() {
   }
 }
 
-// ── Share ─────────────────────────────────────────────────────
+// ── QR for waiting room ───────────────────────────────────────
+function renderJoinQr(roomCode) {
+  const img = document.getElementById('qr-img');
+  if (!img) return;
+  const url = joinUrlForCode(roomCode);
+  // qrserver.com is a tiny stateless QR-as-image service. No SDK, no script,
+  // no API key. If it ever fails we still have the giant printed code above.
+  img.onerror = () => { document.getElementById('qr-wrap').style.display = 'none'; };
+  img.onload  = () => { img.style.opacity = '1'; };
+  img.style.opacity = '0';
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' +
+            encodeURIComponent(url);
+}
+
+function copyChallengeLink() {
+  if (!currentRoomCode) return;
+  const url = joinUrlForCode(currentRoomCode);
+  const text = `Reflex Duel II — arena ${currentRoomCode}. Tap in: ${url}`;
+  if (navigator.share) {
+    navigator.share({ title: 'Reflex Duel II', text, url });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(
+      () => flashToast('link copied'),
+      () => flashToast(url)
+    );
+  } else {
+    flashToast(url);
+  }
+}
+
+function flashToast(msg) {
+  let el = document.getElementById('ef-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'ef-toast';
+    el.className = 'ef-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(flashToast._t);
+  flashToast._t = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ── Rematch ───────────────────────────────────────────────────
+// "Run It Back" — same opponents, same room, no re-typing the code.
+// Either side can initiate. We forward through the existing game_update
+// peer-relay so both sides reset in lockstep before host starts round 1.
+let rematchPending = false;
+
+function requestRematch() {
+  if (!currentRoomCode || rematchPending) return;
+  rematchPending = true;
+  document.getElementById('btn-rematch').disabled = true;
+  document.getElementById('rematch-pending').style.display = '';
+  send({ action: 'game_update', roomCode: currentRoomCode, state: { kind: 'rematch' } });
+  // Reset locally and bounce ourselves back into the game screen.
+  resetForRematch();
+}
+
+function handlePeerEvent(state) {
+  if (state && state.kind === 'rematch') {
+    if (rematchPending) {
+      // Both sides have agreed — host kicks off round 1.
+      if (playerRole === 'host') startNextRound();
+    } else {
+      // Opponent asked first; mirror their reset and confirm.
+      rematchPending = true;
+      resetForRematch();
+      // Echo so the initiator knows we're in.
+      send({ action: 'game_update', roomCode: currentRoomCode, state: { kind: 'rematch' } });
+      if (playerRole === 'host') startNextRound();
+    }
+  }
+}
+
+function resetForRematch() {
+  hostWins       = 0;
+  guestWins      = 0;
+  roundNum       = 0;
+  bestReactionMs = Infinity;
+  currentRoundId = null;
+  circleShownAt  = null;
+  tapLocked      = false;
+  if (showTimer)   { clearTimeout(showTimer);   showTimer = null; }
+  if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+
+  document.getElementById('result-badge').style.display = 'none';
+  document.getElementById('rematch-pending').style.display = 'none';
+  const btn = document.getElementById('btn-rematch');
+  if (btn) btn.disabled = false;
+
+  show('screen-game');
+  initGameUI();
+}
+
+// ── Share (post-game) ─────────────────────────────────────────
 function shareChallenge() {
   const myWins  = playerRole === 'host' ? hostWins : guestWins;
   const oppWins = playerRole === 'host' ? guestWins : hostWins;
   const bestStr = bestReactionMs < Infinity ? `${bestReactionMs}ms` : '—';
   const badge   = bestReactionMs < 200 ? ' ⚡ Superhuman' : '';
+  // Strip any ?room= so a fresh recipient lands on the create flow.
+  const cleanUrl = location.origin + location.pathname;
 
-  const text = `I beat ${opponentName} ${myWins}–${oppWins} in Reflex Duel II — best reaction ${bestStr}${badge}. Think you're faster? ${location.href}`;
+  const text = `I beat ${opponentName} ${myWins}–${oppWins} in Reflex Duel II — best reaction ${bestStr}${badge}. Think you're faster? ${cleanUrl}`;
 
   if (navigator.share) {
-    navigator.share({ title: 'Reflex Duel II', text, url: location.href });
+    navigator.share({ title: 'Reflex Duel II', text, url: cleanUrl });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => flashToast('challenge copied'));
   } else {
-    navigator.clipboard.writeText(text).then(() => alert('Challenge copied — send it to a friend.'));
+    flashToast(cleanUrl);
   }
 }
 
