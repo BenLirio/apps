@@ -302,13 +302,33 @@ async function tryLLMExtract(bill, rawLog) {
 // by the stated bill. This guarantees sum(amounts) === bill exactly (to
 // cents, after a final rounding pass that reconciles any half-cent drift
 // into the last person). Per-person spite delta = amount_owed − fair_share.
+//
+// Rounding rule (matters for the visible receipt math): fair_share is also
+// allocated at cents resolution with residual reconciliation, so the displayed
+// "share of dinner" lines sum exactly to the stated bill, the displayed
+// spite-deltas sum exactly to $0.00, and each person's two line-items add up
+// exactly to their amount-owed. No floating-point drift on screen.
 
 const SPITE_SCALE = 0.5; // maps [-1, 1] → weight multiplier of [-0.5, +0.5]
+
+// Allocate `totalCents` across `n` people as evenly as possible, putting the
+// extra cent(s) at the END so any drift accumulates on the last person —
+// matches how amount_owed is allocated below.
+function allocateEvenCents(totalCents, n) {
+  if (n <= 0) return [];
+  const base = Math.floor(totalCents / n);
+  const remainder = totalCents - base * n;
+  const out = new Array(n).fill(base);
+  // Spread remainder cents over the LAST `remainder` slots so the residual
+  // lands on the same end where amount_owed's residual lands. Keeps fair_share
+  // and amount_owed symmetric for the last person.
+  for (let i = n - remainder; i < n; i++) out[i] += 1;
+  return out;
+}
 
 function buildReceiptFromDiners(bill, diners, { source }) {
   const fullInput = JSON.stringify({ b: bill.toFixed(2), d: diners });
   const seed = hash(fullInput);
-  const fairShare = bill / diners.length;
 
   const draft = diners.map((d, i) => {
     const localSeed = hash(d.name + '|' + d.behavior + '|' + i);
@@ -330,6 +350,8 @@ function buildReceiptFromDiners(bill, diners, { source }) {
 
   const weightSum = draft.reduce((s, d) => s + d.weight, 0);
   const billCents = Math.round(bill * 100);
+
+  // Allocate amount_owed at cents resolution; residual goes to the last person.
   let allocated = 0;
   const amountsCents = draft.map((d, i) => {
     if (i === draft.length - 1) return billCents - allocated;
@@ -339,20 +361,27 @@ function buildReceiptFromDiners(bill, diners, { source }) {
     return c;
   });
 
+  // Allocate fair_share at cents resolution too, so it sums exactly to billCents.
+  const fairCents = allocateEvenCents(billCents, draft.length);
+
   const people = draft.map((d, i) => {
     const amount_owed = amountsCents[i] / 100;
-    const spite_delta = amount_owed - fairShare;
+    const fair_share = fairCents[i] / 100;
+    // Compute spite delta in cents-space so it equals amount_owed − fair_share
+    // at the displayed precision exactly. Rendering then never has to fudge.
+    const spiteCents = amountsCents[i] - fairCents[i];
+    const spite_delta = spiteCents / 100;
     const item_text = d.item || buildLocalItem(d, spite_delta, d.localSeed);
     return {
       name: d.name,
       behavior: d.behavior,
-      fair_share: fairShare,
+      fair_share,
       spite_delta,
       verdict: d.verdict,
       is_spicy: Math.abs(d.mult) >= 0.15,
       amount_owed,
       line_items: [
-        { desc: 'share of dinner', amount: fairShare,  cls: '' },
+        { desc: 'share of dinner', amount: fair_share,  cls: '' },
         { desc: item_text,         amount: spite_delta, cls: spite_delta >= 0 ? 'pos' : 'neg' },
       ],
     };
@@ -363,9 +392,11 @@ function buildReceiptFromDiners(bill, diners, { source }) {
     0
   );
 
+  // Use the per-person rounded fair-share for the receipt-level fair_share
+  // hint; it's only used for diagnostics. The bill itself is the canonical sum.
   return {
     bill,
-    fair_share: fairShare,
+    fair_share: bill / draft.length,
     spite_redistribution: spiteRedistribution,
     new_total: bill,
     people,
@@ -426,22 +457,30 @@ function decodeFragment() {
 }
 
 function receiptFromFragment(obj) {
-  const bill = (obj.b || 0) / 100;
-  const fairShare = obj.d.length ? bill / obj.d.length : 0;
-  const people = obj.d.map(entry => {
-    const amount = (entry.a || 0) / 100;
-    const spiteDelta = amount - fairShare;
+  const billCents = Math.round((obj.b || 0));
+  const bill = billCents / 100;
+  const n = obj.d.length;
+  // Same cents-resolution allocation as the live build path so the rendered
+  // "share of dinner" column sums exactly to the bill and per-person line
+  // items add to the displayed total.
+  const fairCents = allocateEvenCents(billCents, n);
+  const people = obj.d.map((entry, i) => {
+    const amountCents = Math.round(entry.a || 0);
+    const amount = amountCents / 100;
+    const fair_share = fairCents[i] / 100;
+    const spiteCents = amountCents - fairCents[i];
+    const spite_delta = spiteCents / 100;
     return {
       name: String(entry.n || '').slice(0, 40),
       behavior: String(entry.b || '(no notes)').slice(0, 240),
-      fair_share: fairShare,
-      spite_delta: spiteDelta,
+      fair_share,
+      spite_delta,
       verdict: String(entry.v || 'The Low-Key Defendant').slice(0, 60),
       amount_owed: amount,
       is_spicy: entry.s === 1,
       line_items: [
-        { desc: 'share of dinner', amount: fairShare, cls: '' },
-        { desc: String(entry.q || '"(filed)" — receipt charge'), amount: spiteDelta, cls: spiteDelta >= 0 ? 'pos' : 'neg' },
+        { desc: 'share of dinner', amount: fair_share, cls: '' },
+        { desc: String(entry.q || '"(filed)" — receipt charge'), amount: spite_delta, cls: spite_delta >= 0 ? 'pos' : 'neg' },
       ],
     };
   });
@@ -452,7 +491,7 @@ function receiptFromFragment(obj) {
   const totalOwed = people.reduce((s, p) => s + p.amount_owed, 0);
   return {
     bill,
-    fair_share: fairShare,
+    fair_share: n ? bill / n : 0,
     spite_redistribution: spiteRedistribution,
     new_total: totalOwed,
     people,
