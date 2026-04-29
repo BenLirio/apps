@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Walking Tour Confession</title>
+  <meta property="og:title" content="The Walking Tour Confession">
+  <meta property="og:description" content="An unmarked AI surveillance van follows you for 90 seconds. Pick 8 street corners. Receive a stamped Surveillance Report from the deadpan detective on duty.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/the-walking-tour-confession/">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- INTRO -->
+    <section id="intro" class="screen">
+      <div class="intro-frame">
+        <div class="intro-stamp">CASE FILE / OPEN</div>
+        <h1>THE WALKING TOUR CONFESSION</h1>
+        <p class="lede">An unmarked van is parked across the street. The driver hasn't moved in forty minutes. He's on his phone. He says he's writing a "report."</p>
+        <p class="lede small">You have 90 seconds and 8 street corners. The route is the input. Pick wisely. Pick at all.</p>
+        <button id="start-btn" class="big-btn" type="button">Begin the walk</button>
+        <p class="fineprint">No real surveillance occurs. The detective is fictional. Your route is not.</p>
+      </div>
+    </section>
+
+    <!-- WALK -->
+    <section id="walk" class="screen hidden">
+      <header class="walk-hud">
+        <div class="hud-left">
+          <span class="hud-label">CASE</span>
+          <span id="case-id" class="hud-val">--</span>
+        </div>
+        <div class="hud-mid">
+          <span id="hud-progress">STOP 0 / 8</span>
+        </div>
+        <div class="hud-right">
+          <span class="hud-label">T-MINUS</span>
+          <span id="hud-timer" class="hud-val">90</span>
+        </div>
+      </header>
+
+      <div class="map-wrap">
+        <canvas id="map" width="360" height="360" aria-label="Procedural surveillance map"></canvas>
+        <div id="map-overlay" class="map-overlay hidden">
+          <div class="dossier">
+            <div class="dossier-head">
+              <span class="badge">PLAINCLOTHES // STOP <span id="overlay-num">1</span></span>
+              <span class="badge faint" id="overlay-loc">--</span>
+            </div>
+            <div class="dossier-body">
+              <span class="quote-mark">&ldquo;</span>
+              <p id="overlay-line" class="dossier-line"></p>
+              <span class="quote-mark close">&rdquo;</span>
+              <p class="dossier-attrib">— DET. <span id="overlay-det">RUSSO</span>, dictating into case file</p>
+            </div>
+            <button id="overlay-continue" class="continue-btn" type="button">Keep walking</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="walk-hint" id="walk-hint">Click any numbered corner to walk there.</p>
+    </section>
+
+    <!-- REPORT -->
+    <section id="report" class="screen hidden">
+      <article class="report-paper">
+        <header class="report-head">
+          <div class="report-stamps">
+            <span class="stamp red">SURVEILLANCE REPORT</span>
+            <span class="stamp blue" id="report-date">FILED --/--/----</span>
+          </div>
+          <h2 class="report-verdict-label">CIVILIAN ARCHETYPE</h2>
+          <h1 class="report-verdict" id="report-verdict">--</h1>
+          <p class="report-flourish" id="report-flourish">--</p>
+        </header>
+
+        <section class="exhibit">
+          <h3 class="exhibit-h">EXHIBIT A &mdash; ROUTE OF SUBJECT</h3>
+          <canvas id="report-map" width="360" height="360"></canvas>
+          <p class="exhibit-cap" id="exhibit-cap">--</p>
+        </section>
+
+        <section class="notes">
+          <h3 class="notes-h">DETECTIVE NOTES (TRANSCRIBED)</h3>
+          <ol id="notes-list" class="notes-list"></ol>
+        </section>
+
+        <footer class="report-foot">
+          <p class="signoff">Filed by Det. <span id="report-det">RUSSO</span> &middot; Case <span id="report-case">--</span></p>
+        </footer>
+      </article>
+
+      <div id="share" style="display:block">
+        <button onclick="share()" class="share-btn" type="button">Share this report</button>
+        <button id="restart-btn" type="button" class="ghost-btn">File another walk</button>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
