@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Grow My Civilization</title>
   <meta property="og:title" content="Grow My Civilization">
-  <meta property="og:description" content="Name your civilization, pick your trait, and steer it through 10 eras of decisions. Every choice shapes your fate.">
+  <meta property="og:description" content="Name your civilization. Steer it through impossible choices. How long can it last before it collapses?">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/grow-my-civilization/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,15 +26,12 @@
     <div id="setup-panel">
       <div id="header">
         <h1>GROW MY<br>CIVILIZATION</h1>
-        <p id="header-sub">Name your people. Pick your path. Shape your fate.</p>
+        <p id="header-sub">Every choice helps or hurts. How long can yours last?</p>
       </div>
 
       <div id="setup-form">
         <label class="field-label" for="civ-name-input">CIVILIZATION NAME</label>
         <input id="civ-name-input" type="text" maxlength="24" placeholder="e.g. The Iron Shore" autocomplete="off" spellcheck="false">
-
-        <label class="field-label">STARTING TRAIT</label>
-        <div id="trait-grid"></div>
 
         <div id="setup-error"></div>
         <button id="start-btn" disabled>BEGIN ►</button>
@@ -46,27 +43,30 @@
       <div id="game-header">
         <div id="civ-title-row">
           <span id="civ-title"></span>
-          <span id="trait-badge"></span>
+          <span id="age-badge"></span>
         </div>
-        <div id="era-progress-track"><div id="era-progress-bar"></div></div>
         <div id="era-label"></div>
       </div>
 
       <div id="stats-bar">
-        <div class="stat"><span class="stat-label">POP</span><span id="stat-pop">0</span></div>
-        <div class="stat"><span class="stat-label">ERA</span><span id="stat-era">—</span></div>
-        <div class="stat"><span class="stat-label">STABILITY</span><span id="stat-stability">—</span></div>
+        <div class="stat"><span class="stat-label">POP</span><span id="stat-pop">1</span></div>
+        <div class="stat"><span class="stat-label">FOOD</span><span id="stat-food">—</span></div>
+        <div class="stat"><span class="stat-label">ORDER</span><span id="stat-order">—</span></div>
+        <div class="stat"><span class="stat-label">TECH</span><span id="stat-tech">—</span></div>
+        <div class="stat"><span class="stat-label">TURNS</span><span id="stat-turns">0</span></div>
       </div>
 
-      <!-- Decision panel (shown at each era transition) -->
+      <!-- Decision panel (shown at each turn) -->
       <div id="decision-panel" style="display:none">
-        <div id="decision-era-tag">ERA EVENT</div>
+        <div id="decision-era-tag">A CROSSROADS</div>
         <div id="decision-event"></div>
-        <div id="decision-choices">
-          <button id="choice-a" class="choice-btn"></button>
-          <button id="choice-b" class="choice-btn"></button>
-        </div>
+        <div id="decision-choices"></div>
         <div id="decision-flavor"></div>
+      </div>
+
+      <!-- Loading overlay while AI fetches next question -->
+      <div id="thinking-panel" style="display:none">
+        <div id="thinking-dots">CONSULTING ORACLES<span class="dots"></span></div>
       </div>
     </div>
 
@@ -74,7 +74,7 @@
     <div id="verdict-panel" style="display:none">
       <div id="verdict-title"></div>
       <div id="verdict-civ-name"></div>
-      <div id="verdict-decisions-label">YOUR DECISIONS</div>
+      <div id="verdict-decisions-label">YOUR CHRONICLE</div>
       <div id="verdict-decisions"></div>
       <div id="verdict-stats"></div>
     </div>

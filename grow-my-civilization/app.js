@@ -1,5 +1,10 @@
-// Grow My Civilization — player-driven pixel civilization builder
-// Players name their civ, pick a trait, and make decisions at each era to shape their fate
+// Grow My Civilization — survival roguelike with AI-generated decision tree
+// Goal: how long can your civilization last? Each choice helps or hurts now or later.
+// Questions are AI-generated and cached by choice-path so every player walking the
+// same path sees the same prompts (deterministic tree).
+
+const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
+const SLUG = 'grow-my-civilization';
 
 // ── RNG ────────────────────────────────────────────────────────────────────────
 function mulberry32(seed) {
@@ -11,247 +16,91 @@ function mulberry32(seed) {
   };
 }
 
-let rng = mulberry32(Date.now() & 0xFFFFFFFF);
+let visualRng = mulberry32(Date.now() & 0xFFFFFFFF);
 
-// ── Civilization Traits ───────────────────────────────────────────────────────
-const TRAITS = [
-  {
-    id: 'militarist',
-    label: 'MILITARIST',
-    icon: '⚔',
-    desc: 'Conquer first, questions later.',
-    color: '#ff4444',
-    bonus: { growth: 1.3, stability: 0.7, culture: 0.8 }
-  },
-  {
-    id: 'scientist',
-    label: 'SCIENTIST',
-    icon: '⚗',
-    desc: 'Knowledge outlasts empires.',
-    color: '#33aaff',
-    bonus: { growth: 1.0, stability: 1.2, culture: 1.1 }
-  },
-  {
-    id: 'trader',
-    label: 'TRADER',
-    icon: '◈',
-    desc: 'Wealth buys more than swords.',
-    color: '#ffb300',
-    bonus: { growth: 1.2, stability: 1.0, culture: 0.9 }
-  },
-  {
-    id: 'cultural',
-    label: 'CULTURAL',
-    icon: '♪',
-    desc: 'Stories survive where walls crumble.',
-    color: '#aa66ff',
-    bonus: { growth: 0.9, stability: 1.1, culture: 1.5 }
-  }
-];
-
-// ── Era Decisions ─────────────────────────────────────────────────────────────
-// Each era has an event + two choices with different consequences
-const ERA_EVENTS = [
-  {
-    era: 'STONE AGE',
-    event: 'A harsh winter. Tribes dispute the last hearth.',
-    choices: [
-      { label: 'SHARE THE FIRE', effect: { stability: +0.15, growth: +0.1 }, flavor: 'Unity forged in cold.' },
-      { label: 'CLAIM IT ALL',   effect: { stability: -0.1, growth: +0.2 }, flavor: 'Strength above kindness.' }
-    ]
-  },
-  {
-    era: 'COPPER AGE',
-    event: 'Strange shiny ore discovered. The priests call it cursed.',
-    choices: [
-      { label: 'SMELT IT ANYWAY', effect: { growth: +0.2, culture: -0.1 }, flavor: 'Progress offends tradition.' },
-      { label: 'LEAVE IT BURIED', effect: { stability: +0.1, growth: -0.1 }, flavor: 'The gods approve. Barely.' }
-    ]
-  },
-  {
-    era: 'BRONZE AGE',
-    event: 'A rival tribe requests a trade summit.',
-    choices: [
-      { label: 'ACCEPT THE TALKS', effect: { stability: +0.2, growth: +0.1 }, flavor: 'Diplomacy is slower than war.' },
-      { label: 'RAID THEIR CAMP',  effect: { growth: +0.3, stability: -0.2 }, flavor: 'Faster. Messier.' }
-    ]
-  },
-  {
-    era: 'IRON AGE',
-    event: 'Drought threatens the grain stores.',
-    choices: [
-      { label: 'RATION EQUALLY',  effect: { stability: +0.2, growth: -0.1 }, flavor: 'Slow decline, shared fairly.' },
-      { label: 'HOARD FOR ELITE', effect: { stability: -0.25, growth: 0   }, flavor: 'Efficiency. At a cost.' }
-    ]
-  },
-  {
-    era: 'CLASSICAL',
-    event: 'Philosophers demand a say in governance.',
-    choices: [
-      { label: 'GRANT A COUNCIL', effect: { culture: +0.2, stability: +0.1 }, flavor: 'Wisdom dilutes power.' },
-      { label: 'EXILE THEM',      effect: { culture: -0.2, growth: +0.1   }, flavor: 'Quieter. For now.' }
-    ]
-  },
-  {
-    era: 'MEDIEVAL',
-    event: 'The Church wants a cathedral. It will cost a decade of labour.',
-    choices: [
-      { label: 'BUILD THE SPIRE', effect: { culture: +0.3, growth: -0.1 }, flavor: 'Faith reaches heaven.' },
-      { label: 'BUILD WALLS',     effect: { stability: +0.2, culture: -0.1 }, flavor: 'Heaven waits. Enemies don\'t.' }
-    ]
-  },
-  {
-    era: 'RENAISSANCE',
-    event: 'A painter proposes obscene art for the palace.',
-    choices: [
-      { label: 'COMMISSION IT',  effect: { culture: +0.25, stability: -0.05 }, flavor: 'Scandal and beauty, indistinguishable.' },
-      { label: 'BURN THE DRAFT', effect: { culture: -0.1, stability: +0.1  }, flavor: 'Order preserved. Boring.' }
-    ]
-  },
-  {
-    era: 'INDUSTRIAL',
-    event: 'The river runs black with factory runoff.',
-    choices: [
-      { label: 'CLEAN IT UP',    effect: { stability: +0.15, growth: -0.15 }, flavor: 'Conscience is expensive.' },
-      { label: 'KEEP PRODUCING', effect: { growth: +0.25, stability: -0.15 }, flavor: 'Profits first, regrets later.' }
-    ]
-  },
-  {
-    era: 'ATOMIC',
-    event: 'Scientists unlock fission. Military wants it weaponised.',
-    choices: [
-      { label: 'POWER CITIES',   effect: { growth: +0.2, stability: +0.1  }, flavor: 'Light instead of fire.' },
-      { label: 'BUILD THE BOMB', effect: { growth: +0.1, stability: -0.2  }, flavor: 'Deterrence is a gamble.' }
-    ]
-  },
-  {
-    era: 'DIGITAL',
-    event: 'An algorithm predicts which citizens will cause trouble.',
-    choices: [
-      { label: 'DISMANTLE IT',   effect: { culture: +0.2, stability: +0.05 }, flavor: 'Freedom is inefficient. Worth it.' },
-      { label: 'DEPLOY IT',      effect: { stability: +0.2, culture: -0.3  }, flavor: 'Order achieved. Humanity optional.' }
-    ]
-  }
-];
-
-// ── Era Definitions ───────────────────────────────────────────────────────────
+// ── Eras (descriptive, advance with tech) ─────────────────────────────────────
 const ERAS = [
-  { name: 'STONE AGE',   color: '#5a4a3a', bgGrad: ['#0d0d2a','#1a1a3a'] },
-  { name: 'COPPER AGE',  color: '#8b6a3a', bgGrad: ['#0d0d2a','#1a1a3a'] },
-  { name: 'BRONZE AGE',  color: '#a07830', bgGrad: ['#1a1430','#2a1a40'] },
-  { name: 'IRON AGE',    color: '#6a7a8a', bgGrad: ['#2a1830','#3a2840'] },
-  { name: 'CLASSICAL',   color: '#c8a84a', bgGrad: ['#2a2040','#4a3050'] },
-  { name: 'MEDIEVAL',    color: '#5a8a5a', bgGrad: ['#3a2840','#5a3858'] },
-  { name: 'RENAISSANCE', color: '#a05a78', bgGrad: ['#2a2848','#3a3858'] },
-  { name: 'INDUSTRIAL',  color: '#888888', bgGrad: ['#1a1840','#2a2848'] },
-  { name: 'ATOMIC',      color: '#5a9aaa', bgGrad: ['#1a1838','#1a1838'] },
-  { name: 'DIGITAL',     color: '#6a5aaa', bgGrad: ['#0d0d20','#0d0d20'] },
+  { name: 'STONE AGE',   minTech: 0,   color: '#5a4a3a', bgGrad: ['#0d0d2a','#1a1a3a'] },
+  { name: 'COPPER AGE',  minTech: 15,  color: '#8b6a3a', bgGrad: ['#0d0d2a','#1a1a3a'] },
+  { name: 'BRONZE AGE',  minTech: 28,  color: '#a07830', bgGrad: ['#1a1430','#2a1a40'] },
+  { name: 'IRON AGE',    minTech: 40,  color: '#6a7a8a', bgGrad: ['#2a1830','#3a2840'] },
+  { name: 'CLASSICAL',   minTech: 52,  color: '#c8a84a', bgGrad: ['#2a2040','#4a3050'] },
+  { name: 'MEDIEVAL',    minTech: 64,  color: '#5a8a5a', bgGrad: ['#3a2840','#5a3858'] },
+  { name: 'RENAISSANCE', minTech: 75,  color: '#a05a78', bgGrad: ['#2a2848','#3a3858'] },
+  { name: 'INDUSTRIAL',  minTech: 85,  color: '#888888', bgGrad: ['#1a1840','#2a2848'] },
+  { name: 'ATOMIC',      minTech: 95,  color: '#5a9aaa', bgGrad: ['#1a1838','#1a1838'] },
+  { name: 'DIGITAL',     minTech: 105, color: '#6a5aaa', bgGrad: ['#0d0d20','#0d0d20'] },
+  { name: 'STELLAR',     minTech: 120, color: '#aaaaff', bgGrad: ['#000010','#101030'] },
 ];
 
-const BUILDING_COLORS = [
-  ['#5a4a3a','#3a2a2a'],
-  ['#8b6030','#5a3820'],
-  ['#a07028','#6a4818'],
-  ['#707888','#484e58'],
-  ['#c8a040','#888030'],
-  ['#507848','#305830'],
-  ['#903870','#601848'],
-  ['#787878','#484848'],
-  ['#4888a0','#285878'],
-  ['#584898','#382868'],
+const BUILDING_PALETTES_BY_ERA = [
+  ['#5a4a3a','#3a2a2a'], // stone
+  ['#8b6030','#5a3820'], // copper
+  ['#a07028','#6a4818'], // bronze
+  ['#707888','#484e58'], // iron
+  ['#c8a040','#888030'], // classical
+  ['#507848','#305830'], // medieval
+  ['#903870','#601848'], // renaissance
+  ['#787878','#484848'], // industrial
+  ['#4888a0','#285878'], // atomic
+  ['#584898','#382868'], // digital
+  ['#a8a8ff','#5050a0'], // stellar
 ];
+
+function eraIndexFromTech(tech) {
+  let idx = 0;
+  for (let i = 0; i < ERAS.length; i++) {
+    if (tech >= ERAS[i].minTech) idx = i;
+  }
+  return idx;
+}
 
 // ── Game State ────────────────────────────────────────────────────────────────
 let civName = '';
-let chosenTrait = null;
+let phase = 'setup'; // setup | running | thinking | decision | verdict
 
-// Runtime sim state
-let phase = 'setup'; // setup | running | decision | verdict
-let currentEraIdx = 0;
-let eraTimer = 0;        // ms within current era
-const ERA_DURATION = 9000; // ms per era
-let population = 1;
-let maxPop = 1;
-let stability = 1.0;   // 0..2 range, 1.0 = neutral
-let culture = 1.0;
-let growthMult = 1.0;
-let decisionsChosen = [];
-let pendingDecision = null;
-let decisionResolved = false;
-let decisionFlavorText = '';
-let decisionFlavorTimer = 0;
-let animId = null;
-let lastTs = null;
+// Stats: 0..100 typical range, but pop is unbounded.
+let stats = {
+  population: 1,
+  food: 60,
+  order: 60,
+  tech: 0,
+  culture: 50
+};
+let peakPopulation = 1;
+let peakTech = 0;
+
+let turnNumber = 0; // how many decisions resolved
+let pathKey = '';   // string of choice indices joined, e.g. "0,1,2,0"
+let chronicle = []; // [{ event, choice, flavor, era, turn }]
+let pendingEffects = []; // [{ triggerTurn, effect, label }]
+
+let pendingDecision = null; // { event, choices: [{ label, effect, longTermEffect, longTermDelay, flavor }] }
 let gameOver = false;
 let collapsed = false;
+let collapseReason = '';
 
-// Canvas entities
+// Visual entities
 let buildings = [];
 let people = [];
 let fires = [];
 let explosions = [];
 let stars = [];
-let triumphs = []; // rising particles for triumph
+let triumphs = [];
+let animId = null;
+let lastTs = null;
 
 // ── Canvas ────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const W = 360, H = 300;
 
-// ── Setup Screen ──────────────────────────────────────────────────────────────
+// ── Stars / Setup canvas ──────────────────────────────────────────────────────
 function initStars() {
   stars = [];
   for (let i = 0; i < 60; i++) {
-    stars.push({ x: rng() * W, y: rng() * (H * 0.55), r: rng() < 0.3 ? 2 : 1 });
+    stars.push({ x: visualRng() * W, y: visualRng() * (H * 0.55), r: visualRng() < 0.3 ? 2 : 1 });
   }
-}
-
-function startSetup() {
-  phase = 'setup';
-  initStars();
-  drawSetupCanvas();
-  showSetupUI();
-}
-
-function showSetupUI() {
-  document.getElementById('setup-panel').style.display = 'flex';
-  document.getElementById('game-panel').style.display = 'none';
-  // decision-panel is inside game-panel, no need to hide separately
-  document.getElementById('verdict-panel').style.display = 'none';
-  document.getElementById('share').style.display = 'none';
-
-  // Render trait buttons
-  const grid = document.getElementById('trait-grid');
-  grid.innerHTML = '';
-  TRAITS.forEach(t => {
-    const btn = document.createElement('button');
-    btn.className = 'trait-btn';
-    btn.dataset.id = t.id;
-    btn.innerHTML = `<span class="trait-icon">${t.icon}</span><span class="trait-name">${t.label}</span><span class="trait-desc">${t.desc}</span>`;
-    btn.style.setProperty('--trait-color', t.color);
-    btn.addEventListener('click', () => selectTrait(t.id));
-    grid.appendChild(btn);
-  });
-
-  document.getElementById('civ-name-input').value = '';
-  document.getElementById('start-btn').disabled = true;
-  document.getElementById('setup-error').textContent = '';
-
-  document.getElementById('civ-name-input').addEventListener('input', validateSetup);
-}
-
-function selectTrait(id) {
-  chosenTrait = TRAITS.find(t => t.id === id);
-  document.querySelectorAll('.trait-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.id === id);
-  });
-  validateSetup();
-}
-
-function validateSetup() {
-  const name = document.getElementById('civ-name-input').value.trim();
-  const ok = name.length >= 2 && name.length <= 24 && chosenTrait !== null;
-  document.getElementById('start-btn').disabled = !ok;
 }
 
 function drawSetupCanvas() {
@@ -281,142 +130,380 @@ function drawSetupCanvas() {
   ctx.fillRect(Math.floor(fx - 1), Math.floor(fy - 3), 3, 3);
 }
 
+function startSetup() {
+  phase = 'setup';
+  initStars();
+  drawSetupCanvas();
+  document.getElementById('setup-panel').style.display = 'flex';
+  document.getElementById('game-panel').style.display = 'none';
+  document.getElementById('verdict-panel').style.display = 'none';
+  document.getElementById('share').style.display = 'none';
+  document.getElementById('app').className = '';
+
+  document.getElementById('civ-name-input').value = '';
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('setup-error').textContent = '';
+}
+
+function validateSetup() {
+  const name = document.getElementById('civ-name-input').value.trim();
+  document.getElementById('start-btn').disabled = !(name.length >= 2 && name.length <= 24);
+}
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+// Questions are keyed by path so the same sequence of choices always yields
+// the same next question — for any browser that's already walked there. We
+// also persist across reloads via localStorage so one player's exploration
+// helps the next.
+const CACHE_KEY = 'gmc_question_cache_v1';
+let questionCache = {};
+try {
+  questionCache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+} catch (e) { questionCache = {}; }
+
+function persistCache() {
+  try {
+    // Don't let the cache grow forever — soft cap.
+    const keys = Object.keys(questionCache);
+    if (keys.length > 400) {
+      // Drop the oldest by insertion order (we stored _t).
+      keys.sort((a, b) => (questionCache[a]._t || 0) - (questionCache[b]._t || 0));
+      for (let i = 0; i < keys.length - 300; i++) delete questionCache[keys[i]];
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(questionCache));
+  } catch (e) { /* ignore */ }
+}
+
+// ── AI Question Generation ────────────────────────────────────────────────────
+async function fetchQuestion(path, statsSnapshot, chronicleSnapshot) {
+  const cacheKey = path || 'ROOT';
+  if (questionCache[cacheKey]) return questionCache[cacheKey];
+
+  const era = ERAS[eraIndexFromTech(statsSnapshot.tech)].name;
+  const recent = chronicleSnapshot.slice(-3).map(c => `[${c.era}] ${c.choice}`).join(' | ') || 'none yet';
+
+  const sys = `You generate dilemmas for a civilization-survival game. The player is leading civilization "${civName}". Output ONLY valid JSON. Each dilemma must be era-appropriate, dramatic, and force a meaningful tradeoff. Choices have IMMEDIATE effects and a LONG-TERM effect that fires later (3-6 turns). Effects are integers in [-25, +25] on these stats: food, order, tech, culture, population. Long-term delay is an integer in [3, 6]. Provide 2-4 distinct choices. Make some choices look attractive but carry hidden long-term costs, others look harsh now but pay off later.`;
+
+  const user = `Current era: ${era}. Stats: pop=${statsSnapshot.population}, food=${statsSnapshot.food}, order=${statsSnapshot.order}, tech=${statsSnapshot.tech}, culture=${statsSnapshot.culture}. Turn ${turnNumber + 1}. Recent decisions: ${recent}. Path key: ${cacheKey}.
+
+Respond with JSON exactly matching this schema:
+{
+  "event": "1-2 sentence dilemma description",
+  "choices": [
+    {
+      "label": "SHORT IMPERATIVE LABEL (2-5 words, all caps)",
+      "flavor": "One short evocative sentence after picking",
+      "effect": { "food": 0, "order": 0, "tech": 0, "culture": 0, "population": 0 },
+      "longTermDelay": 4,
+      "longTermEffect": { "food": 0, "order": 0, "tech": 0, "culture": 0, "population": 0 },
+      "longTermFlavor": "What unfolds when delayed effect fires (one short sentence)"
+    }
+  ]
+}
+Include 2-4 choices. Omit any stat keys that don't change. Keep numbers small (-15 to +15 typical, max ±25). Do not narrate stats in the flavor text.`;
+
+  const body = {
+    slug: SLUG,
+    messages: [
+      { role: 'system', content: sys },
+      { role: 'user', content: user }
+    ],
+    model: 'gpt-5.4-mini',
+    max_tokens: 600,
+    temperature: 0.9,
+    response_format: 'json_object'
+  };
+
+  const resp = await fetch(AI_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) throw new Error('ai_http_' + resp.status);
+  const data = await resp.json();
+  const parsed = JSON.parse(data.content);
+
+  // Sanitize.
+  if (!parsed || !Array.isArray(parsed.choices) || parsed.choices.length < 2) {
+    throw new Error('ai_bad_shape');
+  }
+  parsed.choices = parsed.choices.slice(0, 4).map(c => ({
+    label: String(c.label || 'PROCEED').toUpperCase().slice(0, 40),
+    flavor: String(c.flavor || ''),
+    effect: clampEffect(c.effect),
+    longTermDelay: clampInt(c.longTermDelay, 3, 6, 4),
+    longTermEffect: clampEffect(c.longTermEffect),
+    longTermFlavor: String(c.longTermFlavor || '')
+  }));
+  parsed.event = String(parsed.event || 'A choice is upon you.');
+  parsed._t = Date.now();
+
+  questionCache[cacheKey] = parsed;
+  persistCache();
+  return parsed;
+}
+
+function clampEffect(e) {
+  const out = {};
+  const keys = ['food', 'order', 'tech', 'culture', 'population'];
+  if (!e || typeof e !== 'object') return out;
+  for (const k of keys) {
+    if (typeof e[k] === 'number' && e[k] !== 0) {
+      out[k] = Math.max(-25, Math.min(25, Math.round(e[k])));
+    }
+  }
+  return out;
+}
+
+function clampInt(v, lo, hi, dflt) {
+  const n = Math.round(Number(v));
+  if (!isFinite(n)) return dflt;
+  return Math.max(lo, Math.min(hi, n));
+}
+
+// ── Fallback question (used if AI is unreachable) ─────────────────────────────
+function fallbackQuestion() {
+  return {
+    event: 'The oracles fall silent. Your council must decide blind.',
+    choices: [
+      {
+        label: 'PRESS ON',
+        flavor: 'You march forward without their counsel.',
+        effect: { order: -3, tech: +2 },
+        longTermDelay: 4,
+        longTermEffect: { culture: +5 },
+        longTermFlavor: 'Tales of your boldness spread.'
+      },
+      {
+        label: 'WAIT IT OUT',
+        flavor: 'You hold position, conserving strength.',
+        effect: { food: +3, order: +2 },
+        longTermDelay: 4,
+        longTermEffect: { tech: -4 },
+        longTermFlavor: 'Rivals out-pace you while you waited.'
+      }
+    ]
+  };
+}
+
 // ── Start Game ────────────────────────────────────────────────────────────────
 function startGame() {
   civName = document.getElementById('civ-name-input').value.trim();
-  if (!civName || !chosenTrait) return;
+  if (!civName) return;
 
   document.getElementById('setup-panel').style.display = 'none';
   document.getElementById('game-panel').style.display = 'flex';
-
   document.getElementById('civ-title').textContent = civName.toUpperCase();
-  document.getElementById('trait-badge').textContent = chosenTrait.icon + ' ' + chosenTrait.label;
-  document.getElementById('trait-badge').style.color = chosenTrait.color;
 
-  // Init sim
-  growthMult = chosenTrait.bonus.growth;
-  stability = 1.0 + (chosenTrait.bonus.stability - 1.0);
-  culture = 1.0 + (chosenTrait.bonus.culture - 1.0);
-  population = 1;
-  maxPop = 1;
-  currentEraIdx = 0;
-  eraTimer = 0;
-  decisionsChosen = [];
+  // Reset state
+  stats = { population: 1, food: 60, order: 60, tech: 0, culture: 50 };
+  peakPopulation = 1;
+  peakTech = 0;
+  turnNumber = 0;
+  pathKey = '';
+  chronicle = [];
+  pendingEffects = [];
+  pendingDecision = null;
   gameOver = false;
   collapsed = false;
+  collapseReason = '';
+
   buildings = [];
   people = [];
+  fires = [{ x: W / 2, y: H - 60, size: 6, age: 0 }];
   explosions = [];
   triumphs = [];
-  fires = [{ x: W / 2, y: H - 60, size: 6, age: 0 }];
   lastTs = null;
 
   phase = 'running';
   updateHUD();
   animId = requestAnimationFrame(gameLoop);
+  nextTurn();
 }
 
-// ── Decision Gate ─────────────────────────────────────────────────────────────
-function triggerDecision(eraIdx) {
+// ── Turn Loop ─────────────────────────────────────────────────────────────────
+async function nextTurn() {
+  if (gameOver) return;
+
+  // Apply any long-term effects whose trigger turn has come.
+  const firing = pendingEffects.filter(p => p.triggerTurn === turnNumber);
+  pendingEffects = pendingEffects.filter(p => p.triggerTurn !== turnNumber);
+  let echoText = '';
+  if (firing.length) {
+    firing.forEach(p => {
+      applyEffect(p.effect);
+      if (p.flavor) echoText += (echoText ? '  ' : '') + `◆ ${p.flavor}`;
+    });
+  }
+
+  // Check collapse from any cause before posing next dilemma.
+  if (checkCollapse()) {
+    triggerCollapse();
+    return;
+  }
+
+  // Show "thinking" while we fetch.
+  phase = 'thinking';
+  document.getElementById('decision-panel').style.display = 'none';
+  document.getElementById('thinking-panel').style.display = 'flex';
+
+  let q;
+  try {
+    q = await fetchQuestion(pathKey, { ...stats }, chronicle.slice());
+  } catch (e) {
+    q = fallbackQuestion();
+  }
+  pendingDecision = q;
+  presentDecision(q, echoText);
+}
+
+function presentDecision(q, echoText) {
   phase = 'decision';
-  pendingDecision = ERA_EVENTS[eraIdx];
-  decisionResolved = false;
-
+  document.getElementById('thinking-panel').style.display = 'none';
   document.getElementById('decision-panel').style.display = 'flex';
-  document.getElementById('decision-event').textContent = pendingDecision.event;
-  document.getElementById('decision-flavor').textContent = '';
+  document.getElementById('decision-event').textContent = q.event;
+  // Show any long-term echo from a past choice in the flavor slot until the
+  // user picks something new.
+  document.getElementById('decision-flavor').textContent = echoText || '';
 
-  const btnA = document.getElementById('choice-a');
-  const btnB = document.getElementById('choice-b');
+  const choicesEl = document.getElementById('decision-choices');
+  choicesEl.innerHTML = '';
+  // Adapt grid: 1 col when >2 choices to give labels room.
+  choicesEl.style.gridTemplateColumns = q.choices.length >= 3 ? '1fr' : '1fr 1fr';
 
-  btnA.textContent = pendingDecision.choices[0].label;
-  btnB.textContent = pendingDecision.choices[1].label;
-  btnA.onclick = () => resolveDecision(0);
-  btnB.onclick = () => resolveDecision(1);
-  btnA.disabled = false;
-  btnB.disabled = false;
+  q.choices.forEach((c, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c.label;
+    btn.addEventListener('click', () => resolveDecision(idx));
+    choicesEl.appendChild(btn);
+  });
 }
 
 function resolveDecision(idx) {
+  if (phase !== 'decision' || !pendingDecision) return;
   const choice = pendingDecision.choices[idx];
-  const eff = choice.effect;
 
-  if (eff.growth)    growthMult   = Math.max(0.3, growthMult   + eff.growth);
-  if (eff.stability) stability    = Math.max(0.1, stability    + eff.stability);
-  if (eff.culture)   culture      = Math.max(0.1, culture      + eff.culture);
+  // Lock buttons + highlight the one the user picked. Stays highlighted into
+  // the next question, addressing user feedback that the picked choice should
+  // visibly persist between dilemmas.
+  const btns = document.querySelectorAll('#decision-choices .choice-btn');
+  btns.forEach((b, i) => {
+    b.disabled = true;
+    if (i === idx) b.classList.add('picked');
+  });
 
-  decisionsChosen.push({ era: pendingDecision.era, choice: choice.label, flavor: choice.flavor });
+  // Apply immediate effect.
+  applyEffect(choice.effect);
+
+  // Schedule long-term effect.
+  if (choice.longTermEffect && Object.keys(choice.longTermEffect).length) {
+    pendingEffects.push({
+      triggerTurn: turnNumber + (choice.longTermDelay || 4),
+      effect: choice.longTermEffect,
+      flavor: choice.longTermFlavor || ''
+    });
+  }
+
+  const era = ERAS[eraIndexFromTech(stats.tech)].name;
+  chronicle.push({
+    event: pendingDecision.event,
+    choice: choice.label,
+    flavor: choice.flavor,
+    era,
+    turn: turnNumber + 1
+  });
 
   document.getElementById('decision-flavor').textContent = choice.flavor;
-  document.getElementById('choice-a').disabled = true;
-  document.getElementById('choice-b').disabled = true;
 
-  decisionFlavorText = choice.flavor;
-  decisionFlavorTimer = 1200;
+  turnNumber++;
+  pathKey = pathKey ? `${pathKey},${idx}` : `${idx}`;
 
+  // Per-turn organic drift from food/order/tech.
+  driftAfterTurn();
+  updateHUD();
+
+  // Brief pause to read flavor + see the highlighted button, then advance.
   setTimeout(() => {
+    if (gameOver) return;
     document.getElementById('decision-panel').style.display = 'none';
-    phase = 'running';
-  }, 1200);
+    nextTurn();
+  }, 1400);
 }
 
-// ── Simulation Tick ───────────────────────────────────────────────────────────
+// ── Effects, Stats Drift, Collapse ────────────────────────────────────────────
+function applyEffect(eff) {
+  if (!eff) return;
+  if (eff.food)       stats.food = clamp(stats.food + eff.food, 0, 100);
+  if (eff.order)      stats.order = clamp(stats.order + eff.order, 0, 100);
+  if (eff.tech)       stats.tech = Math.max(0, stats.tech + eff.tech);
+  if (eff.culture)    stats.culture = clamp(stats.culture + eff.culture, 0, 100);
+
+  // Population responds both to direct deltas and to food/order pressure each turn.
+  if (eff.population) stats.population = Math.max(0, stats.population + eff.population);
+
+  // Per-turn drift from food/order: this happens implicitly each turn even
+  // without direct population deltas (called once per turn in driftAfterTurn).
+  peakPopulation = Math.max(peakPopulation, stats.population);
+  peakTech = Math.max(peakTech, stats.tech);
+}
+
+function driftAfterTurn() {
+  // Food < 30 starves people; food > 70 grows them. Order matters too.
+  const foodPressure = (stats.food - 50) / 25; // -2..+2
+  const orderPressure = (stats.order - 40) / 30; // ~-1..+2
+  const techBonus = stats.tech / 60; // tech makes growth more efficient
+  const growth = (foodPressure + orderPressure) * (0.6 + techBonus * 0.4);
+  // Apply as a fraction of current pop (multiplicative-ish so big civs grow/shrink in scale).
+  const delta = Math.round(stats.population * growth * 0.08 + growth);
+  stats.population = Math.max(0, stats.population + delta);
+
+  // Slight drift toward equilibrium so values don't park forever at extremes.
+  stats.food = clamp(stats.food + (50 - stats.food) * 0.05, 0, 100);
+  stats.order = clamp(stats.order + (50 - stats.order) * 0.04, 0, 100);
+
+  // Tech creeps up tiny bit each turn from baseline curiosity.
+  stats.tech = stats.tech + 0.5;
+
+  peakPopulation = Math.max(peakPopulation, stats.population);
+  peakTech = Math.max(peakTech, stats.tech);
+}
+
+function checkCollapse() {
+  if (stats.population <= 0) { collapseReason = 'Your last hearth went cold. The civilization is no more.'; return true; }
+  if (stats.food <= 0)        { collapseReason = 'Famine swept the land. None remained to bury the rest.'; return true; }
+  if (stats.order <= 0)       { collapseReason = 'Civil war shattered every institution. Nothing held.'; return true; }
+  return false;
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ── Game Loop (visuals) ───────────────────────────────────────────────────────
 function gameLoop(ts) {
   if (lastTs === null) lastTs = ts;
   const dt = Math.min(ts - lastTs, 100);
   lastTs = ts;
 
-  if (phase === 'running') {
-    eraTimer += dt;
+  // Visual entity counts driven by stats.
+  if (!gameOver) {
+    const eraIdx = eraIndexFromTech(stats.tech);
 
-    if (eraTimer >= ERA_DURATION) {
-      eraTimer = 0;
-      if (currentEraIdx < ERAS.length - 1) {
-        currentEraIdx++;
-        // Check collapse threshold (stability below 0.4 = civ can't sustain)
-        if (stability < 0.4) {
-          triggerCollapse();
-          return;
-        }
-        triggerDecision(currentEraIdx);
-        animId = requestAnimationFrame(gameLoop);
-        return;
-      } else {
-        // Reached end — final fate
-        triggerVerdict();
-        return;
-      }
-    }
-
-    // Population: base growth curve shaped by trait bonuses and player choices
-    const eraFrac = eraTimer / ERA_DURATION;
-    const totalProgress = (currentEraIdx + eraFrac) / ERAS.length;
-    const baseCurve = Math.sin(totalProgress * Math.PI * 0.7 + 0.3);
-    const targetPop = Math.max(1, Math.floor(baseCurve * 120 * growthMult * Math.max(0.1, stability)));
-    population = targetPop;
-    maxPop = Math.max(maxPop, population);
-
-    // Fires grow with population
-    const targetFires = Math.max(1, Math.floor(population * 0.015));
+    const targetFires = Math.max(1, Math.min(8, Math.floor(stats.population * 0.02)));
     while (fires.length < targetFires) {
-      fires.push({ x: 20 + rng() * (W - 40), y: H - 55 - rng() * 30, size: 3 + rng() * 4, age: 0 });
+      fires.push({ x: 20 + visualRng() * (W - 40), y: H - 55 - visualRng() * 30, size: 3 + visualRng() * 4, age: 0 });
     }
     while (fires.length > targetFires + 1) fires.shift();
 
-    // Buildings
-    const targetBuildings = Math.floor(population * 0.55);
-    while (buildings.length < targetBuildings) spawnBuilding();
-    while (buildings.length > targetBuildings + 2) buildings.shift();
+    const targetBuildings = Math.min(60, Math.floor(stats.population * 0.5 + stats.tech * 0.4));
+    while (buildings.length < targetBuildings) spawnBuilding(eraIdx);
+    while (buildings.length > targetBuildings + 4) buildings.shift();
 
-    // People
-    const targetPeople = Math.min(population, 22);
-    while (people.length < targetPeople) spawnPerson();
+    const targetPeople = Math.min(28, Math.max(0, Math.floor(stats.population * 0.6)));
+    while (people.length < targetPeople) spawnPerson(eraIdx);
     while (people.length > targetPeople) people.shift();
 
-    // Update fires
     fires.forEach(f => { f.age += dt; f.flicker = Math.sin(f.age * 0.008) * 1.5; });
 
-    // Update people
     people.forEach(p => {
       p.x += p.vx;
       p.y += p.vy * 0.3;
@@ -424,105 +511,102 @@ function gameLoop(ts) {
       if (p.y < H - 80 || p.y > H - 18) p.vy *= -1;
       p.animFrame = (p.animFrame + dt * 0.012) % 4;
     });
-
-    explosions = explosions.filter(e => e.age < e.life);
-    explosions.forEach(e => { e.age += dt; e.x += e.vx; e.y += e.vy; e.vy += 0.05; });
-
-    triumphs = triumphs.filter(t => t.age < t.life);
-    triumphs.forEach(t => { t.age += dt; t.y -= t.speed; t.x += t.vx; });
-
-    updateHUD();
   }
+
+  explosions = explosions.filter(e => e.age < e.life);
+  explosions.forEach(e => { e.age += dt; e.x += e.vx; e.y += e.vy; e.vy += 0.05; });
+
+  triumphs = triumphs.filter(t => t.age < t.life);
+  triumphs.forEach(t => { t.age += dt; t.y -= t.speed; t.x += t.vx; });
 
   draw(dt);
-  if (!gameOver) animId = requestAnimationFrame(gameLoop);
+  animId = requestAnimationFrame(gameLoop);
 }
 
-function triggerCollapse() {
-  gameOver = true;
-  collapsed = true;
-  phase = 'verdict';
-  spawnExplosions();
-  draw(0);
-  setTimeout(() => showVerdict(false), 1800);
-}
-
-function triggerVerdict() {
-  gameOver = true;
-  phase = 'verdict';
-  // Triumph if stability and growthMult are healthy
-  const triumphed = stability >= 0.7 && population > 30;
-  collapsed = !triumphed;
-  if (triumphed) {
-    for (let i = 0; i < 30; i++) {
-      triumphs.push({
-        x: 20 + rng() * (W - 40), y: H - 40,
-        speed: 0.5 + rng() * 1.5, vx: (rng() - 0.5) * 0.8,
-        color: rng() < 0.5 ? '#ffcc00' : '#00ff41',
-        life: 2000 + rng() * 1000, age: 0
-      });
-    }
-    draw(0);
-  }
-  setTimeout(() => showVerdict(triumphed), triumphed ? 2000 : 500);
-}
-
-// ── Spawn Helpers ─────────────────────────────────────────────────────────────
-function spawnBuilding() {
-  const e = currentEraIdx;
-  const x = 20 + rng() * (W - 40);
+function spawnBuilding(eraIdx) {
   const groundY = H - 28;
-  const h = 12 + Math.floor(rng() * (8 + e * 3));
-  const w = 10 + Math.floor(rng() * (6 + e * 2));
-  buildings.push({ x, y: groundY - h, w, h, era: e });
+  // Stats influence height/width — order = neat tall buildings, low order = scattered shorter.
+  const h = 8 + Math.floor(visualRng() * (10 + eraIdx * 2.2 + stats.order * 0.08));
+  const w = 8 + Math.floor(visualRng() * (5 + eraIdx * 1.2));
+  buildings.push({
+    x: 18 + visualRng() * (W - 36),
+    y: groundY - h,
+    w, h,
+    era: eraIdx
+  });
 }
 
-function spawnPerson() {
+function spawnPerson(eraIdx) {
+  // Color hints from culture: high culture = colorful clothes, low = drab.
+  const colorful = stats.culture > 60;
+  const palette = colorful
+    ? ['#ffcc88','#ff88aa','#88ccff','#aaff88','#ffff88']
+    : ['#cc8844','#aa7744','#8a6633'];
   people.push({
-    x: 20 + rng() * (W - 40),
-    y: H - 28 - rng() * 30,
-    vx: (rng() - 0.5) * 0.8,
-    vy: (rng() - 0.5) * 0.4,
-    color: rng() < 0.5 ? '#ffcc88' : '#cc8844',
-    animFrame: rng() * 4,
-    era: currentEraIdx
+    x: 20 + visualRng() * (W - 40),
+    y: H - 28 - visualRng() * 30,
+    vx: (visualRng() - 0.5) * 0.8,
+    vy: (visualRng() - 0.5) * 0.4,
+    color: palette[Math.floor(visualRng() * palette.length)],
+    animFrame: visualRng() * 4,
+    era: eraIdx
   });
 }
 
 function spawnExplosions() {
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 28; i++) {
     explosions.push({
-      x: 20 + rng() * (W - 40),
-      y: H - 40 - rng() * 60,
-      vx: (rng() - 0.5) * 2.5,
-      vy: -rng() * 3.5,
-      life: 900 + rng() * 500,
+      x: 20 + visualRng() * (W - 40),
+      y: H - 40 - visualRng() * 60,
+      vx: (visualRng() - 0.5) * 2.5,
+      vy: -visualRng() * 3.5,
+      life: 900 + visualRng() * 500,
       age: 0,
-      color: rng() < 0.5 ? '#ff6633' : '#ffaa33'
+      color: visualRng() < 0.5 ? '#ff6633' : '#ffaa33'
+    });
+  }
+}
+
+function spawnTriumphs() {
+  for (let i = 0; i < 30; i++) {
+    triumphs.push({
+      x: 20 + visualRng() * (W - 40), y: H - 40,
+      speed: 0.5 + visualRng() * 1.5, vx: (visualRng() - 0.5) * 0.8,
+      color: visualRng() < 0.5 ? '#ffcc00' : '#00ff41',
+      life: 2000 + visualRng() * 1000, age: 0
     });
   }
 }
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function updateHUD() {
-  document.getElementById('stat-pop').textContent = population.toLocaleString();
-  document.getElementById('stat-era').textContent = ERAS[currentEraIdx].name.split(' ')[0];
+  const eraIdx = eraIndexFromTech(stats.tech);
+  document.getElementById('stat-pop').textContent = formatPop(stats.population);
+  document.getElementById('stat-food').textContent = Math.round(stats.food);
+  document.getElementById('stat-order').textContent = Math.round(stats.order);
+  document.getElementById('stat-tech').textContent = Math.round(stats.tech);
+  document.getElementById('stat-turns').textContent = turnNumber;
+  document.getElementById('age-badge').textContent = ERAS[eraIdx].name;
+  document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · TURN ${turnNumber}`;
 
-  const stabPct = Math.round(Math.min(stability * 50, 100));
-  document.getElementById('stat-stability').textContent = stabPct + '%';
+  // Color stats red when dangerous.
+  document.getElementById('stat-food').classList.toggle('warn', stats.food < 25);
+  document.getElementById('stat-order').classList.toggle('warn', stats.order < 25);
+}
 
-  const eraFrac = eraTimer / ERA_DURATION;
-  const barPct = ((currentEraIdx + eraFrac) / ERAS.length) * 100;
-  document.getElementById('era-progress-bar').style.width = barPct + '%';
-  document.getElementById('era-label').textContent = ERAS[currentEraIdx].name;
+function formatPop(n) {
+  if (n < 1000) return String(n);
+  if (n < 1e6) return (n / 1000).toFixed(1) + 'k';
+  if (n < 1e9) return (n / 1e6).toFixed(1) + 'M';
+  return (n / 1e9).toFixed(1) + 'B';
 }
 
 // ── Draw ──────────────────────────────────────────────────────────────────────
 function draw(dt) {
   ctx.clearRect(0, 0, W, H);
 
-  const ei = Math.min(currentEraIdx, ERAS.length - 1);
-  const [sky1, sky2] = ERAS[ei].bgGrad;
+  const ei = eraIndexFromTech(stats.tech);
+  const [sky1, sky2] = ERAS[Math.min(ei, ERAS.length - 1)].bgGrad;
   const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.65);
   skyGrad.addColorStop(0, sky1);
   skyGrad.addColorStop(1, sky2);
@@ -532,8 +616,8 @@ function draw(dt) {
   ctx.fillStyle = '#1a1208';
   ctx.fillRect(0, H * 0.65, W, H * 0.35);
 
-  const totalProgress = (currentEraIdx + eraTimer / ERA_DURATION) / ERAS.length;
-  const starAlpha = Math.max(0, 1 - totalProgress * 1.2);
+  // Stars fade as tech climbs (skies brighten with civilization light).
+  const starAlpha = Math.max(0, 1 - stats.tech / 100);
   if (starAlpha > 0) {
     ctx.globalAlpha = starAlpha;
     ctx.fillStyle = '#ffffff';
@@ -541,9 +625,9 @@ function draw(dt) {
     ctx.globalAlpha = 1;
   }
 
-  // Moon / Sun
-  const celestialY = 20 + totalProgress * H * 0.35;
-  if (totalProgress < 0.5) {
+  // Moon/Sun based on era half.
+  const celestialY = 20 + Math.min(1, stats.tech / 120) * H * 0.3;
+  if (stats.tech < 50) {
     ctx.fillStyle = '#ddeeff';
     ctx.beginPath(); ctx.arc(W * 0.8, celestialY, 14, 0, Math.PI * 2); ctx.fill();
   } else {
@@ -561,17 +645,17 @@ function draw(dt) {
   // Buildings
   const sorted = [...buildings].sort((a, b) => a.y - b.y);
   sorted.forEach(b => {
-    const [bc1, bc2] = BUILDING_COLORS[Math.min(b.era, BUILDING_COLORS.length - 1)];
+    const [bc1, bc2] = BUILDING_PALETTES_BY_ERA[Math.min(b.era, BUILDING_PALETTES_BY_ERA.length - 1)];
     ctx.fillStyle = bc1;
     ctx.fillRect(Math.floor(b.x - b.w / 2), Math.floor(b.y), b.w, b.h);
     ctx.fillStyle = bc2;
     ctx.fillRect(Math.floor(b.x + b.w / 2 - 3), Math.floor(b.y), 3, b.h);
     if (b.h > 18 && b.w > 8) {
       ctx.fillStyle = '#ffee88';
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = Math.min(0.85, 0.3 + stats.order / 200 + stats.tech / 200);
       for (let wy = b.y + 4; wy < b.y + b.h - 4; wy += 6) {
         for (let wx = b.x - b.w / 2 + 2; wx < b.x + b.w / 2 - 4; wx += 6) {
-          if (rng() < 0.55) ctx.fillRect(Math.floor(wx), Math.floor(wy), 2, 2);
+          if (visualRng() < 0.55) ctx.fillRect(Math.floor(wx), Math.floor(wy), 2, 2);
         }
       }
       ctx.globalAlpha = 1;
@@ -620,43 +704,65 @@ function draw(dt) {
     ctx.fillRect(Math.floor(t.x), Math.floor(t.y), 3, 3);
     ctx.globalAlpha = 1;
   });
+
+  // Low-stat overlay tint (red flicker when food/order critical).
+  if (stats.food < 20 || stats.order < 20) {
+    ctx.globalAlpha = 0.08 + Math.sin(performance.now() * 0.003) * 0.04;
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
 }
 
-// ── Verdict ───────────────────────────────────────────────────────────────────
+// ── Collapse / Verdict ────────────────────────────────────────────────────────
+function triggerCollapse() {
+  if (gameOver) return;
+  gameOver = true;
+  collapsed = true;
+  phase = 'verdict';
+  spawnExplosions();
+  setTimeout(() => showVerdict(false), 1800);
+}
+
+// Note: we never auto-trigger triumph — survival is the goal. But if pop and
+// tech reach thresholds we mark "STELLAR" once for celebration; the player
+// chooses to keep going past that or not. (For now we just keep going.)
+
 function showVerdict(triumph) {
   document.getElementById('decision-panel').style.display = 'none';
+  document.getElementById('thinking-panel').style.display = 'none';
   document.getElementById('verdict-panel').style.display = 'flex';
   document.getElementById('share').style.display = 'block';
 
-  const outcome = triumph ? 'LEGACY SECURED' : 'CIVILIZATION LOST';
+  const outcome = triumph ? 'A LASTING LEGACY' : 'CIVILIZATION LOST';
   document.getElementById('verdict-title').textContent = outcome;
   document.getElementById('verdict-civ-name').textContent = civName.toUpperCase();
 
-  // Build decision log
   const logEl = document.getElementById('verdict-decisions');
-  if (decisionsChosen.length === 0) {
+  if (chronicle.length === 0) {
     logEl.innerHTML = '<div class="decision-line">No decisions recorded.</div>';
   } else {
-    logEl.innerHTML = decisionsChosen.map(d =>
-      `<div class="decision-line">► ${d.era}: <span class="decision-choice">${d.choice}</span><br><span class="decision-flavor">${d.flavor}</span></div>`
+    logEl.innerHTML = chronicle.map(d =>
+      `<div class="decision-line">► T${d.turn} ${d.era}: <span class="decision-choice">${d.choice}</span><br><span class="decision-flavor">${d.flavor}</span></div>`
     ).join('');
   }
 
+  const eraIdx = eraIndexFromTech(peakTech);
   const statsEl = document.getElementById('verdict-stats');
   statsEl.innerHTML = [
-    `► PEAK POPULATION: ${maxPop.toLocaleString()}`,
-    `► ERAS REACHED: ${currentEraIdx + 1} / ${ERAS.length}`,
-    `► TRAIT: ${chosenTrait.icon} ${chosenTrait.label}`,
-    `► STABILITY AT END: ${Math.round(Math.min(stability * 50, 100))}%`,
-    `► OUTCOME: ${triumph ? 'EMPIRE' : 'COLLAPSE'}`
-  ].join('<br>');
+    `► TURNS SURVIVED: ${turnNumber}`,
+    `► PEAK POPULATION: ${formatPop(peakPopulation)}`,
+    `► PEAK ERA: ${ERAS[eraIdx].name}`,
+    `► PEAK TECH: ${Math.round(peakTech)}`,
+    collapseReason ? `► CAUSE: ${collapseReason}` : ''
+  ].filter(Boolean).join('<br>');
 
   document.getElementById('app').className = triumph ? 'verdict-triumph' : 'verdict-collapse';
 }
 
 // ── Share ─────────────────────────────────────────────────────────────────────
 function share() {
-  const txt = `I led "${civName}" (${chosenTrait.label}) through ${currentEraIdx + 1} eras and ${collapsed ? 'collapsed into dust' : 'built an empire'}. ${maxPop} peak population. — benlirio.com/apps/grow-my-civilization/`;
+  const txt = `"${civName}" lasted ${turnNumber} turns and reached ${ERAS[eraIndexFromTech(peakTech)].name} before ${collapsed ? 'collapsing' : 'enduring'}. Peak population: ${formatPop(peakPopulation)}. — benlirio.com/apps/grow-my-civilization/`;
   if (navigator.share) {
     navigator.share({ title: 'Grow My Civilization', text: txt, url: 'https://benlirio.com/apps/grow-my-civilization/' });
   } else {
@@ -666,7 +772,6 @@ function share() {
 
 function playAgain() {
   if (animId) cancelAnimationFrame(animId);
-  chosenTrait = null;
   startSetup();
 }
 
@@ -674,6 +779,7 @@ function playAgain() {
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('start-btn').addEventListener('click', startGame);
   document.getElementById('play-again-btn').addEventListener('click', playAgain);
+  document.getElementById('civ-name-input').addEventListener('input', validateSetup);
   initStars();
   startSetup();
 });
