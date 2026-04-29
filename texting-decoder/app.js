@@ -14,6 +14,34 @@ const SLUG = 'texting-decoder';
 const NUM_THREADS = 4;         // four distinct conversations / senders
 const MAX_TURNS_PER_THREAD = 3;// at most three incoming texts per sender
 
+// Case-store: short-URL service so a shared link reproduces the recipient's
+// view of *your* result (threads + archetype). Without this, sharing the bare
+// app URL meant friends opened the link and only saw the intro screen — the
+// "the links don't work" complaint.
+const CASE_STORE = 'https://rrun6q1lfk.execute-api.us-east-1.amazonaws.com';
+
+async function saveCaseToStore(fragString) {
+  try {
+    const res = await fetch(CASE_STORE + '/case', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: SLUG, data: fragString })
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    return j && typeof j.id === 'string' ? j.id : null;
+  } catch (_) { return null; }
+}
+
+async function loadCaseFromStore(id) {
+  try {
+    const res = await fetch(CASE_STORE + '/case/' + encodeURIComponent(id));
+    if (!res.ok) return null;
+    const j = await res.json();
+    return j && typeof j.data === 'string' ? j.data : null;
+  } catch (_) { return null; }
+}
+
 // A small bank of possible "senders" the AI can pick from when opening a new
 // thread. Keeps the cast diverse and weirdly specific — the thing that makes
 // the screenshot funny.
@@ -608,7 +636,77 @@ function buildTells(f) {
 const state = {
   threads: [],
   activeThreadIdx: 0,
+  // The most recent computed archetype + the threads that produced it. Both
+  // are needed so a shared link can rebuild the result screen exactly.
+  result: null,
+  // Short-URL id assigned by case-store after we save the result blob; once
+  // present, share() ships `?c=<id>` so iMessage can linkify it cleanly.
+  shortId: null,
 };
+
+// ---- share-link state (case-store) ----
+//
+// Encode the minimum needed to re-render the result screen on someone else's
+// phone: every thread (sender + turns) plus the archetype name/tag/tells.
+// Reply text is what makes the screenshot funny when the friend opens it, so
+// we keep it. Blob ceiling is 8000 chars; a typical session is well under.
+
+function buildShareBlob() {
+  if (!state.result) return null;
+  return JSON.stringify({
+    v: 1,
+    threads: state.threads.map(t => ({
+      s: t.sender,
+      t: t.turns.filter(tn => !tn._placeholder).map(tn => ({
+        x: tn.text,
+        r: tn.skipped ? '' : (tn.reply || ''),
+        k: !!tn.skipped,
+      })),
+    })),
+    a: {
+      n: state.result.name,
+      g: state.result.tag,
+      l: state.result.tells || [],
+    },
+  });
+}
+
+function parseShareBlob(s) {
+  if (!s) return null;
+  let parsed;
+  try { parsed = JSON.parse(s); } catch (_) { return null; }
+  if (!parsed || parsed.v !== 1 || !parsed.a || !Array.isArray(parsed.threads)) return null;
+  const threads = parsed.threads.map(t => ({
+    sender: typeof t.s === 'string' ? t.s : '',
+    turns: Array.isArray(t.t) ? t.t.map(tn => ({
+      text: typeof tn.x === 'string' ? tn.x : '',
+      reply: typeof tn.r === 'string' ? tn.r : '',
+      skipped: !!tn.k,
+      answered: true,
+    })) : [],
+    closed: true,
+  })).filter(t => t.sender && t.turns.length);
+  if (!threads.length) return null;
+  const a = parsed.a;
+  if (typeof a.n !== 'string' || typeof a.g !== 'string') return null;
+  const tells = Array.isArray(a.l) ? a.l.filter(x => typeof x === 'string') : [];
+  return { threads, result: { name: a.n, tag: a.g, tells } };
+}
+
+async function tryHydrateFromShareLink() {
+  const params = new URLSearchParams(location.search);
+  const shortId = params.get('c');
+  if (!shortId) return false;
+  const data = await loadCaseFromStore(shortId);
+  const parsed = parseShareBlob(data);
+  if (!parsed) return false;
+  state.threads = parsed.threads;
+  state.activeThreadIdx = parsed.threads.length;
+  state.result = parsed.result;
+  state.shortId = shortId;
+  renderResult(parsed.result);
+  return true;
+}
 const $ = id => document.getElementById(id);
 
 function showScreen(name) {
@@ -858,7 +956,26 @@ async function finishQuiz() {
       tells: buildTells(local.features),
     };
   }
+  state.result = result;
   renderResult(result);
+  // Persist this run to the case-store so a shared link can rebuild it on
+  // someone else's phone. Best-effort — if the network or store fails, share
+  // still works (it'll just fall back to the bare URL).
+  persistShareLink();
+}
+
+async function persistShareLink() {
+  try {
+    const blob = buildShareBlob();
+    if (!blob) return;
+    const id = await saveCaseToStore(blob);
+    if (!id) return;
+    state.shortId = id;
+    // Replace the URL so even if the user copies from the address bar
+    // (rather than tapping Share), they get the stateful link.
+    const url = location.origin + location.pathname + '?c=' + id;
+    history.replaceState(null, '', url);
+  } catch (_) { /* non-fatal */ }
 }
 
 function renderResult(result) {
@@ -920,15 +1037,35 @@ function escapeHtml(s) {
 function retry() {
   state.threads = [];
   state.activeThreadIdx = 0;
+  state.result = null;
+  state.shortId = null;
+  // Clear any ?c=… so a retry doesn't keep the previous run's URL.
+  if (location.search) {
+    history.replaceState(null, '', location.origin + location.pathname);
+  }
   showScreen("intro");
 }
 
-function share() {
+// Build the URL we want to ship out. Prefer the stateful ?c=<id> form so
+// recipients land on the same archetype + threads. If for some reason we
+// don't have an id yet (network blip), try once more inline before falling
+// back to the bare URL — better to wait 200ms than send a dead-end link.
+async function buildShareUrl() {
+  if (!state.shortId && state.result) {
+    await persistShareLink();
+  }
+  if (state.shortId) {
+    return location.origin + location.pathname + '?c=' + state.shortId;
+  }
+  return location.origin + location.pathname;
+}
+
+async function share() {
   const name = $("archetype-name").textContent;
   const shareText = name
     ? `I took the Texting Decoder and got: ${name}. what's yours?`
     : "Texting Decoder — what your texts say about you";
-  const url = location.href;
+  const url = await buildShareUrl();
   if (navigator.share) {
     navigator.share({ title: document.title, text: shareText, url }).catch(() => {});
   } else if (navigator.clipboard) {
@@ -946,4 +1083,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("retry-btn").addEventListener("click", retry);
   const skip = $("skip-btn");
   if (skip) skip.addEventListener("click", skipReply);
+  // If this page was opened via a shared ?c=<id> link, hydrate the result
+  // screen from the case-store before doing anything else. Failure (bad id,
+  // network down, etc.) silently falls through to the normal intro screen.
+  tryHydrateFromShareLink().catch(() => {});
 });
