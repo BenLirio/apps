@@ -113,28 +113,36 @@
       reactions: [],
     });
     // EXPLOSIVE: red powder. Stable on its own. Explodes violently when it
-    // touches ANYTHING that isn't also explosive. Triggers chain reactions
-    // with adjacent explosive cells. The blast scatters debris in all directions.
+    // touches ANYTHING that isn't also explosive (after a short settle grace
+    // so freshly-poured cells don't auto-detonate at the top of the screen
+    // mid-fall). Triggers chain reactions with adjacent explosive cells. The
+    // blast scatters debris in all directions.
+    //
+    // Tuning history: radius 7→5, power 1.2→0.9. Original blast felt
+    // overwhelming and erased the canvas in one hit; smaller blasts let the
+    // user actually build chain-reaction setups.
     registerElement({
       id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive',
       kind: 'powder', density: 4, flow: 0.45, stickiness: 0,
       colors: ['#e02020', '#ff3030', '#c01010', '#ff5040', '#ff1010'],
       isBuiltIn: true,
       isExplosive: true,
-      explosionRadius: 7,
-      explosionPower: 1.2,
+      explosionRadius: 5,
+      explosionPower: 0.9,
       reactions: [],
     });
     // NITRO: liquid explosive. Flows like water, detonates on contact with
-    // any non-liquid (wall, powder, static). Pooling nitro can cause cascades.
+    // any non-liquid (wall, powder, static) — also subject to the pour
+    // settle grace so a curtain of nitro doesn't chain-explode at the
+    // ceiling on contact with whatever's painted there.
     registerElement({
       id: NITRO_ID, key: 'nitro', displayName: 'nitro',
       kind: 'liquid', density: 4, viscosity: 0.05, stickiness: 0,
       colors: ['#ff8010', '#e86000', '#ffa030', '#ff6000', '#ffb840'],
       isBuiltIn: true,
       isExplosive: true,
-      explosionRadius: 5,
-      explosionPower: 1.0,
+      explosionRadius: 4,
+      explosionPower: 0.8,
       reactions: [],
     });
   }
@@ -146,6 +154,12 @@
   let colors;      // per-cell color strings
   let life;        // Uint8Array auxiliary lifetime (gas decay)
   let flags;       // Uint8Array per-cell flags (bit0=moved, bit1=reacted)
+  // settle: per-cell countdown frames during which an EXPLOSIVE/NITRO cell
+  // is immune to its own contact-detonation rule. Set on spawn from pours so
+  // a curtain of explosive doesn't auto-detonate the moment any cell brushes
+  // a neighboring non-explosive while still tumbling in. Decremented every
+  // step; once it hits 0 the cell behaves normally. Non-explosives ignore it.
+  let settle;
 
   let selectedKey = 'explosive';
   let isPointerDown = false;
@@ -234,7 +248,14 @@
     colors = new Array(COLS * ROWS).fill(null);
     life   = new Uint8Array(COLS * ROWS);
     flags  = new Uint8Array(COLS * ROWS);
+    settle = new Uint8Array(COLS * ROWS);
   }
+
+  // Frames an explosive cell stays "settling" after spawning from a pour
+  // before it can detonate on contact. ~25 frames is enough for a poured
+  // cell to clear the spawn band and find its resting place; in practice
+  // explosives detonate as soon as they touch sand the user already painted.
+  const EXPLOSIVE_SETTLE_FRAMES = 28;
 
   function idx(c, r) { return r * COLS + c; }
 
@@ -426,7 +447,7 @@
           const nc = c + dc, nr = r + dr;
           if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
           const i = idx(nc, nr);
-          grid[i] = EMPTY; colors[i] = null; life[i] = 0;
+          grid[i] = EMPTY; colors[i] = null; life[i] = 0; settle[i] = 0;
         }
       }
       return;
@@ -552,6 +573,17 @@
         } else {
           life[i] = 0;
         }
+        // Newly-poured explosives get a settle window: while it's > 0 they
+        // ignore contact-detonation. Otherwise pouring explosive on top of
+        // anything painted produces an instant chain-reaction at the ceiling
+        // before the user even sees the curtain land. Painted (not poured)
+        // explosives still detonate normally because paintAt doesn't set
+        // settle.
+        if (spec.isExplosive) {
+          settle[i] = EXPLOSIVE_SETTLE_FRAMES;
+        } else {
+          settle[i] = 0;
+        }
       }
       p.frames++;
       next.push(p);
@@ -561,6 +593,14 @@
 
   // ── Simulation ─────────────────────────────────────────────────────────────
   function clearFlags() { flags.fill(0); }
+
+  // Tick the settle countdown for cells that still have one. Cheap walk —
+  // most cells will be 0 in any given frame.
+  function decrementSettle() {
+    for (let i = 0; i < settle.length; i++) {
+      if (settle[i] > 0) settle[i]--;
+    }
+  }
 
   const NBR_DIRS = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
 
@@ -696,6 +736,11 @@
         const spec = registry[id];
         if (!spec || !spec.isExplosive) continue;
         if (flags[i] & 2) continue;
+        // During the settle window after spawning from a pour, the cell is
+        // immune to contact-detonation. This stops the "pouring explosive
+        // detonates as it enters the screen" cascade users hit when there's
+        // already material painted on the canvas.
+        if (settle[i] > 0) continue;
 
         // Check all 8 neighbors for non-explosive contact
         let triggered = false;
@@ -739,6 +784,10 @@
         if (!spec || !spec.reactions || !spec.reactions.length) continue;
 
         for (const rx of spec.reactions) {
+          // If a previous reaction this frame already consumed the source
+          // cell (e.g. acid dissolved into the wall it was eating), stop —
+          // grid[i] no longer points at this element.
+          if (flags[i] & 2) break;
           const otherId = keyToId[rx.other];
           if (!otherId) continue;
 
@@ -773,6 +822,28 @@
                   : 0;
               }
               flags[ni] |= 2;
+              // Self-consumption: corrosive elements (acid eating walls, lava
+              // hardening on water) should *also* deplete as they react. If
+              // the reaction has a `selfConsume` chance, roll for it; on hit,
+              // the source cell turns into `selfBecomes` (or empty) so the
+              // user sees acid actually getting "used up" by what it eats.
+              if (typeof rx.selfConsume === 'number' && Math.random() < rx.selfConsume) {
+                const sb = rx.selfBecomes;
+                if (sb && keyToId[sb]) {
+                  const sbSpec = registry[keyToId[sb]];
+                  grid[i] = keyToId[sb];
+                  colors[i] = colorForSpec(sbSpec);
+                  life[i] = (sbSpec.kind === 'gas' && sbSpec.lifeMin)
+                    ? sbSpec.lifeMin + Math.floor(Math.random() * Math.max(1, sbSpec.lifeMax - sbSpec.lifeMin))
+                    : 0;
+                } else {
+                  grid[i] = EMPTY; colors[i] = null; life[i] = 0;
+                }
+                flags[i] |= 2;
+                // Source cell consumed — stop processing further reactions
+                // for it this frame.
+                break;
+              }
             }
           }
         }
@@ -786,6 +857,13 @@
   // `survive` — array of neighbor-count values that keep an existing cell alive
   // `birthFrom` — optional array of element keys that count as neighbors
   //               (defaults to the element's own key + keys listed)
+  // `cellularTick` rate-limits how often each cellular element evaluates,
+  // and `growChance` applies a per-cell probability when it does. The mix is
+  // what makes mold/coral/fungus feel organic instead of strobing in
+  // perfect Conway lockstep across the whole grid every frame. Defaults
+  // chosen so a stand of mold spreads over a few seconds rather than one
+  // frame.
+  let cellularFrame = 0;
   function applyCellular() {
     // Collect all cellular element ids
     const cellularIds = Object.keys(registry)
@@ -793,12 +871,24 @@
       .filter(id => registry[id] && registry[id].kind === 'cellular');
     if (!cellularIds.length) return;
 
+    cellularFrame++;
+
     // We process all cellular elements in one snapshot pass to avoid order bias
     const snapGrid = grid.slice();
     for (const id of cellularIds) {
       const spec = registry[id];
+      // Tick rate: how many frames between evaluations of this element.
+      // Default 6 → roughly 10 evaluations per second instead of 60.
+      const tickEvery = Math.max(1, Math.round(spec.cellularTick || 6));
+      if (cellularFrame % tickEvery !== 0) continue;
+
       const born    = spec.born    || [3];
       const survive = spec.survive || [2, 3];
+      // Per-cell stochastic gate. growChance < 1 means "even if neighbors
+      // would birth this cell this tick, only do it sometimes" — produces
+      // a fuzzy, drifting boundary instead of a hard checkerboard.
+      const growChance   = (typeof spec.growChance   === 'number') ? spec.growChance   : 0.45;
+      const surviveChance= (typeof spec.surviveChance=== 'number') ? spec.surviveChance: 0.92;
       // Keys whose cells count as "alive" neighbors for birth/survival counting
       const neighborKeys = [spec.key, ...(spec.birthFrom || [])];
       const neighborIds  = new Set(neighborKeys.map(k => keyToId[k]).filter(Boolean));
@@ -815,10 +905,14 @@
           }
           if (isAlive) {
             if (!survive.includes(n)) {
-              grid[i] = EMPTY; colors[i] = null; life[i] = 0;
+              // Death: only sometimes; keeps colonies from collapsing all at
+              // once and gives a softer organic decay.
+              if (Math.random() > surviveChance) {
+                grid[i] = EMPTY; colors[i] = null; life[i] = 0;
+              }
             }
           } else if (snapGrid[i] === EMPTY) {
-            if (born.includes(n)) {
+            if (born.includes(n) && Math.random() < growChance) {
               grid[i] = id;
               colors[i] = colorForSpec(spec);
               life[i] = 0;
@@ -831,6 +925,7 @@
 
   function step() {
     clearFlags();
+    decrementSettle();
 
     // Bottom row is open sky for falling things.
     for (let c = 0; c < COLS; c++) {
@@ -1061,9 +1156,9 @@
   }
 
   function swap(a, b) {
-    const g = grid[a], co = colors[a], l = life[a];
-    grid[a] = grid[b];  colors[a] = colors[b];  life[a] = life[b];
-    grid[b] = g;        colors[b] = co;         life[b] = l;
+    const g = grid[a], co = colors[a], l = life[a], s = settle[a];
+    grid[a] = grid[b];  colors[a] = colors[b];  life[a] = life[b];  settle[a] = settle[b];
+    grid[b] = g;        colors[b] = co;         life[b] = l;        settle[b] = s;
   }
 
   let _colArr = null;
@@ -1110,6 +1205,7 @@
           life[gi] = (spec.kind === 'gas' && spec.lifeMin)
             ? spec.lifeMin + Math.floor(Math.random() * Math.max(1, spec.lifeMax - spec.lifeMin))
             : 0;
+          settle[gi] = 0;
         }
         // Cell deposited — projectile consumed
         continue;
@@ -1448,9 +1544,15 @@
       '  "lifeMax": integer 0-200 (GAS ONLY, >= lifeMin),',
       '  "born": array of integers 0-8 (CELLULAR ONLY — neighbor counts that birth a new cell, e.g. [3] for Conway life),',
       '  "survive": array of integers 0-8 (CELLULAR ONLY — neighbor counts that keep an existing cell alive, e.g. [2,3]),',
+      '  "cellularTick": integer 1-30 (CELLULAR ONLY, optional — frames between automaton steps. Higher = slower growth. Default 6. Use 8-12 for ambient mold/coral, 2-4 for fast-spreading life.),',
+      '  "growChance": number 0.05-1 (CELLULAR ONLY, optional — per-cell chance to actually birth on a tick when neighbor count matches. Default 0.45. Lower (0.15-0.3) gives a fuzzy spreading boundary; 1 is strict Conway.),',
+      '  "surviveChance": number 0.5-1 (CELLULAR ONLY, optional — per-cell chance an unhealthy cell escapes death this tick. Default 0.92. Lower = more flickery decay.),',
+      '  "birthFrom": array of existing element keys (CELLULAR ONLY, optional — other elements whose cells count as alive neighbors for birth/survival. Use this so mold spreads through plant/wood, coral grows on wall, etc.),',
       '  "colors": array of 3-6 hex strings like "#aabbcc", vivid, coherent, readable on near-black,',
-      '  "reactions": array of 0-3 objects, each { "other": "<existing-key>", "becomes": "<existing-key-or-empty>", "chance": number 0.005-0.25, "explodes": bool (optional), "explosionRadius": int 4-16 (optional), "explosionPower": float 0.5-2 (optional) }',
+      '  "reactions": array of 0-3 objects, each { "other": "<existing-key>", "becomes": "<existing-key-or-empty>", "chance": number 0.005-0.25, "selfConsume": number 0-1 (optional), "selfBecomes": "<existing-key-or-empty>" (optional), "explodes": bool (optional), "explosionRadius": int 4-16 (optional), "explosionPower": float 0.5-2 (optional) }',
       '}',
+      '',
+      'SELF-CONSUME — corrosive/depleting reactions: when an element actively WORKS on something (acid eating walls, lava cooling on water, bleach removing color, fire burning plant), the source cell should also deplete each time the reaction fires. Use `selfConsume` 0.1-0.6 plus optional `selfBecomes` (e.g. lava turning into stone when it touches water). Without selfConsume a single drop of acid eats forever — feels broken, not physical. Acid ON wall = selfConsume 0.4-0.6. Acid ON sand/plant = 0.15-0.3. Lava ON water = 0.4 with selfBecomes "wall" or "stone" if it exists. Bleach ON ink = 0.2.',
       '',
       'KIND — pick by what the name evokes, not just letters:',
       '- static: solid, never moves. wall, brick, stone, metal, wood, ice, plant, glass, bone, web, crystal, bedrock, concrete, iron, steel.',
@@ -1466,7 +1568,9 @@
       '- stickiness: glue/tar/slime/web/resin = 0.7-0.95. "sticky/clingy/gummy" >= 0.5. default 0.',
       '- buoyancy (gas): hot/fire/plasma = 1.0, steam = 0.8, smoke = 0.6, heavy fog = 0.25.',
       '- lifeMin/lifeMax (gas): short puff 20-40, medium 60-100, long-lived 120-180. Fire usually 40-80; smoke 60-120; steam 30-60.',
-      '- born/survive (cellular): standard Conway life = born:[3], survive:[2,3]. Dense coral = born:[3,4,5], survive:[4,5,6,7]. Fast spreading mold = born:[3,6], survive:[2,3].',
+      '- born/survive (cellular): standard Conway life = born:[3], survive:[2,3]. Dense coral = born:[3,4,5], survive:[4,5,6,7]. Slow drifting mold = born:[2,3], survive:[1,2,3,4,5] with cellularTick:8 + growChance:0.3 — gives it that organic spread instead of binary on/off Conway pulsing. Fast spreading slime = born:[1,2,3], survive:[2,3,4] with growChance:0.6.',
+      '- cellularTick / growChance / surviveChance (cellular): defaults are 6 / 0.45 / 0.92. For ambient living organisms (mold, fungus, lichen) prefer slower ticks (8-12) and lower growChance (0.2-0.4) so they creep across the canvas. Strict Conway "life" = tick:1, growChance:1, surviveChance:1.',
+      '- birthFrom (cellular): list element keys whose cells count as alive neighbors. Mold/fungus → ["plant","wood"]. Coral → ["wall","stone"]. Crystal growth → ["wall"]. This is how the user gets organisms that *spread along* existing material instead of just generating in empty space.',
       '',
       'EXPLOSION REACTIONS — use the explodes flag for elements that should BLOW UP:',
       '  If the element name or description implies explosion (TNT, bomb, dynamite, C4, grenade, landmine, etc.), add a reaction with `"explodes": true`.',
@@ -1480,8 +1584,8 @@
       '  Meaning: "when this element is next to <other>, with <chance> per frame, <other> turns into <becomes>".',
       '  Worked examples — COPY THESE PATTERNS when names match:',
       '    fire → kind:gas, buoyancy:1, density:1, lifeMin:30, lifeMax:70, colors:["#ff4020","#ff8010","#ffc040","#ffe070"], reactions:[{other:"water",becomes:"empty",chance:0.25},{other:"plant",becomes:"fire",chance:0.12},{other:"oil",becomes:"fire",chance:0.15}]',
-      '    lava → kind:liquid, density:8, viscosity:0.8, colors:["#ff5020","#ff8030","#d03010","#ffc040"], reactions:[{other:"water",becomes:"empty",chance:0.2},{other:"plant",becomes:"fire",chance:0.15},{other:"wall",becomes:"empty",chance:0.01}]',
-      '    acid → kind:liquid, density:4, viscosity:0.1, colors:["#60ff30","#80ff40","#30d020","#b0ff60"], reactions:[{other:"wall",becomes:"empty",chance:0.04},{other:"sand",becomes:"empty",chance:0.06},{other:"plant",becomes:"empty",chance:0.15}]',
+      '    lava → kind:liquid, density:8, viscosity:0.8, colors:["#ff5020","#ff8030","#d03010","#ffc040"], reactions:[{other:"water",becomes:"empty",chance:0.2,selfConsume:0.4},{other:"plant",becomes:"fire",chance:0.15},{other:"wall",becomes:"empty",chance:0.01}]',
+      '    acid → kind:liquid, density:4, viscosity:0.1, colors:["#60ff30","#80ff40","#30d020","#b0ff60"], reactions:[{other:"wall",becomes:"empty",chance:0.04,selfConsume:0.5},{other:"sand",becomes:"empty",chance:0.06,selfConsume:0.3},{other:"plant",becomes:"empty",chance:0.15,selfConsume:0.15}]',
       '    snow → kind:powder, flow:0.4, density:2, colors:["#ffffff","#e8f0ff","#d0e0f0","#fafcff"], reactions:[{other:"fire",becomes:"empty",chance:0.25}]',
       '    honey → kind:liquid, density:6, viscosity:0.9, stickiness:0.7, colors:["#e8a030","#d48020","#ffc050","#b86020"]',
       '    smoke → kind:gas, buoyancy:0.6, density:2, lifeMin:60, lifeMax:120, colors:["#606060","#808080","#4a4a4a","#a0a0a0"]',
@@ -1490,7 +1594,7 @@
       '    oil → kind:liquid, density:3, viscosity:0.3, colors:["#2a1010","#4a2810","#1a0808","#603020"], reactions:[{other:"fire",becomes:"fire",chance:0.2}]',
       '    gunpowder → kind:powder, flow:0.6, density:4, colors:["#2a2a2a","#404040","#1a1a1a"], reactions:[{other:"fire",becomes:"fire",chance:0.5}]',
       '    tnt → kind:powder, flow:0.45, density:4, colors:["#c02020","#e03030","#ff4040","#802020"], reactions:[{other:"fire",explodes:true,explosionRadius:10,explosionPower:1.5,chance:0.9}]',
-      '    mold → kind:cellular, density:3, born:[3,6], survive:[2,3,6], colors:["#304820","#405830","#50682a","#2a3818"]',
+      '    mold → kind:cellular, density:3, born:[2,3], survive:[1,2,3,4,5], cellularTick:8, growChance:0.3, surviveChance:0.96, birthFrom:["plant","wood"], colors:["#304820","#405830","#50682a","#2a3818"]  // slow organic spread that creeps along plant/wood',
       '    life → kind:cellular, density:3, born:[3], survive:[2,3], colors:["#40e080","#30c060","#60f090","#20a050"]',
       '',
       'REACTION ANTI-PATTERNS (avoid these):',
@@ -1728,7 +1832,24 @@
           if (selfPropagateCount > 1) continue; // only allow one self-reaction
           chance = Math.min(chance, 0.05);       // cap viral spread chance
         }
-        reactions.push({ other, becomes, chance });
+        const reaction = { other, becomes, chance };
+        // Optional `selfConsume` (0..1) — chance the source cell is consumed
+        // when this reaction fires. Models corrosive/depleting interactions
+        // (acid eating walls, lava cooling on water). `selfBecomes` controls
+        // what the consumed source turns into; defaults to empty.
+        const sc = Number(rx.selfConsume);
+        if (isFinite(sc) && sc > 0) {
+          reaction.selfConsume = Math.max(0, Math.min(1, sc));
+          if (typeof rx.selfBecomes === 'string') {
+            const sb = rx.selfBecomes.toLowerCase();
+            if (sb === '' || sb === 'empty') {
+              reaction.selfBecomes = null;
+            } else if (validKeys.has(sb)) {
+              reaction.selfBecomes = sb;
+            }
+          }
+        }
+        reactions.push(reaction);
       }
     }
 
@@ -1786,11 +1907,31 @@
     } else if (kind === 'cellular') {
       // born: neighbor counts that create a new cell from empty
       // survive: neighbor counts that keep an existing cell alive
+      // cellularTick: frames between evaluations (higher = slower growth)
+      // growChance / surviveChance: stochastic gates per cell per tick.
+      // Defaults are tuned so mold/coral spread organically rather than
+      // grid-blinking in lockstep — a single user-flagged complaint:
+      // "mold with cellular automaton feels off, find more natural ways
+      // to make stuff grow around the place or spread."
       const parseIntArray = (v) => Array.isArray(v)
         ? v.map(Number).filter(n => isFinite(n) && n >= 0 && n <= 8).map(Math.round)
         : null;
       out.born    = parseIntArray(raw && raw.born)    || [3];
       out.survive = parseIntArray(raw && raw.survive) || [2, 3];
+      const tick = Number(raw && raw.cellularTick);
+      out.cellularTick = isFinite(tick) ? Math.max(1, Math.min(30, Math.round(tick))) : 6;
+      const gc = Number(raw && raw.growChance);
+      out.growChance = isFinite(gc) ? Math.max(0.05, Math.min(1, gc)) : 0.45;
+      const sc = Number(raw && raw.surviveChance);
+      out.surviveChance = isFinite(sc) ? Math.max(0.5, Math.min(1, sc)) : 0.92;
+      // Optional birthFrom: keys whose cells count as alive neighbors. The
+      // LLM can use this to make e.g. mold spread across plant or wood.
+      if (Array.isArray(raw && raw.birthFrom)) {
+        out.birthFrom = raw.birthFrom
+          .filter(k => typeof k === 'string')
+          .map(k => k.toLowerCase())
+          .filter(k => keyToId[k]);
+      }
     }
 
     // Name-based reaction backstops: if the model produced no reactions for
@@ -1799,11 +1940,18 @@
     const blob = (key + ' ' + (userDesc || '')).toLowerCase();
     const any = (...words) => words.some(w => blob.indexOf(w) >= 0);
     const hasReact = (other) => out.reactions.some(r => r.other === other);
-    const tryAdd = (other, becomes, chance) => {
+    const tryAdd = (other, becomes, chance, extras) => {
       if (!keyToId[other]) return;
       if (becomes != null && !keyToId[becomes] && becomes !== key) return;
       if (hasReact(other)) return;
-      out.reactions.push({ other, becomes, chance });
+      const rx = { other, becomes, chance };
+      if (extras && typeof extras === 'object') {
+        if (typeof extras.selfConsume === 'number') rx.selfConsume = extras.selfConsume;
+        if (typeof extras.selfBecomes === 'string' && (keyToId[extras.selfBecomes] || extras.selfBecomes === 'empty')) {
+          rx.selfBecomes = extras.selfBecomes === 'empty' ? null : extras.selfBecomes;
+        }
+      }
+      out.reactions.push(rx);
     };
     const tryAddExplode = (other, radius, power, chance) => {
       if (!keyToId[other]) return;
@@ -1817,13 +1965,21 @@
       tryAdd('water', null, 0.25);
     }
     if (kind === 'liquid' && any('lava', 'magma')) {
-      tryAdd('water', null, 0.2);
+      // Lava cools when it hits water — both should diminish, so the lava
+      // cell occasionally vanishes (becomes steam-equivalent / empty) when
+      // the contact reaction fires.
+      tryAdd('water', null, 0.2, { selfConsume: 0.4 });
       tryAdd('plant', 'fire', 0.15);
     }
     if (kind === 'liquid' && any('acid')) {
-      tryAdd('plant', null, 0.15);
-      tryAdd('wall', null, 0.04);
-      tryAdd('sand', null, 0.06);
+      // Acid should also be USED UP as it eats. User feedback: "the acid
+      // felt like it should also be getting used up while it eats at the
+      // stuff." Without selfConsume, a single acid drop dissolves an
+      // unlimited wall — feels broken. selfConsume gives the cell a chance
+      // to vanish each time it successfully etches a neighbor.
+      tryAdd('plant', null, 0.15, { selfConsume: 0.15 });
+      tryAdd('wall', null, 0.04, { selfConsume: 0.5 });
+      tryAdd('sand', null, 0.06, { selfConsume: 0.3 });
     }
     if (kind === 'powder' && any('snow', 'ice')) {
       tryAdd('fire', null, 0.2);
@@ -2045,7 +2201,11 @@
         reactions = [{ other: 'fire', explodes: true, explosionRadius: 10, explosionPower: 1.5, chance: 0.9 }];
       }
     } else if (has('mold', 'fungus', 'mycelium', 'lichen', 'coral', 'slime-mold')) {
-      kind = 'cellular'; density = 3; born = [3, 6]; survive = [2, 3, 6];
+      // Looser automaton rules + lower born requirements give mold a more
+      // organic spreading feel: a single seed can radiate outward instead
+      // of needing 3 perfect neighbors before growing. The new stochastic
+      // tick / growChance / surviveChance defaults further soften it.
+      kind = 'cellular'; density = 3; born = [2, 3]; survive = [1, 2, 3, 4, 5];
       colorsOverride = ['#304820', '#405830', '#50682a', '#2a3818'];
     } else if (has('conway', 'automaton', 'life')) {
       kind = 'cellular'; density = 3; born = [3]; survive = [2, 3];
@@ -2077,7 +2237,15 @@
     if (kind === 'liquid')   { out.viscosity = viscosity; out.stickiness = stickiness; }
     if (kind === 'powder')   { out.flow = flow; out.stickiness = stickiness; }
     if (kind === 'gas')      { out.buoyancy = buoyancy; out.lifeMin = lifeMin; out.lifeMax = lifeMax; }
-    if (kind === 'cellular') { out.born = born; out.survive = survive; }
+    if (kind === 'cellular') {
+      out.born = born;
+      out.survive = survive;
+      // Slower, fuzzier growth than vanilla Conway. Mold/coral should drift
+      // outward like a living thing, not pulse in 60Hz Conway lockstep.
+      out.cellularTick   = 6;
+      out.growChance     = 0.4;
+      out.surviveChance  = 0.94;
+    }
     return out;
   }
 })();
