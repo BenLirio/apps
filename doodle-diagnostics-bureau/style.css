@@ -1,0 +1,536 @@
+/* Aesthetic: 2016-era school-counselor mimeograph evaluation form — yellowed paper, Cutive Mono headings, Special Elite typewriter body, Comic Neue annotations, red rubber-stamp accents */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255,243,200,.6), transparent 60%),
+    radial-gradient(ellipse at 80% 90%, rgba(180,140,80,.18), transparent 60%),
+    #2a2620;
+  min-height: 100vh;
+  font-family: 'Special Elite', 'Cutive Mono', Georgia, serif;
+  color: #2a241b;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  padding: 20px 14px 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Paper sheet shared by both screens */
+.form-sheet, .verdict-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  background:
+    /* mimeograph speckle */
+    radial-gradient(circle at 12% 18%, rgba(120,80,40,.06) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 67% 41%, rgba(120,80,40,.05) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 88% 72%, rgba(120,80,40,.07) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 30% 88%, rgba(120,80,40,.04) 0 1.5px, transparent 2px),
+    /* uneven yellowing */
+    linear-gradient(135deg, #f3e1ad 0%, #ecd393 35%, #f4e2ae 60%, #e2c47a 100%);
+  background-blend-mode: multiply, multiply, multiply, multiply, normal;
+  border: 1px solid rgba(80,55,20,.35);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.4) inset,
+    0 -2px 0 rgba(120,80,40,.08) inset,
+    0 18px 40px rgba(0,0,0,.55),
+    0 4px 10px rgba(0,0,0,.3);
+  padding: 22px 22px 28px;
+  border-radius: 2px;
+}
+
+/* tri-fold creases */
+.form-sheet::before, .verdict-sheet::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  top: 33.33%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(60,40,15,.3) 8%, rgba(60,40,15,.3) 92%, transparent);
+  pointer-events: none;
+}
+.form-sheet::after, .verdict-sheet::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  top: 66.66%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(60,40,15,.3) 8%, rgba(60,40,15,.3) 92%, transparent);
+  pointer-events: none;
+}
+
+/* ============ HEADER ============ */
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.form-seal {
+  flex: 0 0 auto;
+  width: 110px;
+  height: 110px;
+  border: 2.5px solid #6e1c14;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6e1c14;
+  transform: rotate(-4deg);
+  box-shadow: 0 0 0 3px rgba(110,28,20,.05) inset;
+  opacity: .85;
+}
+.form-seal.small { width: 90px; height: 90px; }
+.seal-ring {
+  position: absolute;
+  inset: 6px;
+  border: 1.5px solid #6e1c14;
+  border-radius: 50%;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 8px;
+  letter-spacing: .15em;
+  text-align: center;
+  padding: 6px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  font-weight: 700;
+}
+.form-seal.small .seal-ring { font-size: 7px; padding: 4px 3px; }
+.seal-inner {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  background: rgba(243,225,173,.7);
+  padding: 2px 4px;
+  z-index: 1;
+}
+
+.form-title-block {
+  flex: 1;
+  min-width: 0;
+}
+.form-id {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  color: #5a3a1a;
+  text-transform: uppercase;
+}
+.form-title {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0 2px;
+  letter-spacing: .02em;
+  line-height: 1.1;
+  color: #2a241b;
+}
+.form-subtitle {
+  font-family: 'Special Elite', serif;
+  font-size: 12px;
+  color: #5a3a1a;
+  letter-spacing: .04em;
+}
+
+.rule {
+  border: 0;
+  border-top: 1.5px dashed rgba(80,55,20,.5);
+  margin: 14px 0;
+}
+
+/* ============ FIELDS ============ */
+.form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.form-cell { flex: 1 1 60%; min-width: 0; }
+.form-cell.narrow { flex: 1 1 30%; }
+
+.field-label {
+  display: block;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #5a3a1a;
+  margin-bottom: 4px;
+}
+
+.field-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px solid rgba(60,40,15,.55);
+  padding: 6px 2px;
+  font-family: 'Special Elite', serif;
+  font-size: 16px;
+  color: #2a241b;
+  outline: none;
+}
+.field-input:focus {
+  border-bottom-color: #6e1c14;
+}
+
+/* ============ INSTRUCTIONS ============ */
+.instructions {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(80,55,20,.4);
+  background: rgba(255,253,235,.25);
+}
+.instr-num {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  color: #6e1c14;
+  flex: 0 0 auto;
+}
+.instr-title {
+  font-family: 'Cutive Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+  letter-spacing: .04em;
+}
+.instr-text {
+  font-family: 'Special Elite', serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3a2e1d;
+}
+
+/* ============ CANVAS ============ */
+.canvas-frame {
+  border: 2px solid rgba(60,40,15,.55);
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 26px, rgba(70,90,180,.18) 26px 27px),
+    #fbf2d4;
+  padding: 6px;
+  margin-bottom: 10px;
+}
+.canvas-label {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: #5a3a1a;
+  text-transform: uppercase;
+  margin: 2px 4px 6px;
+}
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 26px, rgba(70,90,180,.22) 26px 27px),
+    /* red margin line */
+    linear-gradient(to right, transparent 0 38px, rgba(180,40,40,.5) 38px 39px, transparent 39px 100%),
+    #fff8df;
+  border: 1px solid rgba(60,40,15,.3);
+  /* rule lines + red margin */
+  aspect-ratio: 600 / 380;
+  overflow: hidden;
+  touch-action: none;
+}
+#pad, #replay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  color: rgba(80,55,20,.45);
+  font-size: 14px;
+  pointer-events: none;
+}
+.timer-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(110,28,20,.92);
+  color: #fdf3c8;
+  padding: 6px 10px;
+  font-family: 'Cutive Mono', monospace;
+  letter-spacing: .08em;
+  text-align: center;
+  border: 2px solid #fdf3c8;
+  pointer-events: none;
+  transform: rotate(2deg);
+  box-shadow: 0 2px 0 rgba(0,0,0,.2);
+}
+.timer-num {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+.timer-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.canvas-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* ============ BUTTONS ============ */
+.btn-primary, .btn-secondary {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 12px 18px;
+  border: 2px solid #2a241b;
+  cursor: pointer;
+  min-height: 44px;
+  transition: transform .08s ease, box-shadow .08s ease;
+  border-radius: 0;
+}
+.btn-primary {
+  background: #2a241b;
+  color: #fdf3c8;
+  flex: 1 1 auto;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.3);
+}
+.btn-primary:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,.3); }
+.btn-primary:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 rgba(0,0,0,.3); }
+.btn-primary:disabled { opacity: .5; cursor: default; }
+
+.btn-secondary {
+  background: transparent;
+  color: #2a241b;
+}
+.btn-secondary:hover { background: rgba(42,36,27,.08); }
+
+/* ============ LOADING ============ */
+.loading-block {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(255,253,235,.4);
+  border: 1px dashed rgba(80,55,20,.4);
+  text-align: center;
+}
+.loading-text {
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  color: #6e1c14;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.loading-bar {
+  height: 6px;
+  background: rgba(80,55,20,.15);
+  overflow: hidden;
+  border: 1px solid rgba(80,55,20,.3);
+}
+.loading-fill {
+  height: 100%;
+  width: 0%;
+  background: #6e1c14;
+  animation: fill 2.4s ease-out forwards;
+}
+@keyframes fill {
+  0% { width: 0%; }
+  60% { width: 70%; }
+  100% { width: 95%; }
+}
+
+/* ============ VERDICT SHEET ============ */
+.verdict-sheet {
+  margin-top: 0;
+}
+.verdict-stamp {
+  position: absolute;
+  top: 22px;
+  right: -8px;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: #b3211a;
+  border: 4px solid #b3211a;
+  padding: 8px 16px;
+  transform: rotate(-12deg);
+  opacity: .85;
+  text-shadow: 0 0 1px rgba(179,33,26,.4);
+  box-shadow: 0 0 0 1px rgba(179,33,26,.2);
+  background: rgba(255,250,220,.3);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.exhibit-row {
+  margin: 8px 0 12px;
+}
+.exhibit-block {
+  border: 2px solid rgba(60,40,15,.55);
+  padding: 6px;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 26px, rgba(70,90,180,.18) 26px 27px),
+    #fbf2d4;
+}
+.exhibit-label {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #5a3a1a;
+  margin: 2px 4px 6px;
+}
+#replay-canvas {
+  position: relative;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 26px, rgba(70,90,180,.22) 26px 27px),
+    linear-gradient(to right, transparent 0 38px, rgba(180,40,40,.5) 38px 39px, transparent 39px 100%),
+    #fff8df;
+  width: 100%;
+  aspect-ratio: 600 / 380;
+  border: 1px solid rgba(60,40,15,.3);
+  inset: auto;
+}
+.exhibit-caption {
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  font-size: 12px;
+  color: #5a3a1a;
+  margin: 6px 4px 2px;
+  font-style: italic;
+}
+
+.verdict-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: rgba(255,253,235,.3);
+  border: 1px dashed rgba(80,55,20,.4);
+}
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Cutive Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+.meta-k { color: #5a3a1a; text-transform: uppercase; }
+.meta-v { color: #2a241b; font-weight: 700; }
+
+.verdict-block {
+  margin: 16px 0;
+  text-align: center;
+}
+.verdict-label {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .2em;
+  color: #5a3a1a;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.verdict-name {
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.15;
+  color: #6e1c14;
+  padding: 6px 0;
+  text-shadow: 0 0 1px rgba(110,28,20,.2);
+}
+@media (min-width: 480px) { .verdict-name { font-size: 36px; } }
+
+.diagnosis-block, .rec-block {
+  margin: 14px 0;
+  padding: 10px 12px;
+  border-left: 3px solid #6e1c14;
+  background: rgba(255,253,235,.35);
+}
+.diagnosis-label, .rec-label {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .15em;
+  color: #5a3a1a;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.diagnosis-text {
+  font-family: 'Special Elite', serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #2a241b;
+  white-space: pre-line;
+}
+.rec-tag {
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2a241b;
+  word-break: break-word;
+}
+
+.signature-row {
+  display: flex;
+  gap: 16px;
+  margin: 18px 0 8px;
+}
+.sig-cell { flex: 1; min-width: 0; }
+.sig-line {
+  height: 22px;
+  border-bottom: 1.5px solid rgba(60,40,15,.6);
+}
+.sig-caption {
+  font-family: 'Cutive Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #5a3a1a;
+  margin-top: 4px;
+}
+
+.share-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.share-row .btn-primary { flex: 1 1 60%; }
+.share-row .btn-secondary { flex: 1 1 30%; }
+
+/* tighten on small screens */
+@media (max-width: 420px) {
+  body { padding: 12px 8px 100px; }
+  .form-sheet, .verdict-sheet { padding: 14px 14px 20px; }
+  .form-title { font-size: 18px; }
+  .form-seal { width: 84px; height: 84px; }
+  .form-seal.small { width: 70px; height: 70px; }
+  .seal-ring { font-size: 6px; }
+  .form-seal.small .seal-ring { font-size: 5.5px; }
+  .verdict-stamp { font-size: 26px; padding: 6px 12px; right: -4px; top: 14px; }
+  .verdict-name { font-size: 24px; }
+}

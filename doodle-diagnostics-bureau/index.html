@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doodle Diagnostics Bureau</title>
+  <meta property="og:title" content="Doodle Diagnostics Bureau">
+  <meta property="og:description" content="Doodle for 20 seconds. The Bureau of Adolescent Doodleography stamps your form and assigns a verdict.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/doodle-diagnostics-bureau/">
+  <meta property="og:image" content="https://benlirio.com/apps/doodle-diagnostics-bureau/favicon.jpg">
+  <meta name="theme-color" content="#d6c089">
+  <link rel="icon" type="image/jpeg" href="favicon.jpg">
+  <link rel="apple-touch-icon" href="favicon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Special+Elite&family=Cutive+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="form" class="form-sheet">
+    <div class="form-header">
+      <div class="form-seal" aria-hidden="true">
+        <div class="seal-ring">BUREAU OF ADOLESCENT DOODLEOGRAPHY</div>
+        <div class="seal-inner">EST. 2016</div>
+      </div>
+      <div class="form-title-block">
+        <div class="form-id">FORM 17-B (rev. 04/2016)</div>
+        <h1 class="form-title">Adolescent Doodle Evaluation</h1>
+        <div class="form-subtitle">School Counselor — Confidential Diagnostic</div>
+      </div>
+    </div>
+
+    <hr class="rule">
+
+    <div class="form-row">
+      <div class="form-cell">
+        <label class="field-label">SUBJECT NAME (or pseudonym)</label>
+        <input id="subject-name" type="text" maxlength="40" autocomplete="off" placeholder="e.g. Jordan T." class="field-input">
+      </div>
+      <div class="form-cell narrow">
+        <label class="field-label">DATE</label>
+        <input id="subject-date" type="text" readonly class="field-input">
+      </div>
+    </div>
+
+    <div class="instructions">
+      <div class="instr-num">SECTION I</div>
+      <div class="instr-body">
+        <div class="instr-title">Submission of Exhibit A</div>
+        <div class="instr-text">In the box below, the subject shall doodle <em>anything at all</em> for a duration not to exceed twenty (20) seconds. The doodle may include but is not limited to: hearts, cursive URLs, stick figures, song lyrics, geometric shapes, the word "yeah" written eleven times. The Bureau accepts no responsibility for what is uncovered.</div>
+      </div>
+    </div>
+
+    <div class="canvas-frame">
+      <div class="canvas-label">EXHIBIT A — please doodle in this space:</div>
+      <div class="canvas-wrap">
+        <canvas id="pad" width="600" height="380"></canvas>
+        <div id="timer-overlay" class="timer-overlay" style="display:none">
+          <div class="timer-num">20</div>
+          <div class="timer-label">seconds remaining</div>
+        </div>
+        <div id="canvas-empty" class="canvas-empty">tap or drag to begin doodling</div>
+      </div>
+      <div class="canvas-controls">
+        <button id="clear-btn" type="button" class="btn-secondary">Clear</button>
+        <button id="start-btn" type="button" class="btn-primary">Begin 20s evaluation</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading-block" style="display:none">
+      <div class="loading-text">cross-referencing pen-lifts against the 2016 cohort...</div>
+      <div class="loading-bar"><div class="loading-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="verdict" class="verdict-sheet" style="display:none">
+    <div class="verdict-stamp">EVALUATED</div>
+
+    <div class="form-header">
+      <div class="form-seal small" aria-hidden="true">
+        <div class="seal-ring">BUREAU OF ADOLESCENT DOODLEOGRAPHY</div>
+        <div class="seal-inner">EST. 2016</div>
+      </div>
+      <div class="form-title-block">
+        <div class="form-id">FORM 17-B (rev. 04/2016) — DIAGNOSTIC SECTION</div>
+        <h1 class="form-title">Doodle Evaluation Results</h1>
+        <div class="form-subtitle">FILED <span id="filed-date"></span></div>
+      </div>
+    </div>
+
+    <hr class="rule">
+
+    <div class="exhibit-row">
+      <div class="exhibit-block">
+        <div class="exhibit-label">EXHIBIT A</div>
+        <canvas id="replay-canvas" width="600" height="380"></canvas>
+        <div class="exhibit-caption" id="exhibit-caption">submitted by SUBJECT</div>
+      </div>
+    </div>
+
+    <div class="verdict-meta">
+      <div class="meta-item"><span class="meta-k">PEN-LIFT COUNT</span><span class="meta-v" id="m-strokes">—</span></div>
+      <div class="meta-item"><span class="meta-k">INK DENSITY</span><span class="meta-v" id="m-density">—</span></div>
+      <div class="meta-item"><span class="meta-k">LOOP TIGHTNESS</span><span class="meta-v" id="m-loops">—</span></div>
+      <div class="meta-item"><span class="meta-k">SYMMETRY INDEX</span><span class="meta-v" id="m-sym">—</span></div>
+    </div>
+
+    <div class="verdict-block">
+      <div class="verdict-label">ADOLESCENT SUBTYPE</div>
+      <div id="verdict-name" class="verdict-name">—</div>
+    </div>
+
+    <div class="diagnosis-block">
+      <div class="diagnosis-label">SECTION II — BEHAVIORAL DIAGNOSIS</div>
+      <div id="diagnosis-text" class="diagnosis-text">—</div>
+    </div>
+
+    <div class="rec-block">
+      <div class="rec-label">SECTION III — RECOMMENDED TUMBLR TAG (2016 catalog)</div>
+      <div id="rec-tag" class="rec-tag">—</div>
+    </div>
+
+    <div class="signature-row">
+      <div class="sig-cell">
+        <div class="sig-line"></div>
+        <div class="sig-caption">EVALUATING COUNSELOR</div>
+      </div>
+      <div class="sig-cell">
+        <div class="sig-line"></div>
+        <div class="sig-caption">DATE</div>
+      </div>
+    </div>
+
+    <div id="share" class="share-row">
+      <button onclick="share()" class="btn-primary">Share evaluation</button>
+      <button onclick="resetForm()" type="button" class="btn-secondary">New evaluation</button>
+    </div>
+  </div>
+</body>
+</html>
