@@ -414,21 +414,6 @@ function tick(dt) {
   }
   critters = next;
 
-  // Equilibrium-rescue: any species below 2 but with at least 1 alive — rare reseed
-  const liveCounts = {};
-  for (const c of critters) liveCounts[c.spec.id] = (liveCounts[c.spec.id] || 0) + 1;
-  for (const spec of getActiveSpecs()) {
-    const n = liveCounts[spec.id] || 0;
-    // If species went extinct, give it a small chance per tick to be revived from "elsewhere"
-    if (n === 0 && rng() < 0.0012 * dt * 60) {
-      const newCount = Math.max(2, Math.floor((spec.eats === 'predators' ? 2 : 3)));
-      for (let i = 0; i < newCount; i++)
-        critters.push(mkCritter(rng() * W, rng() * H, spec));
-    } else if (n > 0 && n < 2 && rng() < 0.005 * dt * 60) {
-      critters.push(mkCritter(rng() * W, rng() * H, spec));
-    }
-  }
-
   updatePopCounts();
 
   const milestoneIndex = Math.floor(simTime / CFG.milestoneSeconds);
