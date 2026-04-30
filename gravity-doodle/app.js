@@ -1,12 +1,16 @@
 // Gravity Doodle — an AI-driven falling-sand physics sandbox.
-// Explosions are a CORE mechanic. Two built-in explosive materials:
-//   EXPLOSIVE (powder) — bright red, stable until it touches ANYTHING
-//                        that isn't explosive; then it chain-blasts outward
-//                        in every direction with flying debris.
-//   NITRO (liquid)     — orange, flows like water, violently detonates on
-//                        contact with any non-liquid material.
 //
-// The seed palette: wall, sand, water, explosive, nitro.
+// The seed palette covers one of each engine kind so a fresh canvas can
+// already do something interesting before any element is invented:
+//   WALL  (static)   — sandy structural blocks, the default brush.
+//   SAND  (powder)   — granular, falls and piles.
+//   WATER (liquid)   — fluid, runs and pools.
+//   EXPLOSIVE (powder) — bright red. Stable until it touches ANYTHING that
+//                        isn't also explosive; then it chain-blasts outward
+//                        in every direction with flying debris.
+//   SMOKE (gas)      — grey, rises and slowly fades.
+//   PLANT (cellular) — green, grows along walls in a Conway-style sweep.
+//
 // Everything else is invented by the user via the AI.
 //
 // Physics kinds:
@@ -83,7 +87,8 @@
   const SAND_ID      = 2;
   const WATER_ID     = 3;
   const EXPLOSIVE_ID = 4;
-  const NITRO_ID     = 5;
+  const SMOKE_ID     = 5;
+  const PLANT_ID     = 6;
 
   // Canonical sand: warm amber/golden tones. Earlier palettes leaned into deep
   // reds which made sand read as lava — a user flagged it explicitly. Keep
@@ -131,18 +136,28 @@
       explosionPower: 0.9,
       reactions: [],
     });
-    // NITRO: liquid explosive. Flows like water, detonates on contact with
-    // any non-liquid (wall, powder, static) — also subject to the pour
-    // settle grace so a curtain of nitro doesn't chain-explode at the
-    // ceiling on contact with whatever's painted there.
+    // SMOKE: a gas seed. Rises, drifts, slowly fades. Gives the canvas
+    // something atmospheric without needing to invent it.
     registerElement({
-      id: NITRO_ID, key: 'nitro', displayName: 'nitro',
-      kind: 'liquid', density: 4, viscosity: 0.05, stickiness: 0,
-      colors: ['#ff8010', '#e86000', '#ffa030', '#ff6000', '#ffb840'],
+      id: SMOKE_ID, key: 'smoke', displayName: 'smoke',
+      kind: 'gas', density: 2, buoyancy: 0.6,
+      lifeMin: 90, lifeMax: 180,
+      colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb', '#7c7c7c'],
       isBuiltIn: true,
-      isExplosive: true,
-      explosionRadius: 4,
-      explosionPower: 0.8,
+      reactions: [],
+    });
+    // PLANT: a cellular seed. Stable on its own, slowly creeps along walls.
+    // `survive` covers 0..8 so a lone painted cell never starves; `born`
+    // requires 2-3 plant/wall neighbors so growth only kicks in once the
+    // user has put something next to a wall.
+    registerElement({
+      id: PLANT_ID, key: 'plant', displayName: 'plant',
+      kind: 'cellular', density: 3,
+      born: [2, 3], survive: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      cellularTick: 14, growChance: 0.10, surviveChance: 1,
+      birthFrom: ['wall'],
+      colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a', '#5fcc66'],
+      isBuiltIn: true,
       reactions: [],
     });
   }
@@ -161,7 +176,7 @@
   // step; once it hits 0 the cell behaves normally. Non-explosives ignore it.
   let settle;
 
-  let selectedKey = 'explosive';
+  let selectedKey = 'wall';
   let isPointerDown = false;
   let lastCell = null;
   let lastPointer = null;        // {c, r} of most recent pointer position
@@ -226,7 +241,7 @@
 
     animId = requestAnimationFrame(loop);
 
-    showOverlay('paint explosive (red) onto the canvas\nthen pour sand on top to detonate!\n\nsparks shoot in all directions.\nchain reactions cascade!');
+    showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.\n\npaint explosive (red), then drop sand\non it to chain-react!');
     syncActionLabel();
     bindModal();
     bindElementFeedbackModal();
@@ -277,7 +292,7 @@
 
     // Seeds first in their canonical order, then invented elements in insertion
     // order, then the erase tool.
-    const orderedIds = [WALL_ID, SAND_ID, WATER_ID, EXPLOSIVE_ID, NITRO_ID];
+    const orderedIds = [WALL_ID, SAND_ID, WATER_ID, EXPLOSIVE_ID, SMOKE_ID, PLANT_ID];
     const customIds = Object.keys(registry)
       .map(n => +n)
       .filter(id => !registry[id].isBuiltIn)
@@ -396,14 +411,15 @@
     syncActionLabel();
   };
 
-  // Static materials and erase can't be poured — fall back to sand.
+  // Only powders and liquids make sense as a top-of-screen curtain.
+  // Static/cellular don't fall, gas just escapes the top row instantly.
   function pourableKeyFor(key) {
     if (key === 'erase') return 'sand';
     const id = keyToId[key];
     if (!id) return 'sand';
     const spec = registry[id];
     if (!spec) return 'sand';
-    if (spec.kind === 'static') return 'sand';
+    if (spec.kind !== 'powder' && spec.kind !== 'liquid') return 'sand';
     return key;
   }
 
@@ -419,10 +435,10 @@
     sparks = [];
     pendingExplosions = [];
     initGrid();
-    selectedKey = 'explosive';
+    selectedKey = 'wall';
     refreshActiveClass();
     syncActionLabel();
-    showOverlay('paint explosive (red) onto the canvas\nthen pour sand on top to detonate!\n\nsparks shoot in all directions.\nchain reactions cascade!');
+    showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.\n\npaint explosive (red), then drop sand\non it to chain-react!');
   };
 
   // ── Drawing ────────────────────────────────────────────────────────────────
@@ -723,10 +739,10 @@
   }
 
   // ── Explosive contact detection ─────────────────────────────────────────────
-  // Called during the reaction pass. Built-in explosives (explosive powder,
-  // nitro liquid) detonate the moment they touch ANY non-explosive material.
-  // This is different from reaction-based explosions which only fire on
-  // specific `other` element contacts.
+  // Called during the reaction pass. The built-in explosive powder (and any
+  // AI-invented element flagged isExplosive) detonates the moment it touches
+  // ANY non-explosive material. This is different from reaction-based
+  // explosions which only fire on specific `other` element contacts.
   function applyExplosiveContacts() {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {

@@ -44,7 +44,8 @@ html, body {
   --mat-sand:      #e8a030;
   --mat-water:     #4aa8d8;
   --mat-explosive: #e02020;
-  --mat-nitro:     #ff8010;
+  --mat-smoke:     #aaaaaa;
+  --mat-plant:     #3aa040;
   --mat-erase:     #808080;
 }
 
@@ -218,14 +219,16 @@ header h1 {
 .tool-btn.mat-sand      { --swatch: var(--mat-sand); }
 .tool-btn.mat-water     { --swatch: var(--mat-water); }
 .tool-btn.mat-explosive { --swatch: var(--mat-explosive); }
-.tool-btn.mat-nitro     { --swatch: var(--mat-nitro); }
+.tool-btn.mat-smoke     { --swatch: var(--mat-smoke); }
+.tool-btn.mat-plant     { --swatch: var(--mat-plant); }
 .tool-btn.mat-erase     { --swatch: var(--mat-erase); }
 
 .tool-btn.active.mat-wall      { background: var(--mat-wall);      color: #1a1714; border-color: var(--mat-wall);      font-weight: 700; }
 .tool-btn.active.mat-sand      { background: var(--mat-sand);      color: #1a1714; border-color: var(--mat-sand);      font-weight: 700; }
 .tool-btn.active.mat-water     { background: var(--mat-water);     color: #1a1714; border-color: var(--mat-water);     font-weight: 700; }
 .tool-btn.active.mat-explosive { background: var(--mat-explosive); color: #fff;    border-color: var(--mat-explosive); font-weight: 700; }
-.tool-btn.active.mat-nitro     { background: var(--mat-nitro);     color: #1a1714; border-color: var(--mat-nitro);     font-weight: 700; }
+.tool-btn.active.mat-smoke     { background: var(--mat-smoke);     color: #1a1714; border-color: var(--mat-smoke);     font-weight: 700; }
+.tool-btn.active.mat-plant     { background: var(--mat-plant);     color: #1a1714; border-color: var(--mat-plant);     font-weight: 700; }
 .tool-btn.active.mat-erase     { background: var(--mat-erase);     color: #1a1714; border-color: var(--mat-erase);     font-weight: 700; }
 
 /* Explosive materials pulse to draw attention */
