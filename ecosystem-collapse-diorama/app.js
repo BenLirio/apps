@@ -886,8 +886,9 @@ function buildCatalog() {
 }
 
 function refreshCatalogSelection() {
+  const w = pendingWorld || world;
   for (const card of document.querySelectorAll('.critter-card')) {
-    if (pendingWorld.selected.includes(card.dataset.id)) {
+    if (w.selected.includes(card.dataset.id)) {
       card.classList.add('selected');
     } else {
       card.classList.remove('selected');
