@@ -59,6 +59,7 @@
     if (gl) {
       uploadElementData();
       uploadPalette();
+      uploadReactions();
     }
   }
 
@@ -100,7 +101,8 @@
   let stateFboA = null, stateFboB = null;
   let elementDataTex = null;                   // 256x1 RGBA8UI: kind, density, paramA, paramB
   let paletteTex = null;                       // 256x4 RGBA8: 4 color variants per element
-  let progSim = null, progPaint = null, progRender = null, progClear = null;
+  let reactionsTex = null;                     // 256x3 RGBA8UI: per-id reaction slots
+  let progSim = null, progPaint = null, progRender = null, progClear = null, progReact = null;
   let quadVao = null;
   let frameCounter = 0;
   // Settle frames live in the B channel of state texture for explosives. We
@@ -156,7 +158,7 @@
 
     animId = requestAnimationFrame(loop);
 
-    showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.\n\n(milestone 1: explosions, gas\nrising, and reactions return soon.)');
+    showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.\n\npaint smoke (rises) or invent fire\nwith the +invent button.');
     syncActionLabel();
     bindModal();
     bindElementFeedbackModal();
@@ -330,17 +332,32 @@
       if (c.id == 0u) return false;
       return getInfo(c.id).kind == 3u;
     }
+    bool isGas(Cell c) {
+      if (c.id == 0u) return false;
+      return getInfo(c.id).kind == 4u;
+    }
 
-    // Decrement settle frames if non-zero (used by explosives, runs every block).
-    Cell tickSettle(Cell c) {
+    // Tick auxiliary state per frame: decrement explosive settle frames and
+    // tick gas life. When life hits zero the cell evaporates. Only called in
+    // phase 0 so each tick = one real frame, not 4× per frame.
+    Cell tickAux(Cell c, bool doTick) {
+      if (!doTick) return c;
+      if (c.id == 0u) return c;
       if (c.settle > 0u) c.settle = c.settle - 1u;
+      ElemInfo info = getInfo(c.id);
+      if (info.kind == 4u && c.life > 0u) {
+        c.life = c.life - 1u;
+        if (c.life == 0u) c = Cell(0u, 0u, 0u, 0u);
+      }
       return c;
     }
 
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
       // GL fragments use y-up; we map fragment y directly into texture y.
-      // "Down" in gameplay = decreasing fragment y.
+      // "Down" in gameplay = decreasing fragment y, "up" = increasing y.
+
+      bool isPhase0 = (uPhase == 0);
 
       // Phase chooses a 2×2 block origin offset. We rotate through
       // (0,0),(1,1),(0,1),(1,0) for full coverage.
@@ -350,17 +367,26 @@
       else if (uPhase == 2) off = ivec2(1, 0);
       else off = ivec2(0, 1);
 
+      // Top-row gas escape: cells at the top edge (highest fragment y) evaporate
+      // if they're gas. Mirrors the CPU sim's open-sky-at-top rule.
+      if (px.y == uSize.y - 1) {
+        Cell self = tickAux(readCell(px), isPhase0);
+        if (isGas(self)) self = Cell(0u, 0u, 0u, 0u);
+        outColor = packCell(self);
+        return;
+      }
+
       // Block origin (lower-left of the 2×2)
       ivec2 rel = px - off;
       ivec2 blockOrigin = (rel / 2) * 2 + off;
       ivec2 local = px - blockOrigin;
 
       // Edge handling: if block goes out of bounds, pass cell through unchanged
-      // (apart from settle tick).
+      // (apart from aux tick).
       if (local.x < 0 || local.y < 0 ||
           blockOrigin.x < 0 || blockOrigin.y < 0 ||
           blockOrigin.x + 1 >= uSize.x || blockOrigin.y + 1 >= uSize.y) {
-        outColor = packCell(tickSettle(readCell(px)));
+        outColor = packCell(tickAux(readCell(px), isPhase0));
         return;
       }
 
@@ -370,16 +396,17 @@
       Cell tl = readCell(blockOrigin + ivec2(0,1));
       Cell tr = readCell(blockOrigin + ivec2(1,1));
 
-      // Decrement settle in all four cells once per block step.
-      bl = tickSettle(bl); br = tickSettle(br); tl = tickSettle(tl); tr = tickSettle(tr);
+      // Tick aux on all four cells (only fires in phase 0).
+      bl = tickAux(bl, isPhase0); br = tickAux(br, isPhase0);
+      tl = tickAux(tl, isPhase0); tr = tickAux(tr, isPhase0);
 
-      // Decide swaps. We process gravity (top→bottom) then sideways (liquid).
+      // Decide swaps. We process gravity (top→bottom) then sideways (liquid),
+      // then gas rising (bottom→top).
       // 1) Direct fall: TL→BL, TR→BR
       if (wantsSink(tl, bl)) { Cell t = tl; tl = bl; bl = t; }
       if (wantsSink(tr, br)) { Cell t = tr; tr = br; br = t; }
 
       // 2) Diagonal slide: TL→BR or TR→BL (after direct fall)
-      // Use a hash so the choice is deterministic per block per frame.
       float r = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y), uint(uFrame)));
       bool preferLeft = r < 0.5;
       if (preferLeft) {
@@ -391,19 +418,43 @@
       }
 
       // 3) Liquid sideways flow on the bottom row.
-      // If BL is a liquid resting on something (or wall under it elsewhere), and
-      // BR is empty, allow a horizontal swap. Symmetric for BR→BL.
       if (isLiquid(bl) && br.id == 0u && r >= 0.5) {
         Cell t = bl; bl = br; br = t;
       } else if (isLiquid(br) && bl.id == 0u && r < 0.5) {
         Cell t = br; br = bl; bl = t;
       }
-      // 3b) Liquid sideways flow on the top row (lets pools level out higher up).
+      // 3b) Liquid sideways flow on the top row.
       float r2 = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y) + 7919u, uint(uFrame)));
       if (isLiquid(tl) && tr.id == 0u && r2 >= 0.5) {
         Cell t = tl; tl = tr; tr = t;
       } else if (isLiquid(tr) && tl.id == 0u && r2 < 0.5) {
         Cell t = tr; tr = tl; tl = t;
+      }
+
+      // 4) Gas rising: BL→TL, BR→TR if buoyancy roll passes. Gas in TL/TR
+      // also rises into a TL/TR... wait no — those are already at top of
+      // block. We rely on the next phase's offset to put TL into a BL slot
+      // of the block above. Buoyancy = paramA scaled to [0,1].
+      float rGas = rand01(uvec3(uint(blockOrigin.x) + 1234u, uint(blockOrigin.y) + 5678u, uint(uFrame)));
+      // BL gas rises into empty TL.
+      if (isGas(bl) && tl.id == 0u) {
+        float buoy = float(getInfo(bl.id).paramA) / 255.0;
+        if (rGas < buoy) { Cell t = bl; bl = tl; tl = t; }
+      }
+      // BR gas rises into empty TR (use a separate slice of the random).
+      float rGas2 = rand01(uvec3(uint(blockOrigin.x) + 4321u, uint(blockOrigin.y) + 8765u, uint(uFrame)));
+      if (isGas(br) && tr.id == 0u) {
+        float buoy = float(getInfo(br.id).paramA) / 255.0;
+        if (rGas2 < buoy) { Cell t = br; br = tr; tr = t; }
+      }
+      // Diagonal rise: BL→TR or BR→TL when direct rise is blocked.
+      if (isGas(bl) && tl.id != 0u && tr.id == 0u) {
+        float buoy = float(getInfo(bl.id).paramA) / 255.0;
+        if (rGas < buoy * 0.5) { Cell t = bl; bl = tr; tr = t; }
+      }
+      if (isGas(br) && tr.id != 0u && tl.id == 0u) {
+        float buoy = float(getInfo(br.id).paramA) / 255.0;
+        if (rGas2 < buoy * 0.5) { Cell t = br; br = tl; tl = t; }
       }
 
       // Output the cell at this fragment's local block position.
@@ -504,11 +555,137 @@
     void main() { outColor = uvec4(0u); }
   `;
 
+  // Reaction shader: each cell looks at its 8 neighbors. For each neighbor's
+  // reaction list, if a slot's `other` matches this cell's id and a chance
+  // roll succeeds, this cell transforms to that slot's `becomes`. We also
+  // check this cell's OWN reactions for self-consume rolls — if any neighbor
+  // matches a self-consume reaction's `other` and both rolls succeed, this
+  // cell goes empty. Each fragment writes only itself, so the "neighbor changes
+  // me" inversion is the only fragment-shader-friendly formulation of the CPU
+  // sim's "I change my neighbors" rule. Reactions run once per frame.
+  const FS_REACT = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uReactions;  // 256 wide × 3 tall, per-id reaction slots
+    uniform ivec2 uSize;
+    uniform int uFrame;
+
+    uint hash3(uvec3 v) {
+      v = v * 1664525u + 1013904223u;
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      v ^= (v >> 16u);
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      return v.x;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 selfCell = texelFetch(uState, px, 0);
+      uint selfId = selfCell.r;
+
+      // Read all 8 neighbors (clamped to edges by texture wrap mode).
+      ivec2 D[8];
+      D[0] = ivec2(-1, -1); D[1] = ivec2(0, -1); D[2] = ivec2(1, -1);
+      D[3] = ivec2(-1,  0);                       D[4] = ivec2(1,  0);
+      D[5] = ivec2(-1,  1); D[6] = ivec2(0,  1); D[7] = ivec2(1,  1);
+      uint nIds[8];
+      for (int i = 0; i < 8; i++) {
+        ivec2 np = px + D[i];
+        if (np.x < 0 || np.x >= uSize.x || np.y < 0 || np.y >= uSize.y) {
+          nIds[i] = 0u;
+        } else {
+          nIds[i] = texelFetch(uState, np, 0).r;
+        }
+      }
+
+      // 1) Inverse pass: did a neighbor's reaction transform me?
+      // If selfId == 0, skip (empty cells aren't transformed by reactions).
+      uint newId = selfId;
+      uvec4 newCell = selfCell;
+      bool transformed = false;
+
+      if (selfId != 0u) {
+        for (int i = 0; i < 8 && !transformed; i++) {
+          uint nid = nIds[i];
+          if (nid == 0u) continue;
+          for (int slot = 0; slot < 3 && !transformed; slot++) {
+            uvec4 rx = texelFetch(uReactions, ivec2(int(nid), slot), 0);
+            uint other = rx.r;
+            if (other == 0u) break;       // unused slot
+            if (other != selfId) continue; // not me
+            uint becomes = rx.g;
+            uint chance  = rx.b;
+            // Roll using a hash of (sorted-cell-pair, frame, slot) so both
+            // sides of the pair compute the same roll.
+            ivec2 a = px;
+            ivec2 b = px + D[i];
+            ivec2 lo = min(a, b);
+            ivec2 hi = max(a, b);
+            uint h = hash3(uvec3(uint(lo.x) | (uint(lo.y) << 16),
+                                 uint(hi.x) | (uint(hi.y) << 16),
+                                 uint(uFrame) * 31u + uint(slot)));
+            if ((h & 0xFFu) < chance) {
+              newId = becomes;
+              transformed = true;
+            }
+          }
+        }
+      }
+
+      // 2) Self-consume pass: do any of MY reactions trigger consumption?
+      // Only matters if I haven't already been transformed by step 1.
+      if (selfId != 0u && !transformed) {
+        bool consumed = false;
+        for (int slot = 0; slot < 3 && !consumed; slot++) {
+          uvec4 rx = texelFetch(uReactions, ivec2(int(selfId), slot), 0);
+          uint other = rx.r;
+          if (other == 0u) break;
+          uint chance      = rx.b;
+          uint selfConsume = rx.a;
+          if (selfConsume == 0u) continue;
+          for (int i = 0; i < 8 && !consumed; i++) {
+            if (nIds[i] != other) continue;
+            ivec2 a = px;
+            ivec2 b = px + D[i];
+            ivec2 lo = min(a, b);
+            ivec2 hi = max(a, b);
+            uint h1 = hash3(uvec3(uint(lo.x) | (uint(lo.y) << 16),
+                                  uint(hi.x) | (uint(hi.y) << 16),
+                                  uint(uFrame) * 31u + uint(slot)));
+            if ((h1 & 0xFFu) >= chance) continue;
+            uint h2 = hash3(uvec3(uint(px.x) * 1009u + 7u, uint(px.y) * 31u + 13u,
+                                  uint(uFrame) * 17u + uint(slot)));
+            if ((h2 & 0xFFu) < selfConsume) {
+              newId = 0u;
+              consumed = true;
+              transformed = true;
+            }
+          }
+        }
+      }
+
+      if (transformed) {
+        if (newId == 0u) {
+          newCell = uvec4(0u);
+        } else {
+          // Pick a fresh color variant for the new element.
+          uint v = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 9001u)) & 3u;
+          newCell = uvec4(newId, v, 0u, 0u);
+        }
+      }
+      outColor = newCell;
+    }
+  `;
+
   function initGL() {
     progSim    = linkProgram(VS_QUAD, FS_SIM);
     progPaint  = linkProgram(VS_QUAD, FS_PAINT);
     progRender = linkProgram(VS_QUAD, FS_RENDER);
     progClear  = linkProgram(VS_QUAD, FS_CLEAR);
+    progReact  = linkProgram(VS_QUAD, FS_REACT);
 
     // Fullscreen triangle (covers the framebuffer with two tris).
     quadVao = gl.createVertexArray();
@@ -533,8 +710,16 @@
     // Palette texture (256x4 RGBA8). Width=ids, Height=variants.
     paletteTex = createU8Texture2D(256, 4);
 
+    // Reactions texture: 256 wide × 3 tall, RGBA8UI per slot.
+    reactionsTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 3);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
     uploadElementData();
     uploadPalette();
+    uploadReactions();
   }
 
   // Pack registry into the lookup texture.
@@ -587,6 +772,41 @@
     if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
     if (h.length !== 6) return [136, 136, 136];
     return [parseInt(h.slice(0,2),16)|0, parseInt(h.slice(2,4),16)|0, parseInt(h.slice(4,6),16)|0];
+  }
+
+  // Pack each element's reaction list into 3 slots × 256 ids.
+  // Per slot: (otherId, becomesId, chanceByte, selfConsumeByte).
+  // otherId == 0 marks an unused slot. Reactions with explodes:true are
+  // skipped here (they belong to the milestone-3 explosion path).
+  function uploadReactions() {
+    const buf = new Uint8Array(256 * 3 * 4);
+    for (let id = 0; id < 256; id++) {
+      const spec = registry[id];
+      if (!spec || !Array.isArray(spec.reactions)) continue;
+      let slot = 0;
+      for (const rx of spec.reactions) {
+        if (slot >= 3) break;
+        if (!rx || rx.explodes) continue;
+        const otherId = keyToId[rx.other];
+        if (!otherId) continue;
+        let becomesId = 0;
+        if (rx.becomes != null && rx.becomes !== '' && rx.becomes !== 'empty') {
+          becomesId = keyToId[rx.becomes] || 0;
+          if (!becomesId) continue;
+        }
+        const chance = Math.max(0, Math.min(255, Math.round((rx.chance || 0) * 255)));
+        const selfConsume = Math.max(0, Math.min(255, Math.round(((typeof rx.selfConsume === 'number') ? rx.selfConsume : 0) * 255)));
+        // Slot row layout: slot 0 = top row of texture (y=0), etc.
+        const o = (slot * 256 + id) * 4;
+        buf[o + 0] = otherId;
+        buf[o + 1] = becomesId;
+        buf[o + 2] = chance;
+        buf[o + 3] = selfConsume;
+        slot++;
+      }
+    }
+    gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 3, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
   // ── Overlay / palette UI / pours / paint state ─────────────────────────────
@@ -936,6 +1156,24 @@
     }
   }
 
+  function reactStep() {
+    gl.useProgram(progReact);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progReact, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
+    gl.uniform1i(gl.getUniformLocation(progReact, 'uReactions'), 1);
+    gl.uniform2i(gl.getUniformLocation(progReact, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progReact, 'uFrame'), frameCounter);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
   function render() {
     gl.useProgram(progRender);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -954,6 +1192,7 @@
   function loop() {
     spawnFromPours();
     simStep();
+    reactStep();
     render();
     frameCounter++;
     animId = requestAnimationFrame(loop);
