@@ -103,6 +103,7 @@
   let paletteTex = null;                       // 256x4 RGBA8: 4 color variants per element
   let reactionsTex = null;                     // 256x3 RGBA8UI: per-id reaction slots
   let progSim = null, progPaint = null, progRender = null, progClear = null, progReact = null;
+  let progContact = null, progBlast = null;
   let quadVao = null;
   let frameCounter = 0;
   // Settle frames live in the B channel of state texture for explosives. We
@@ -555,6 +556,105 @@
     void main() { outColor = uvec4(0u); }
   `;
 
+  // Explosive contact shader: an explosive cell with settle==0 that touches
+  // any non-explosive non-empty neighbor gets primed (life=255). Primed cells
+  // will detonate in the next pass. Non-explosive cells pass through unchanged.
+  // Note: explosive elements are always powders in the seed/AI data, so the life
+  // channel is otherwise unused for them — safe to repurpose as the prime flag.
+  const FS_CONTACT = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uElemData;
+    uniform ivec2 uSize;
+
+    bool isExplosiveId(uint id) {
+      if (id == 0u) return false;
+      uvec4 e = texelFetch(uElemData, ivec2(int(id), 0), 0);
+      return (e.a & 0x80u) != 0u;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      if (self.r == 0u) { outColor = self; return; }
+      if (!isExplosiveId(self.r)) { outColor = self; return; }
+      // Already primed?
+      if (self.a == 255u) { outColor = self; return; }
+      // Still in settle window — immune to contact detonation.
+      if (self.b > 0u) { outColor = self; return; }
+      // Scan 8 neighbors for any non-empty non-explosive cell.
+      bool triggered = false;
+      for (int dy = -1; dy <= 1 && !triggered; dy++) {
+        for (int dx = -1; dx <= 1 && !triggered; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) continue;
+          uvec4 n = texelFetch(uState, np, 0);
+          if (n.r == 0u) continue;
+          if (isExplosiveId(n.r)) continue;
+          triggered = true;
+        }
+      }
+      if (triggered) self.a = 255u;
+      outColor = self;
+    }
+  `;
+
+  // Blast shader: any cell within BLAST_R of a primed explosive is cleared.
+  // Primed explosives clear themselves. Other explosives within radius become
+  // primed too — chain reaction propagates one cell-radius per frame.
+  const FS_BLAST = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uElemData;
+    uniform ivec2 uSize;
+    const int BLAST_R = 5;
+
+    bool isExplosiveId(uint id) {
+      if (id == 0u) return false;
+      uvec4 e = texelFetch(uElemData, ivec2(int(id), 0), 0);
+      return (e.a & 0x80u) != 0u;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      bool selfExp = isExplosiveId(self.r);
+      bool selfPrimed = (selfExp && self.a == 255u);
+
+      if (selfPrimed) {
+        // Detonate: vanish.
+        outColor = uvec4(0u);
+        return;
+      }
+      // Scan blast neighborhood for primed explosives.
+      bool inBlast = false;
+      for (int dy = -BLAST_R; dy <= BLAST_R && !inBlast; dy++) {
+        for (int dx = -BLAST_R; dx <= BLAST_R && !inBlast; dx++) {
+          if (dx*dx + dy*dy > BLAST_R*BLAST_R) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) continue;
+          uvec4 n = texelFetch(uState, np, 0);
+          if (!isExplosiveId(n.r)) continue;
+          if (n.a == 255u) inBlast = true;
+        }
+      }
+      if (!inBlast) { outColor = self; return; }
+      if (self.r == 0u) { outColor = self; return; }
+      if (selfExp) {
+        // Chain detonation: also become primed for next frame's blast.
+        outColor = uvec4(self.r, self.g, self.b, 255u);
+        return;
+      }
+      // Non-explosive: cleared by blast.
+      outColor = uvec4(0u);
+    }
+  `;
+
   // Reaction shader: each cell looks at its 8 neighbors. For each neighbor's
   // reaction list, if a slot's `other` matches this cell's id and a chance
   // roll succeeds, this cell transforms to that slot's `becomes`. We also
@@ -686,6 +786,8 @@
     progRender = linkProgram(VS_QUAD, FS_RENDER);
     progClear  = linkProgram(VS_QUAD, FS_CLEAR);
     progReact  = linkProgram(VS_QUAD, FS_REACT);
+    progContact= linkProgram(VS_QUAD, FS_CONTACT);
+    progBlast  = linkProgram(VS_QUAD, FS_BLAST);
 
     // Fullscreen triangle (covers the framebuffer with two tris).
     quadVao = gl.createVertexArray();
@@ -739,8 +841,10 @@
       else if (spec.kind === 'liquid') paramA = Math.round(((typeof spec.viscosity === 'number') ? spec.viscosity : 0) * 255);
       else if (spec.kind === 'gas') paramA = Math.round(((typeof spec.buoyancy === 'number') ? spec.buoyancy : 0.9) * 255);
       buf[id * 4 + 2] = paramA;
-      // paramB: stickiness (0..255). Other kinds 0.
-      buf[id * 4 + 3] = Math.round(((typeof spec.stickiness === 'number') ? spec.stickiness : 0) * 255);
+      // paramB: low 7 bits = stickiness × 127, high bit = isExplosive flag.
+      let paramB = Math.round(((typeof spec.stickiness === 'number') ? spec.stickiness : 0) * 127) & 0x7f;
+      if (spec.isExplosive) paramB |= 0x80;
+      buf[id * 4 + 3] = paramB;
     }
     gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
@@ -1156,6 +1260,42 @@
     }
   }
 
+  function explosionStep() {
+    // Pass 1: contact detection — mark explosives that touch non-explosive.
+    gl.useProgram(progContact);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progContact, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
+    gl.uniform1i(gl.getUniformLocation(progContact, 'uElemData'), 1);
+    gl.uniform2i(gl.getUniformLocation(progContact, 'uSize'), COLS, ROWS);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+
+    // Pass 2: blast — clear cells within blast radius of any primed explosive,
+    // detonate primed cells themselves, and prime any other explosive within
+    // radius (chain reaction).
+    gl.useProgram(progBlast);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progBlast, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
+    gl.uniform1i(gl.getUniformLocation(progBlast, 'uElemData'), 1);
+    gl.uniform2i(gl.getUniformLocation(progBlast, 'uSize'), COLS, ROWS);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
   function reactStep() {
     gl.useProgram(progReact);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
@@ -1192,6 +1332,7 @@
   function loop() {
     spawnFromPours();
     simStep();
+    explosionStep();
     reactStep();
     render();
     frameCounter++;
