@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Minor Saint of [Your Devotion]</title>
+  <meta property="og:title" content="Minor Saint of [Your Devotion]">
+  <meta property="og:description" content="Trace a halo. Confess a mundane devotion. The Order issues your minor-saint verdict on a riso prayer card.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/minor-saint-of-devotion/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div class="paper">
+
+    <!-- Stage 1: trace halo -->
+    <section id="stage-trace" class="stage">
+      <header class="curia">
+        <div class="curia-stamp">ORDO MINORUM &middot; DEPT. OF MUNDANE PATRONAGE</div>
+        <h1 class="title">The Office of Minor Saints</h1>
+        <p class="subtitle">file no. <span id="filenum">MM&middot;CDXXII</span> &mdash; trace a halo to begin your petition</p>
+      </header>
+
+      <div class="card-shell">
+        <div class="card riso" id="trace-card">
+          <div class="card-bleed"></div>
+          <div class="card-frame">
+            <div class="card-corner tl"></div>
+            <div class="card-corner tr"></div>
+            <div class="card-corner bl"></div>
+            <div class="card-corner br"></div>
+            <div class="card-instruction" id="card-instr">trace a halo here<br><span class="tinyhand">finger or mouse &mdash; close the loop</span></div>
+            <canvas id="halo-canvas" width="640" height="640" aria-label="Trace your halo"></canvas>
+          </div>
+          <div class="card-foot">
+            <span class="seal">&#10047;</span>
+            <span class="foot-text">draft &mdash; not yet canonized</span>
+            <span class="seal">&#10047;</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="redo-btn" class="ghost-btn" type="button">redraw</button>
+        <button id="trace-next" class="primary-btn" type="button" disabled>submit halo &rsaquo;</button>
+      </div>
+      <p class="hint" id="trace-hint">close the loop &mdash; the Curia accepts only sealed halos</p>
+    </section>
+
+    <!-- Stage 2: confess devotion -->
+    <section id="stage-confess" class="stage hidden">
+      <header class="curia">
+        <div class="curia-stamp">ORDO MINORUM &middot; CONFESSIONAL ANNEX</div>
+        <h2 class="title small">your halo is on file</h2>
+        <p class="subtitle">now: declare the small, weird thing</p>
+      </header>
+
+      <div class="confess-wrap">
+        <label for="devotion" class="devotion-label">what mundane thing are you weirdly devoted to?</label>
+        <textarea id="devotion" maxlength="120" rows="2" placeholder="re-folding the fitted sheet&hellip;"></textarea>
+        <p class="counter"><span id="char-count">0</span>/120</p>
+        <p class="hint" id="confess-hint">one sentence. we keep no copies.</p>
+      </div>
+
+      <div class="actions">
+        <button id="back-btn" class="ghost-btn" type="button">&lsaquo; redraw halo</button>
+        <button id="confess-next" class="primary-btn" type="button" disabled>petition the order &rsaquo;</button>
+      </div>
+    </section>
+
+    <!-- Stage 3: ruling / loading -->
+    <section id="stage-ruling" class="stage hidden">
+      <div class="ruling-wrap">
+        <div class="spinner-wax">
+          <div class="wax-drip"></div>
+        </div>
+        <p class="ruling-text" id="ruling-text">the Curia is consulting the smaller calendar&hellip;</p>
+      </div>
+    </section>
+
+    <!-- Stage 4: prayer card reveal -->
+    <section id="stage-card" class="stage hidden">
+      <p class="verdict-stamp">VERDICT &middot; CANONIZED MINOR &middot; <span id="verdict-num">no. CDXXII</span></p>
+      <div class="card-shell">
+        <div class="card riso final" id="prayer-card">
+          <div class="card-bleed"></div>
+          <div class="card-frame final-frame">
+            <div class="card-corner tl"></div>
+            <div class="card-corner tr"></div>
+            <div class="card-corner bl"></div>
+            <div class="card-corner br"></div>
+            <canvas id="halo-final" width="640" height="640" aria-hidden="true"></canvas>
+            <div class="saint-block">
+              <p class="saint-eyebrow" id="saint-eyebrow">SAINT</p>
+              <h2 class="saint-name" id="saint-name">Saint Mira</h2>
+              <p class="saint-patronage" id="saint-patronage">Patron of Half-Watched Documentaries</p>
+              <div class="rule"></div>
+              <p class="prayer" id="prayer">&hellip;</p>
+              <p class="devotion-line" id="devotion-line">&mdash; for one weirdly devoted to <em id="devotion-echo"></em></p>
+            </div>
+          </div>
+          <div class="card-foot">
+            <span class="seal">&#10047;</span>
+            <span class="foot-text">filed &middot; <span id="filed-date"></span> &middot; ordo minorum</span>
+            <span class="seal">&#10047;</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="share" class="actions" style="display:none">
+        <button class="ghost-btn" type="button" onclick="restart()">file another</button>
+        <button class="primary-btn" type="button" onclick="share()">share prayer card</button>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
