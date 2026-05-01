@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hard Launch My Mundane</title>
+  <meta property="og:title" content="Hard Launch My Mundane">
+  <meta property="og:description" content="hard-launch the 4 weird little things you've been weirdly devoted to this week. flirty soft-launch carousel for your snack, your show, your playlist, your hyperfixation.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/hard-launch-my-mundane/">
+  <meta property="og:image" content="https://benlirio.com/apps/hard-launch-my-mundane/favicon.jpg">
+  <meta name="theme-color" content="#e9d5b8">
+  <link rel="icon" type="image/jpeg" href="favicon.jpg">
+  <link rel="apple-touch-icon" href="favicon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Homemade+Apple&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <!-- INTRO / FORM -->
+    <section id="intro" class="screen">
+      <div class="brand">
+        <span class="brand-mark">soft launch / dot / archive</span>
+        <h1>Hard&nbsp;Launch<br><em>My Mundane</em></h1>
+        <p class="tagline">tell me 4 small things you've been weirdly devoted to this week. i'll soft-launch them as your new boyfriends/girlfriends/situationships.</p>
+      </div>
+
+      <form id="form" autocomplete="off">
+        <label class="field">
+          <span class="field-label">01 / the snack</span>
+          <input type="text" id="thing1" maxlength="80" placeholder="e.g. costco italian funeral meatball sub" required>
+          <button type="button" class="chip" data-target="thing1" data-pool="snack">need an idea</button>
+        </label>
+        <label class="field">
+          <span class="field-label">02 / the show</span>
+          <input type="text" id="thing2" maxlength="80" placeholder="e.g. early-2000s british gardening reruns" required>
+          <button type="button" class="chip" data-target="thing2" data-pool="show">need an idea</button>
+        </label>
+        <label class="field">
+          <span class="field-label">03 / the playlist</span>
+          <input type="text" id="thing3" maxlength="80" placeholder="e.g. only songs that mention a moon" required>
+          <button type="button" class="chip" data-target="thing3" data-pool="playlist">need an idea</button>
+        </label>
+        <label class="field">
+          <span class="field-label">04 / the hyperfixation</span>
+          <input type="text" id="thing4" maxlength="80" placeholder="e.g. learning to identify mosses" required>
+          <button type="button" class="chip" data-target="thing4" data-pool="hobby">need an idea</button>
+        </label>
+
+        <button type="submit" id="go">launch&nbsp;them</button>
+        <p id="error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <!-- LOADING -->
+    <section id="loading" class="screen" hidden>
+      <p class="loading-line" id="loading-line">putting the soft on the launch&hellip;</p>
+    </section>
+
+    <!-- CAROUSEL / RESULT -->
+    <section id="result" class="screen" hidden>
+      <header class="post-header">
+        <div class="avatar"></div>
+        <div class="post-meta">
+          <div class="post-handle">@yourself</div>
+          <div class="post-sub">soft launch &mdash; just now</div>
+        </div>
+        <div class="dots">&hellip;</div>
+      </header>
+
+      <div class="carousel-wrap">
+        <div id="carousel" class="carousel"></div>
+        <div id="dots" class="pagination"></div>
+      </div>
+
+      <div class="result-actions">
+        <div id="share" style="display:block">
+          <button id="share-btn" onclick="share()">share the carousel</button>
+        </div>
+        <button id="reset" type="button">launch a different four</button>
+      </div>
+
+      <p class="receipt" id="receipt"></p>
+    </section>
+  </main>
+</body>
+</html>
