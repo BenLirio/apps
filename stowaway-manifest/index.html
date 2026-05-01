@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stowaway Manifest</title>
+  <meta property="og:title" content="Stowaway Manifest">
+  <meta property="og:description" content="Pick a passenger to slip aboard today's zeppelin. Watch the 60-second voyage. Receive your stamped Customs House manifest.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/stowaway-manifest/">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IM+Fell+English+SC&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+
+    <!-- Stage 1: Passenger pick -->
+    <section id="pick" class="stage">
+      <header class="bureau-head">
+        <div class="bureau-stamp">CUSTOMS HOUSE / PORT BUREAU</div>
+        <h1>STOWAWAY MANIFEST</h1>
+        <p class="bureau-sub">Today's zeppelin departs in <span id="dep-clock">—</span>.<br>Choose one passenger to slip aboard.</p>
+        <p class="utc-line">VOYAGE DATE: <span id="utc-date">—</span> &nbsp;&middot;&nbsp; SEAL <span id="seal-id">—</span></p>
+      </header>
+
+      <div id="passenger-grid"></div>
+
+      <div class="footnote">Same passenger &middot; same date &rarr; same voyage. No two picks fly identical.</div>
+    </section>
+
+    <!-- Stage 2: Voyage canvas -->
+    <section id="voyage" class="stage" hidden>
+      <div class="voyage-frame">
+        <div class="voyage-head">
+          <span class="voyage-id">VOYAGE LOG</span>
+          <span id="voyage-clock">00 / 60</span>
+        </div>
+        <canvas id="canvas" width="360" height="220"></canvas>
+        <div id="voyage-caption">…departing now…</div>
+        <div id="voyage-events"></div>
+      </div>
+    </section>
+
+    <!-- Stage 3: Manifest reveal -->
+    <section id="manifest" class="stage" hidden>
+      <div id="manifest-doc"></div>
+      <div id="share" style="display:none">
+        <button onclick="share()">Share your manifest</button>
+        <button id="download-btn" onclick="downloadManifest()">Download PNG</button>
+        <button id="reroll-btn" onclick="reset()">Pick a different passenger</button>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
