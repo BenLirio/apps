@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Cabinet Briefing</title>
+  <meta property="og:title" content="The Cabinet Briefing">
+  <meta property="og:description" content="Set six policy dials. Receive an Eyes-Only Presidential Daily Brief from your alternate timeline.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/the-cabinet-briefing/">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans:wght@400;500;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="root">
+    <section id="console" aria-label="War room console">
+      <header class="console-header">
+        <div class="header-left">
+          <span class="seal">SEAL OF THE EXECUTIVE</span>
+          <h1>THE CABINET BRIEFING</h1>
+          <span class="subhead">SITUATION ROOM // POLICY POSTURE INTAKE // FY-XX</span>
+        </div>
+        <div class="header-right">
+          <div class="stamp stamp-eyes">EYES ONLY</div>
+          <div class="stamp stamp-top">TOP SECRET</div>
+        </div>
+      </header>
+
+      <p class="instructions">SET THE NATIONAL POSTURE. A PRESIDENTIAL DAILY BRIEF WILL BE PREPARED FOR YOUR REVIEW.</p>
+
+      <div id="dials" class="dials"></div>
+
+      <div class="brief-cta">
+        <button id="briefBtn" class="brief-btn">BRIEF THE PRESIDENT</button>
+        <p class="footnote">CLEARANCE: COSMIC // HANDLE VIA RUMOR-INT CHANNELS ONLY</p>
+      </div>
+    </section>
+
+    <section id="briefDoc" class="brief-doc" style="display:none">
+      <div class="folder">
+        <div class="folder-tab">PDB &mdash; <span id="briefDate"></span></div>
+        <div class="folder-body">
+          <div class="folder-stamps">
+            <div class="stamp stamp-eyes">EYES ONLY</div>
+            <div class="stamp stamp-top">TOP SECRET // RUMOR-INT</div>
+            <div class="stamp stamp-cosmic">COSMIC CLEARANCE</div>
+          </div>
+          <h2 class="brief-title">PRESIDENTIAL DAILY BRIEF</h2>
+          <div class="brief-meta">
+            <div><span>FROM:</span> OFFICE OF THE DIRECTOR OF NATIONAL FABRICATION</div>
+            <div><span>TO:</span> THE PRESIDENT</div>
+            <div><span>POSTURE CODE:</span> <span id="postureCode" class="redact-text">&mdash;</span></div>
+          </div>
+
+          <div id="bulletins" class="bulletins"></div>
+
+          <div class="brief-footer">
+            <div class="redact-line"></div>
+            <div class="redact-line short"></div>
+            <p class="initials">DECLASSIFY ON: NEVER &nbsp;//&nbsp; INITIALS: <span class="redact-text">[REDACTED]</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div id="share">
+        <button onclick="share()" class="share-btn">SHARE THIS BRIEFING</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
