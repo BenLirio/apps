@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Grow My Civilization</title>
   <meta property="og:title" content="Grow My Civilization">
-  <meta property="og:description" content="Name your civilization. Steer it through impossible choices. How long can it last before it collapses?">
+  <meta property="og:description" content="An illuminated chronicle. Steer a civilization through impossible choices. How long can yours last?">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/grow-my-civilization/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
   <script src="feedback.js" defer></script>
@@ -25,16 +26,17 @@
     <!-- ── SETUP PANEL ─────────────────────────────────────────────── -->
     <div id="setup-panel">
       <div id="header">
-        <h1>GROW MY<br>CIVILIZATION</h1>
-        <p id="header-sub">Every choice helps or hurts. How long can yours last?</p>
+        <h1><span class="drop">G</span>row My Civilization</h1>
+        <p id="header-sub">An illuminated chronicle.<br>Each choice helps or hurts. How long can yours last?</p>
       </div>
 
       <div id="setup-form">
-        <label class="field-label" for="civ-name-input">CIVILIZATION NAME</label>
-        <input id="civ-name-input" type="text" maxlength="24" placeholder="e.g. The Iron Shore" autocomplete="off" spellcheck="false">
-
-        <div id="setup-error"></div>
-        <button id="start-btn" disabled>BEGIN ►</button>
+        <p class="naming-intro">Your civilization shall be named</p>
+        <div id="civ-name-display"></div>
+        <div class="btn-row">
+          <button id="reroll-btn" type="button">↻ Roll Again</button>
+        </div>
+        <button id="start-btn">Begin the Chronicle</button>
       </div>
     </div>
 
@@ -49,16 +51,16 @@
       </div>
 
       <div id="stats-bar">
-        <div class="stat"><span class="stat-label">POP</span><span id="stat-pop">1</span></div>
-        <div class="stat"><span class="stat-label">FOOD</span><span id="stat-food">—</span></div>
-        <div class="stat"><span class="stat-label">ORDER</span><span id="stat-order">—</span></div>
-        <div class="stat"><span class="stat-label">TECH</span><span id="stat-tech">—</span></div>
-        <div class="stat"><span class="stat-label">TURNS</span><span id="stat-turns">0</span></div>
+        <div class="stat"><span class="stat-label">Pop</span><span id="stat-pop">1</span></div>
+        <div class="stat"><span class="stat-label">Food</span><span id="stat-food">—</span></div>
+        <div class="stat"><span class="stat-label">Order</span><span id="stat-order">—</span></div>
+        <div class="stat"><span class="stat-label">Tech</span><span id="stat-tech">—</span></div>
+        <div class="stat"><span class="stat-label">Turns</span><span id="stat-turns">0</span></div>
       </div>
 
       <!-- Decision panel (shown at each turn) -->
       <div id="decision-panel" style="display:none">
-        <div id="decision-era-tag">A CROSSROADS</div>
+        <div id="decision-era-tag">A Crossroads</div>
         <div id="decision-event"></div>
         <div id="decision-choices"></div>
         <div id="decision-flavor"></div>
@@ -66,7 +68,7 @@
 
       <!-- Loading overlay while AI fetches next question -->
       <div id="thinking-panel" style="display:none">
-        <div id="thinking-dots">CONSULTING ORACLES<span class="dots"></span></div>
+        <div id="thinking-dots">consulting the oracles<span class="dots"></span></div>
       </div>
     </div>
 
@@ -74,14 +76,14 @@
     <div id="verdict-panel" style="display:none">
       <div id="verdict-title"></div>
       <div id="verdict-civ-name"></div>
-      <div id="verdict-decisions-label">YOUR CHRONICLE</div>
+      <div id="verdict-decisions-label">Your Chronicle</div>
       <div id="verdict-decisions"></div>
       <div id="verdict-stats"></div>
     </div>
 
     <div id="share" style="display:none">
-      <button onclick="share()">Share your civilization's story</button>
-      <button id="play-again-btn" class="secondary-btn">Play Again</button>
+      <button onclick="share()">Share Your Chronicle</button>
+      <button id="play-again-btn" class="secondary-btn">Begin Anew</button>
     </div>
 
   </div>

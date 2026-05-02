@@ -55,6 +55,29 @@ function eraIndexFromTech(tech) {
   return idx;
 }
 
+// ── Name Generator ────────────────────────────────────────────────────────────
+const NAME_ADJECTIVES = [
+  'Iron', 'Hollow', 'Bronze', 'Salt', 'Glass', 'Cinder', 'Velvet', 'Storm',
+  'Pale', 'Crimson', 'Quiet', 'Wandering', 'Marble', 'Last', 'First', 'Hidden',
+  'Verdant', 'Distant', 'Bone', 'River', 'Spire', 'Ember', 'Briar', 'Crooked',
+  'Whispering', 'Twilight', 'Open', 'Shrouded', 'Auric', 'Granite', 'Lantern',
+  'Silken', 'Drowsy', 'Northern', 'Southern', 'Forgotten'
+];
+const NAME_NOUNS = [
+  'Shore', 'Empire', 'Council', 'Republic', 'Hold', 'Reach', 'Vale', 'Spires',
+  'Hollows', 'Folk', 'Hearth', 'Coast', 'Crown', 'Gate', 'Wardens', 'Tide',
+  'Banner', 'Wake', 'Clan', 'Dominion', 'Concordat', 'Court', 'Choir',
+  'Cartographers', 'Stewards', 'Magistracy', 'Wayfarers', 'Glassblowers',
+  'Almanac', 'Beacon', 'Garrison', 'Hearthstones', 'Lighthouse', 'Mariners',
+  'Saltmakers', 'Threshold'
+];
+
+function generateCivName() {
+  const a = NAME_ADJECTIVES[Math.floor(Math.random() * NAME_ADJECTIVES.length)];
+  const n = NAME_NOUNS[Math.floor(Math.random() * NAME_NOUNS.length)];
+  return `The ${a} ${n}`;
+}
+
 // ── Game State ────────────────────────────────────────────────────────────────
 let civName = '';
 let phase = 'setup'; // setup | running | thinking | decision | verdict
@@ -140,14 +163,17 @@ function startSetup() {
   document.getElementById('share').style.display = 'none';
   document.getElementById('app').className = '';
 
-  document.getElementById('civ-name-input').value = '';
-  document.getElementById('start-btn').disabled = true;
-  document.getElementById('setup-error').textContent = '';
+  rollName();
 }
 
-function validateSetup() {
-  const name = document.getElementById('civ-name-input').value.trim();
-  document.getElementById('start-btn').disabled = !(name.length >= 2 && name.length <= 24);
+function rollName() {
+  civName = generateCivName();
+  const display = document.getElementById('civ-name-display');
+  display.classList.add('rolling');
+  setTimeout(() => {
+    display.textContent = civName;
+    display.classList.remove('rolling');
+  }, 110);
 }
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
@@ -288,12 +314,11 @@ function fallbackQuestion() {
 
 // ── Start Game ────────────────────────────────────────────────────────────────
 function startGame() {
-  civName = document.getElementById('civ-name-input').value.trim();
-  if (!civName) return;
+  if (!civName) civName = generateCivName();
 
   document.getElementById('setup-panel').style.display = 'none';
   document.getElementById('game-panel').style.display = 'flex';
-  document.getElementById('civ-title').textContent = civName.toUpperCase();
+  document.getElementById('civ-title').textContent = civName;
 
   // Reset state
   stats = { population: 1, food: 60, order: 60, tech: 0, culture: 50 };
@@ -587,7 +612,7 @@ function updateHUD() {
   document.getElementById('stat-tech').textContent = Math.round(stats.tech);
   document.getElementById('stat-turns').textContent = turnNumber;
   document.getElementById('age-badge').textContent = ERAS[eraIdx].name;
-  document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · TURN ${turnNumber}`;
+  document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · Turn ${turnNumber}`;
 
   // Color stats red when dangerous.
   document.getElementById('stat-food').classList.toggle('warn', stats.food < 25);
@@ -734,35 +759,43 @@ function showVerdict(triumph) {
   document.getElementById('verdict-panel').style.display = 'flex';
   document.getElementById('share').style.display = 'block';
 
-  const outcome = triumph ? 'A LASTING LEGACY' : 'CIVILIZATION LOST';
+  const outcome = triumph ? 'A Lasting Legacy' : 'A Civilization Lost';
   document.getElementById('verdict-title').textContent = outcome;
-  document.getElementById('verdict-civ-name').textContent = civName.toUpperCase();
+  document.getElementById('verdict-civ-name').textContent = civName;
 
   const logEl = document.getElementById('verdict-decisions');
   if (chronicle.length === 0) {
     logEl.innerHTML = '<div class="decision-line">No decisions recorded.</div>';
   } else {
     logEl.innerHTML = chronicle.map(d =>
-      `<div class="decision-line">► T${d.turn} ${d.era}: <span class="decision-choice">${d.choice}</span><br><span class="decision-flavor">${d.flavor}</span></div>`
+      `<div class="decision-line"><span class="turn-tag">Turn ${d.turn} · ${d.era}</span><br><span class="decision-choice">${escapeHtml(d.choice)}</span><span class="decision-flavor">${escapeHtml(d.flavor)}</span></div>`
     ).join('');
   }
 
   const eraIdx = eraIndexFromTech(peakTech);
   const statsEl = document.getElementById('verdict-stats');
-  statsEl.innerHTML = [
-    `► TURNS SURVIVED: ${turnNumber}`,
-    `► PEAK POPULATION: ${formatPop(peakPopulation)}`,
-    `► PEAK ERA: ${ERAS[eraIdx].name}`,
-    `► PEAK TECH: ${Math.round(peakTech)}`,
-    collapseReason ? `► CAUSE: ${collapseReason}` : ''
-  ].filter(Boolean).join('<br>');
+  const rows = [
+    ['Turns survived', turnNumber],
+    ['Peak population', formatPop(peakPopulation)],
+    ['Peak era', ERAS[eraIdx].name],
+    ['Peak tech', Math.round(peakTech)],
+  ];
+  if (collapseReason) rows.push(['Cause', collapseReason]);
+  statsEl.innerHTML = rows.map(([k, v]) =>
+    `<div><span class="stat-key">${k}</span>${escapeHtml(String(v))}</div>`
+  ).join('');
 
   document.getElementById('app').className = triumph ? 'verdict-triumph' : 'verdict-collapse';
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ── Share ─────────────────────────────────────────────────────────────────────
 function share() {
-  const txt = `"${civName}" lasted ${turnNumber} turns and reached ${ERAS[eraIndexFromTech(peakTech)].name} before ${collapsed ? 'collapsing' : 'enduring'}. Peak population: ${formatPop(peakPopulation)}. — benlirio.com/apps/grow-my-civilization/`;
+  const eraName = ERAS[eraIndexFromTech(peakTech)].name.toLowerCase();
+  const txt = `${civName} lasted ${turnNumber} turns and reached the ${eraName} before ${collapsed ? 'collapsing' : 'enduring'}. Peak population: ${formatPop(peakPopulation)}. — benlirio.com/apps/grow-my-civilization/`;
   if (navigator.share) {
     navigator.share({ title: 'Grow My Civilization', text: txt, url: 'https://benlirio.com/apps/grow-my-civilization/' });
   } else {
@@ -779,7 +812,7 @@ function playAgain() {
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('start-btn').addEventListener('click', startGame);
   document.getElementById('play-again-btn').addEventListener('click', playAgain);
-  document.getElementById('civ-name-input').addEventListener('input', validateSetup);
+  document.getElementById('reroll-btn').addEventListener('click', rollName);
   initStars();
   startSetup();
 });
