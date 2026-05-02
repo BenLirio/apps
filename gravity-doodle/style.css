@@ -43,6 +43,15 @@ html, body {
   --mat-wall:      #d8c8a0;
   --mat-sand:      #e8a030;
   --mat-water:     #4aa8d8;
+  --mat-ice:       #c0e0ff;
+  --mat-steam:     #d8e8f0;
+  --mat-lava:      #ff5020;
+  --mat-fire:      #ff8010;
+  --mat-acid:      #60ff30;
+  --mat-honey:     #e8a030;
+  --mat-gravel:    #7a7060;
+  --mat-stone:     #888080;
+  --mat-mold:      #405830;
   --mat-explosive: #e02020;
   --mat-smoke:     #aaaaaa;
   --mat-plant:     #3aa040;
@@ -130,7 +139,7 @@ header h1 {
 #btn-drop:active:not(:disabled) { transform: translateY(1px); }
 #btn-drop:disabled { opacity: 0.35; cursor: not-allowed; }
 
-#btn-reset {
+#btn-reset, #btn-probe {
   flex: 1;
   height: 48px;
   background: transparent;
@@ -142,12 +151,20 @@ header h1 {
   cursor: pointer;
   border-radius: 0;
   text-transform: lowercase;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
 #btn-reset:hover {
   color: #e06020;
   border-color: #e06020;
+}
+
+#btn-probe:hover { color: var(--amber); border-color: var(--amber); }
+#btn-probe[aria-pressed="true"] {
+  color: var(--bg);
+  background: var(--amber);
+  border-color: var(--amber);
+  font-weight: 700;
 }
 
 /* Palette */
@@ -218,6 +235,15 @@ header h1 {
 .tool-btn.mat-wall      { --swatch: var(--mat-wall); }
 .tool-btn.mat-sand      { --swatch: var(--mat-sand); }
 .tool-btn.mat-water     { --swatch: var(--mat-water); }
+.tool-btn.mat-ice       { --swatch: var(--mat-ice); }
+.tool-btn.mat-steam     { --swatch: var(--mat-steam); }
+.tool-btn.mat-lava      { --swatch: var(--mat-lava); }
+.tool-btn.mat-fire      { --swatch: var(--mat-fire); }
+.tool-btn.mat-acid      { --swatch: var(--mat-acid); }
+.tool-btn.mat-honey     { --swatch: var(--mat-honey); }
+.tool-btn.mat-gravel    { --swatch: var(--mat-gravel); }
+.tool-btn.mat-stone     { --swatch: var(--mat-stone); }
+.tool-btn.mat-mold      { --swatch: var(--mat-mold); }
 .tool-btn.mat-explosive { --swatch: var(--mat-explosive); }
 .tool-btn.mat-smoke     { --swatch: var(--mat-smoke); }
 .tool-btn.mat-plant     { --swatch: var(--mat-plant); }
@@ -226,6 +252,15 @@ header h1 {
 .tool-btn.active.mat-wall      { background: var(--mat-wall);      color: #1a1714; border-color: var(--mat-wall);      font-weight: 700; }
 .tool-btn.active.mat-sand      { background: var(--mat-sand);      color: #1a1714; border-color: var(--mat-sand);      font-weight: 700; }
 .tool-btn.active.mat-water     { background: var(--mat-water);     color: #1a1714; border-color: var(--mat-water);     font-weight: 700; }
+.tool-btn.active.mat-ice       { background: var(--mat-ice);       color: #1a1714; border-color: var(--mat-ice);       font-weight: 700; }
+.tool-btn.active.mat-steam     { background: var(--mat-steam);     color: #1a1714; border-color: var(--mat-steam);     font-weight: 700; }
+.tool-btn.active.mat-lava      { background: var(--mat-lava);      color: #1a1714; border-color: var(--mat-lava);      font-weight: 700; }
+.tool-btn.active.mat-fire      { background: var(--mat-fire);      color: #1a1714; border-color: var(--mat-fire);      font-weight: 700; }
+.tool-btn.active.mat-acid      { background: var(--mat-acid);      color: #1a1714; border-color: var(--mat-acid);      font-weight: 700; }
+.tool-btn.active.mat-honey     { background: var(--mat-honey);     color: #1a1714; border-color: var(--mat-honey);     font-weight: 700; }
+.tool-btn.active.mat-gravel    { background: var(--mat-gravel);    color: #1a1714; border-color: var(--mat-gravel);    font-weight: 700; }
+.tool-btn.active.mat-stone     { background: var(--mat-stone);     color: #1a1714; border-color: var(--mat-stone);     font-weight: 700; }
+.tool-btn.active.mat-mold      { background: var(--mat-mold);      color: #e8d5b0; border-color: var(--mat-mold);      font-weight: 700; }
 .tool-btn.active.mat-explosive { background: var(--mat-explosive); color: #fff;    border-color: var(--mat-explosive); font-weight: 700; }
 .tool-btn.active.mat-smoke     { background: var(--mat-smoke);     color: #1a1714; border-color: var(--mat-smoke);     font-weight: 700; }
 .tool-btn.active.mat-plant     { background: var(--mat-plant);     color: #1a1714; border-color: var(--mat-plant);     font-weight: 700; }
@@ -582,6 +617,78 @@ header h1 {
   cursor: not-allowed;
 }
 
+/* Probe tooltip — pinned to a corner of the canvas. The tooltip persists
+   until probe mode is toggled off or the user taps an empty cell. Each line
+   shows one trait so the layout reads like a lab readout. */
+#probe-tooltip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(15, 14, 12, 0.92);
+  border: 1px solid var(--amber);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  padding: 8px 10px;
+  pointer-events: none;
+  z-index: 5;
+  max-width: 75%;
+  white-space: pre;
+}
+#probe-tooltip .probe-name {
+  color: var(--amber);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+}
+#probe-tooltip .probe-bar {
+  display: inline-block;
+  width: 60px;
+  height: 8px;
+  margin-left: 6px;
+  margin-right: 4px;
+  background: var(--btn-bg);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  position: relative;
+  overflow: hidden;
+}
+#probe-tooltip .probe-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--amber);
+}
+#probe-tooltip .probe-bar.heat > span { background: linear-gradient(90deg, #4aa8d8, #e8a030, #ff5020); }
+
+/* Discovery toast: bottom of canvas, fades in when something new emerges. */
+#discovery-toast {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 14, 12, 0.92);
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  font-family: inherit;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  padding: 6px 12px;
+  pointer-events: none;
+  z-index: 5;
+  text-transform: lowercase;
+  max-width: 90%;
+  text-align: center;
+  animation: discovery-fade 4s ease-out forwards;
+}
+@keyframes discovery-fade {
+  0%   { opacity: 0; transform: translate(-50%, 8px); }
+  10%  { opacity: 1; transform: translate(-50%, 0); }
+  85%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -4px); }
+}
+
 /* Short viewports */
 @media (max-height: 780px) {
   body { padding: 8px 8px 12px; }
@@ -589,7 +696,7 @@ header h1 {
   header h1 { font-size: 1.2rem; }
   #tagline { font-size: 0.68rem; }
   #canvas-wrap { max-height: calc(100dvh - 320px); }
-  #btn-drop, #btn-reset { height: 44px; font-size: 0.85rem; }
+  #btn-drop, #btn-reset, #btn-probe { height: 44px; font-size: 0.85rem; }
   .tool-btn, .invent-btn { height: 30px; font-size: 0.66rem; }
 }
 

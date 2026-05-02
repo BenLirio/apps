@@ -63,6 +63,7 @@
       uploadTraits();
       uploadCellular();
     }
+    rebuildDiscoveryRules();
   }
 
   function nextCustomId() { return nextId++; }
@@ -75,6 +76,27 @@
   const SMOKE_ID     = 5;
   const PLANT_ID     = 6;
   const SPARK_ID     = 7;
+  // ice / steam / lava seed the phase-transition system: ice melts to water,
+  // water boils to steam, steam condenses back to water, lava emits enough heat
+  // to drive the whole chain. Without these the demo of "discovering science"
+  // has nothing visible to show on first load.
+  const ICE_ID       = 8;
+  const STEAM_ID     = 9;
+  const LAVA_ID      = 10;
+  // One built-in per "new physics axis" so each emergent behavior has
+  // something to play with on first load (no AI invent needed):
+  //   fire   — drives the ignition pipeline (flammable + temp >= ignition)
+  //   acid   — drives the corrosion pass (corrosivity > hardness)
+  //   honey  — high viscosity demos the fluidity gate in FS_SIM
+  //   gravel — low flow demos the same fluidity gate for powders
+  //   stone  — completes the lava↔stone phase loop alongside ice/water/steam
+  //   mold   — cellular CA + reaction; spreads on plant
+  const FIRE_ID      = 11;
+  const ACID_ID      = 12;
+  const HONEY_ID     = 13;
+  const GRAVEL_ID    = 14;
+  const STONE_ID     = 15;
+  const MOLD_ID      = 16;
 
   const SAND_PALETTE = ['#e8a030', '#d89028', '#f0b848', '#e8a838'];
 
@@ -96,7 +118,8 @@
     registry[SAND_ID]      = { id: SAND_ID,      key: 'sand',      displayName: 'sand',      kind: 'powder', density: 5, flow: 0.55, stickiness: 0, colors: SAND_PALETTE, isBuiltIn: true, reactions: [],
       emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 80,  corrosivity: 0,   hardness: 60 };
     registry[WATER_ID]     = { id: WATER_ID,     key: 'water',     displayName: 'water',     kind: 'liquid', density: 5, viscosity: 0, stickiness: 0, colors: ['#4aa8d8', '#3e9ac8', '#62b8e0', '#2e84b8'], isBuiltIn: true, reactions: [],
-      emitTemp: 25, ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0 };
+      emitTemp: 25, ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0,
+      boilingPoint: 100, boilsTo: 'steam', freezingPoint: 22, freezesTo: 'ice' };
     registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#d01818', '#ff4030', '#ffae40', '#ffd060'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [],
       emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
     registry[SMOKE_ID]     = { id: SMOKE_ID,     key: 'smoke',     displayName: 'smoke',     kind: 'gas',    density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb'], isBuiltIn: true, reactions: [],
@@ -108,6 +131,33 @@
     // up. Short-lived, hot, buoyant — a visceral byproduct of detonation.
     registry[SPARK_ID]     = { id: SPARK_ID,     key: 'spark',     displayName: 'spark',     kind: 'gas',      density: 1, buoyancy: 1, lifeMin: 14, lifeMax: 34, colors: ['#ffe070', '#ffb030', '#fff0a0', '#ff6020'], isBuiltIn: true, isHidden: true, reactions: [],
       emitTemp: 150, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 0,   hardness: 0 };
+    registry[ICE_ID]       = { id: ICE_ID,       key: 'ice',       displayName: 'ice',       kind: 'static',   density: 5, colors: ['#c0e0ff', '#a0d0f0', '#e0f0ff', '#80b0e0'], isBuiltIn: true, reactions: [],
+      emitTemp: 10, ignitionPoint: 255, flammability: 0,    conductivity: 160, corrosivity: 0,   hardness: 60,
+      meltingPoint: 33, meltsTo: 'water' };
+    registry[STEAM_ID]     = { id: STEAM_ID,     key: 'steam',     displayName: 'steam',     kind: 'gas',      density: 1, buoyancy: 0.95, lifeMin: 180, lifeMax: 240, colors: ['#d8e8f0', '#b0c8d8', '#f0f6fa', '#c0d8e0'], isBuiltIn: true, reactions: [],
+      emitTemp: 130, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0,
+      freezingPoint: 50, freezesTo: 'water' };
+    registry[LAVA_ID]      = { id: LAVA_ID,      key: 'lava',      displayName: 'lava',      kind: 'liquid',   density: 8, viscosity: 0.7, stickiness: 0, colors: ['#ff5020', '#ff8030', '#d03010', '#ffc040'], isBuiltIn: true, reactions: [],
+      emitTemp: 210, ignitionPoint: 255, flammability: 0,    conductivity: 180, corrosivity: 80,  hardness: 30,
+      freezingPoint: 80, freezesTo: 'stone' };
+    registry[FIRE_ID]      = { id: FIRE_ID,      key: 'fire',      displayName: 'fire',      kind: 'gas',      density: 1, buoyancy: 1, lifeMin: 30, lifeMax: 70, colors: ['#ff4020', '#ff8010', '#ffc040', '#ffe070'], isBuiltIn: true, reactions: [],
+      emitTemp: 240, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 40,  hardness: 0 };
+    registry[ACID_ID]      = { id: ACID_ID,      key: 'acid',      displayName: 'acid',      kind: 'liquid',   density: 4, viscosity: 0.1, stickiness: 0, colors: ['#60ff30', '#80ff40', '#30d020', '#b0ff60'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 200, flammability: 0,    conductivity: 110, corrosivity: 200, hardness: 0 };
+    registry[HONEY_ID]     = { id: HONEY_ID,     key: 'honey',     displayName: 'honey',     kind: 'liquid',   density: 6, viscosity: 0.92, stickiness: 0.7, colors: ['#e8a030', '#d48020', '#ffc050', '#b86020'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 180, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 0 };
+    registry[GRAVEL_ID]    = { id: GRAVEL_ID,    key: 'gravel',    displayName: 'gravel',    kind: 'powder',   density: 7, flow: 0.15, stickiness: 0, colors: ['#7a7060', '#605040', '#8a8278', '#504438'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 240, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 100 };
+    registry[STONE_ID]     = { id: STONE_ID,     key: 'stone',     displayName: 'stone',     kind: 'static',   density: 9, colors: ['#888080', '#706868', '#a09890', '#605850'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 200,
+      meltingPoint: 200, meltsTo: 'lava' };
+    // Mold: a cellular CA seeded by adjacent plant. The reactions list also
+    // converts plant cells in direct contact, so a single seed creeps through
+    // a plant patch over time. Slow tick + low growChance keep it from
+    // exploding instantly.
+    registry[MOLD_ID]      = { id: MOLD_ID,      key: 'mold',      displayName: 'mold',      kind: 'cellular', density: 3, born: [1,2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.06, surviveChance: 1, birthFrom: ['plant'], colors: ['#304820', '#405830', '#50682a', '#2a3818'], isBuiltIn: true,
+      reactions: [{ other: 'plant', becomes: 'mold', chance: 0.03 }],
+      emitTemp: 30, ignitionPoint: 150, flammability: 0.06, conductivity: 70,  corrosivity: 0,   hardness: 50 };
     keyToId.wall = WALL_ID;
     keyToId.sand = SAND_ID;
     keyToId.water = WATER_ID;
@@ -115,7 +165,16 @@
     keyToId.smoke = SMOKE_ID;
     keyToId.plant = PLANT_ID;
     keyToId.spark = SPARK_ID;
-    nextId = SPARK_ID + 1;
+    keyToId.ice = ICE_ID;
+    keyToId.steam = STEAM_ID;
+    keyToId.lava = LAVA_ID;
+    keyToId.fire = FIRE_ID;
+    keyToId.acid = ACID_ID;
+    keyToId.honey = HONEY_ID;
+    keyToId.gravel = GRAVEL_ID;
+    keyToId.stone = STONE_ID;
+    keyToId.mold = MOLD_ID;
+    nextId = MOLD_ID + 1;
   }
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -136,6 +195,7 @@
   let progSim = null, progPaint = null, progRender = null, progClear = null, progReact = null;
   let progContact = null, progBlast = null;
   let progHeat = null, progIgnition = null, progCellular = null;
+  let progCorrosion = null, progPhase = null;
   let quadVao = null;
   let frameCounter = 0;
   // Settle frames live in the B channel of state texture for explosives. We
@@ -147,9 +207,18 @@
   let lastPointer = null;
   let holdPaintTimer = null;
   let animId = null;
+  let probeMode = false;
 
   // Pours: each entry is { id, kind, frames, total }. Top-row spawns each frame.
   let pours = [];
+
+  // Discovery tracking: known transformations the user could observe
+  // (reactions + phase changes), plus a Set of those they have. Rebuilt
+  // whenever the registry changes.
+  const DISCOVERY_INTERVAL = 60;          // frames between readbacks (~1s @ 60fps)
+  let discoveryRules = [];                // [{ from, to, fromKey, toKey, label }]
+  const discoveredKeys = new Set();
+  let discoveryReadBuf = null;            // Uint8Array of the grid for readback
 
   // ── Init ───────────────────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
@@ -161,6 +230,7 @@
     }
 
     initBuiltIns();
+    rebuildDiscoveryRules();
     // Build the palette UI first, so that even if a shader fails to compile
     // the user still sees their paint options (and can read the error).
     rebuildPalette();
@@ -389,6 +459,18 @@
       return getInfo(c.id).kind == 4u;
     }
 
+    // Per-element fluidity governs how readily a powder/liquid leaves a
+    // straight-down trajectory: powders use flow (paramA/255), liquids use
+    // 1 - viscosity (1 - paramA/255). Gates the diagonal-slide and
+    // sideways-flow swaps so honey piles, gravel piles steeply, water spreads.
+    float fluidity(uint id) {
+      if (id == 0u) return 1.0;
+      ElemInfo info = getInfo(id);
+      if (info.kind == 2u) return float(info.paramA) / 255.0;
+      if (info.kind == 3u) return 1.0 - float(info.paramA) / 255.0;
+      return 1.0;
+    }
+
     // Tick auxiliary state per frame: decrement explosive settle frames and
     // tick gas life. When life hits zero the cell evaporates. Only called in
     // phase 0 so each tick = one real frame, not 4× per frame.
@@ -458,28 +540,34 @@
       if (wantsSink(tl, bl)) { Cell t = tl; tl = bl; bl = t; }
       if (wantsSink(tr, br)) { Cell t = tr; tr = br; br = t; }
 
-      // 2) Diagonal slide: TL→BR or TR→BL (after direct fall)
+      // 2) Diagonal slide: TL→BR or TR→BL (after direct fall). Each slide
+      // is gated by the *moving* cell's fluidity so viscous liquids and
+      // low-flow powders stay put more often than freely-flowing ones.
       float r = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y), uint(uFrame)));
       bool preferLeft = r < 0.5;
+      float gL = rand01(uvec3(uint(blockOrigin.x) + 11u, uint(blockOrigin.y), uint(uFrame) + 1u));
+      float gR = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y) + 13u, uint(uFrame) + 2u));
       if (preferLeft) {
-        if (wantsSink(tl, br)) { Cell t = tl; tl = br; br = t; }
-        if (wantsSink(tr, bl)) { Cell t = tr; tr = bl; bl = t; }
+        if (wantsSink(tl, br) && gL < fluidity(tl.id)) { Cell t = tl; tl = br; br = t; }
+        if (wantsSink(tr, bl) && gR < fluidity(tr.id)) { Cell t = tr; tr = bl; bl = t; }
       } else {
-        if (wantsSink(tr, bl)) { Cell t = tr; tr = bl; bl = t; }
-        if (wantsSink(tl, br)) { Cell t = tl; tl = br; br = t; }
+        if (wantsSink(tr, bl) && gR < fluidity(tr.id)) { Cell t = tr; tr = bl; bl = t; }
+        if (wantsSink(tl, br) && gL < fluidity(tl.id)) { Cell t = tl; tl = br; br = t; }
       }
 
-      // 3) Liquid sideways flow on the bottom row.
-      if (isLiquid(bl) && br.id == 0u && r >= 0.5) {
+      // 3) Liquid sideways flow on the bottom row, gated by 1 - viscosity.
+      float sB = rand01(uvec3(uint(blockOrigin.x) + 17u, uint(blockOrigin.y), uint(uFrame) + 3u));
+      if (isLiquid(bl) && br.id == 0u && r >= 0.5 && sB < fluidity(bl.id)) {
         Cell t = bl; bl = br; br = t;
-      } else if (isLiquid(br) && bl.id == 0u && r < 0.5) {
+      } else if (isLiquid(br) && bl.id == 0u && r < 0.5 && sB < fluidity(br.id)) {
         Cell t = br; br = bl; bl = t;
       }
       // 3b) Liquid sideways flow on the top row.
       float r2 = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y) + 7919u, uint(uFrame)));
-      if (isLiquid(tl) && tr.id == 0u && r2 >= 0.5) {
+      float sT = rand01(uvec3(uint(blockOrigin.x) + 23u, uint(blockOrigin.y) + 19u, uint(uFrame) + 4u));
+      if (isLiquid(tl) && tr.id == 0u && r2 >= 0.5 && sT < fluidity(tl.id)) {
         Cell t = tl; tl = tr; tr = t;
-      } else if (isLiquid(tr) && tl.id == 0u && r2 < 0.5) {
+      } else if (isLiquid(tr) && tl.id == 0u && r2 < 0.5 && sT < fluidity(tr.id)) {
         Cell t = tr; tr = tl; tl = t;
       }
 
@@ -1088,6 +1176,127 @@
     }
   `;
 
+  // Corrosion shader: each cell scans its 8 neighbors for the maximum
+  // corrosivity trait. If that exceeds this cell's hardness, dissolve with
+  // probability proportional to the gap. Lets acid eat sand/plant emergent —
+  // no per-pair reaction needed. Same-id neighbors are skipped so a pool of
+  // acid doesn't dissolve itself.
+  const FS_CORROSION = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uTraits;
+    uniform ivec2 uSize;
+    uniform int uFrame;
+
+    uint hash3(uvec3 v) {
+      v = v * 1664525u + 1013904223u;
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      v ^= (v >> 16u);
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      return v.x;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      if (self.r == 0u) { outColor = self; return; }
+      // Self's hardness is in row 1 (channel g) of traits texture.
+      uvec4 sr1 = texelFetch(uTraits, ivec2(int(self.r), 1), 0);
+      uint hard = sr1.g;
+      uint maxCorr = 0u;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) continue;
+          uint nid = texelFetch(uState, np, 0).r;
+          if (nid == 0u) continue;
+          if (nid == self.r) continue;
+          uvec4 nr1 = texelFetch(uTraits, ivec2(int(nid), 1), 0);
+          if (nr1.r > maxCorr) maxCorr = nr1.r;
+        }
+      }
+      if (maxCorr <= hard) { outColor = self; return; }
+      uint diff = maxCorr - hard; // 1..255
+      // Per-frame dissolve chance ~ diff / 2048. Acid (200) on sand (60) gives
+      // ~6.8%/frame, so cells fizz away in ~15 frames. Acid on wall (200)
+      // gives diff=0 → no eating, which matches the milestone-3 baseline.
+      uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
+      if ((h & 0x7FFu) < diff) {
+        outColor = uvec4(0u);
+      } else {
+        outColor = self;
+      }
+    }
+  `;
+
+  // Phase-transition shader: reads each cell's temperature, looks up the
+  // (meltAt, boilAt, freezeAt) thresholds and (meltsTo, boilsTo, freezesTo)
+  // target ids in the traits texture (rows 2 + 3). Stochastic gates so phase
+  // fronts don't snap as a perfect line. A 0 threshold means "no transition",
+  // which is the default for elements without phase data.
+  const FS_PHASE = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uTemp;
+    uniform highp usampler2D uTraits;
+    uniform highp usampler2D uElemData;
+    uniform ivec2 uSize;
+    uniform int uFrame;
+
+    uint hash3(uvec3 v) {
+      v = v * 1664525u + 1013904223u;
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      v ^= (v >> 16u);
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      return v.x;
+    }
+
+    // Phase-change products inherit a default 120-frame life when they are gas
+    // so they decay just like painted gas. Non-gas products clear life.
+    uvec4 transformTo(uint newId, uint h) {
+      uvec4 e = texelFetch(uElemData, ivec2(int(newId), 0), 0);
+      uint life = (e.r == 4u) ? 120u : 0u;
+      return uvec4(newId, h & 3u, 0u, life);
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      if (self.r == 0u) { outColor = self; return; }
+      uvec4 r2 = texelFetch(uTraits, ivec2(int(self.r), 2), 0);
+      uvec4 r3 = texelFetch(uTraits, ivec2(int(self.r), 3), 0);
+      uint meltAt   = r2.r;
+      uint boilAt   = r2.g;
+      uint freezeAt = r2.b;
+      uint meltTo   = r3.r;
+      uint boilTo   = r3.g;
+      uint freezeTo = r3.b;
+      uint temp = texelFetch(uTemp, px, 0).r;
+      uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
+      uint roll = h & 0xFFu;
+
+      // Boiling outranks melting — if water is over its boiling point, it
+      // skips the molten step (which it doesn't have anyway).
+      if (boilAt > 0u && boilTo > 0u && temp >= boilAt) {
+        if (roll < 64u) { outColor = transformTo(boilTo, h); return; }
+      }
+      if (meltAt > 0u && meltTo > 0u && temp >= meltAt) {
+        if (roll < 32u) { outColor = transformTo(meltTo, h); return; }
+      }
+      if (freezeAt > 0u && freezeTo > 0u && temp <= freezeAt) {
+        if (roll < 24u) { outColor = transformTo(freezeTo, h); return; }
+      }
+      outColor = self;
+    }
+  `;
+
   function initGL() {
     // Core shaders — must succeed for the sim to run at all.
     progSim    = linkProgram(VS_QUAD, FS_SIM);
@@ -1103,6 +1312,8 @@
     try { progHeat     = linkProgram(VS_QUAD, FS_HEAT);     } catch (e) { console.warn('progHeat compile failed, heat pass disabled:', e); }
     try { progIgnition = linkProgram(VS_QUAD, FS_IGNITION); } catch (e) { console.warn('progIgnition compile failed, ignition pass disabled:', e); }
     try { progCellular = linkProgram(VS_QUAD, FS_CELLULAR); } catch (e) { console.warn('progCellular compile failed, cellular pass disabled:', e); }
+    try { progCorrosion= linkProgram(VS_QUAD, FS_CORROSION);} catch (e) { console.warn('progCorrosion compile failed, corrosion pass disabled:', e); }
+    try { progPhase    = linkProgram(VS_QUAD, FS_PHASE);    } catch (e) { console.warn('progPhase compile failed, phase pass disabled:', e); }
 
     // Fullscreen triangle (covers the framebuffer with two tris).
     quadVao = gl.createVertexArray();
@@ -1134,12 +1345,15 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    // Traits texture: 256 wide × 2 tall, RGBA8UI.
+    // Traits texture: 256 wide × 4 tall, RGBA8UI.
     // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
     // Row 1 = (corrosivity, hardness, _, _)
+    // Row 2 = (meltingPoint, boilingPoint, freezingPoint, _)         — phase thresholds
+    // Row 3 = (meltsToId, boilsToId, freezesToId, _)                 — phase products
+    // 0 in any threshold byte means "no transition for this element."
     traitsTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 2);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 4);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
@@ -1246,12 +1460,23 @@
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 3, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
-  // Pack each element's traits into 2 rows of RGBA8UI per id.
+  // Pack each element's traits into 4 rows of RGBA8UI per id.
   // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
   // Row 1 = (corrosivity, hardness, _, _)
+  // Row 2 = (meltingPoint, boilingPoint, freezingPoint, _)
+  // Row 3 = (meltsToId, boilsToId, freezesToId, _)
+  // Phase target keys are resolved against keyToId at upload time, so an
+  // element registered before its phase target still picks up the link as
+  // soon as the target is registered (registerElement re-uploads traits).
   function uploadTraits() {
     if (!traitsTex) return;
-    const buf = new Uint8Array(256 * 2 * 4);
+    const buf = new Uint8Array(256 * 4 * 4);
+    const resolveId = (key) => {
+      if (typeof key !== 'string' || !key) return 0;
+      const lc = key.toLowerCase();
+      if (lc === 'empty') return 0;
+      return keyToId[lc] || 0;
+    };
     for (let id = 0; id < 256; id++) {
       const spec = registry[id];
       if (!spec) continue;
@@ -1271,9 +1496,19 @@
       buf[o1+1] = hardness;
       buf[o1+2] = 0;
       buf[o1+3] = 0;
+      const o2 = (2 * 256 + id) * 4;
+      buf[o2+0] = clamp255(spec.meltingPoint,   0);
+      buf[o2+1] = clamp255(spec.boilingPoint,   0);
+      buf[o2+2] = clamp255(spec.freezingPoint,  0);
+      buf[o2+3] = 0;
+      const o3 = (3 * 256 + id) * 4;
+      buf[o3+0] = resolveId(spec.meltsTo);
+      buf[o3+1] = resolveId(spec.boilsTo);
+      buf[o3+2] = resolveId(spec.freezesTo);
+      buf[o3+3] = 0;
     }
     gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 4, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
   function clamp255(v, def) {
@@ -1339,7 +1574,17 @@
     if (!host) return;
     host.innerHTML = '';
 
-    const orderedIds = [WALL_ID, SAND_ID, WATER_ID, EXPLOSIVE_ID, SMOKE_ID, PLANT_ID];
+    // Logical grouping: solids first, then powders, liquids, the cold→hot
+    // phase chain, hot+volatile, and finally life. Keeps related elements
+    // adjacent so users discover pairs (water+ice, lava+stone, plant+mold).
+    const orderedIds = [
+      WALL_ID, STONE_ID,
+      SAND_ID, GRAVEL_ID,
+      WATER_ID, HONEY_ID, ACID_ID,
+      ICE_ID, STEAM_ID,
+      LAVA_ID, FIRE_ID, EXPLOSIVE_ID, SMOKE_ID,
+      PLANT_ID, MOLD_ID,
+    ];
     const customIds = Object.keys(registry)
       .map(n => +n)
       .filter(id => !registry[id].isBuiltIn)
@@ -1348,7 +1593,7 @@
 
     for (const id of orderedIds) {
       const spec = registry[id];
-      if (!spec) continue;
+      if (!spec || spec.isHidden) continue;
       host.appendChild(buildMaterialButton(spec));
     }
     host.appendChild(buildEraseButton());
@@ -1469,6 +1714,7 @@
     selectedKey = 'wall';
     refreshActiveClass();
     syncActionLabel();
+    discoveredKeys.clear();
     showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.');
   };
 
@@ -1590,8 +1836,12 @@
   function onPointerDown(e) {
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
-    isPointerDown = true;
     const cell = canvasCell(e);
+    if (probeMode) {
+      probeAt(cell.c, cell.r);
+      return;
+    }
+    isPointerDown = true;
     lastCell = cell;
     lastPointer = cell;
     paintAtFrag(cell.c, cell.r, brushRadiusFor(selectedKey));
@@ -1600,6 +1850,15 @@
   }
 
   function onPointerMove(e) {
+    if (probeMode) {
+      // Drag-to-probe: tracks under the finger so the user can scrub a region.
+      if (e.buttons || (e.pointerType === 'touch')) {
+        e.preventDefault();
+        const cell = canvasCell(e);
+        probeAt(cell.c, cell.r);
+      }
+      return;
+    }
     if (!isPointerDown) return;
     e.preventDefault();
     const cell = canvasCell(e);
@@ -1613,6 +1872,173 @@
     lastCell = null;
     lastPointer = null;
     stopHoldPaint();
+  }
+
+  // ── Probe mode ─────────────────────────────────────────────────────────────
+  // Tap-to-inspect: reads back one cell from the state + temperature textures
+  // and renders a small lab-readout tooltip. Intended to make heat/traits
+  // observable so phase transitions and corrosion feel like discoverable
+  // physics rather than magic.
+  window.toggleProbe = function () {
+    probeMode = !probeMode;
+    const btn = document.getElementById('btn-probe');
+    if (btn) btn.setAttribute('aria-pressed', probeMode ? 'true' : 'false');
+    if (canvas) canvas.style.cursor = probeMode ? 'crosshair' : 'crosshair';
+    if (!probeMode) hideProbeTooltip();
+  };
+
+  function probeAt(col, row) {
+    if (!gl || col < 0 || row < 0 || col >= COLS || row >= ROWS) {
+      hideProbeTooltip();
+      return;
+    }
+    // The most-recently-written state is whichever fbo we last drew into;
+    // since every step ends with a swap, stateFboA is current.
+    const cell = new Uint8Array(4);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, stateFboA);
+    gl.readPixels(col, row, 1, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, cell);
+    const tempPixel = new Uint8Array(4);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, tempFboA);
+    gl.readPixels(col, row, 1, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, tempPixel);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    const id = cell[0];
+    const temp = tempPixel[0];
+    showProbeTooltip(id, temp);
+  }
+
+  function showProbeTooltip(id, temp) {
+    const el = document.getElementById('probe-tooltip');
+    if (!el) return;
+    if (id === 0) {
+      el.innerHTML = `<span class="probe-name">empty</span>\n` +
+        `temp     ${pad3(temp)}  ${heatBar(temp)}`;
+      el.classList.remove('hidden');
+      return;
+    }
+    const spec = registry[id];
+    if (!spec) { el.classList.add('hidden'); return; }
+    const name = spec.displayName || spec.key || ('id ' + id);
+    const lines = [`<span class="probe-name">${escapeHtml(name)}</span>`];
+    lines.push(`kind     ${spec.kind}`);
+    lines.push(`temp     ${pad3(temp)}  ${heatBar(temp)}`);
+    if (typeof spec.density === 'number')      lines.push(`density  ${pad3(spec.density)}`);
+    if (typeof spec.flow === 'number')         lines.push(`flow     ${spec.flow.toFixed(2)}  ${unitBar(spec.flow)}`);
+    if (typeof spec.viscosity === 'number')    lines.push(`viscos   ${spec.viscosity.toFixed(2)}  ${unitBar(spec.viscosity)}`);
+    if (typeof spec.buoyancy === 'number')     lines.push(`buoyant  ${spec.buoyancy.toFixed(2)}  ${unitBar(spec.buoyancy)}`);
+    if (typeof spec.stickiness === 'number' && spec.stickiness > 0)
+      lines.push(`sticky   ${spec.stickiness.toFixed(2)}  ${unitBar(spec.stickiness)}`);
+    if (typeof spec.emitTemp === 'number' && spec.emitTemp !== 30)
+      lines.push(`emits    ${pad3(spec.emitTemp)}  ${heatBar(spec.emitTemp)}`);
+    if (typeof spec.ignitionPoint === 'number' && spec.ignitionPoint < 255)
+      lines.push(`ignites  ${pad3(spec.ignitionPoint)}+ flam ${(spec.flammability||0).toFixed(2)}`);
+    if (typeof spec.conductivity === 'number') lines.push(`heat-k   ${pad3(spec.conductivity)}  ${valBar(spec.conductivity)}`);
+    if (typeof spec.corrosivity === 'number' && spec.corrosivity > 0)
+      lines.push(`corrode  ${pad3(spec.corrosivity)}  ${valBar(spec.corrosivity)}`);
+    if (typeof spec.hardness === 'number')     lines.push(`hard     ${pad3(spec.hardness)}  ${valBar(spec.hardness)}`);
+    if (spec.meltingPoint && spec.meltsTo)     lines.push(`melts→${spec.meltsTo} @ ${spec.meltingPoint}`);
+    if (spec.boilingPoint && spec.boilsTo)     lines.push(`boils→${spec.boilsTo} @ ${spec.boilingPoint}`);
+    if (spec.freezingPoint && spec.freezesTo)  lines.push(`freeze→${spec.freezesTo} @ ${spec.freezingPoint}`);
+    el.innerHTML = lines.join('\n');
+    el.classList.remove('hidden');
+  }
+
+  function hideProbeTooltip() {
+    const el = document.getElementById('probe-tooltip');
+    if (el) el.classList.add('hidden');
+  }
+
+  function pad3(n) { return ('  ' + (n|0)).slice(-3); }
+  function unitBar(v) {
+    const w = Math.max(0, Math.min(60, Math.round(v * 60)));
+    return `<span class="probe-bar"><span style="width:${w}px"></span></span>`;
+  }
+  function valBar(v) {
+    const w = Math.max(0, Math.min(60, Math.round((v / 255) * 60)));
+    return `<span class="probe-bar"><span style="width:${w}px"></span></span>`;
+  }
+  function heatBar(t) {
+    const w = Math.max(0, Math.min(60, Math.round((t / 255) * 60)));
+    return `<span class="probe-bar heat"><span style="width:${w}px"></span></span>`;
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  // ── Discovery log ─────────────────────────────────────────────────────────
+  // Builds a list of "what could happen" from the registry — every named
+  // reaction product and every phase-transition target. Periodically reads
+  // the grid back and detects when a product appears alongside its source for
+  // the first time, surfacing it as a small toast. The user is meant to feel
+  // like a curious chemist: do something to a material, and the sandbox names
+  // what they discovered.
+  function rebuildDiscoveryRules() {
+    discoveryRules = [];
+    const seen = new Set();
+    const push = (fromKey, toKey, label) => {
+      if (!fromKey || !toKey || fromKey === toKey) return;
+      const from = keyToId[fromKey];
+      const to = keyToId[toKey];
+      if (!from || !to) return;
+      const k = from + '>' + to;
+      if (seen.has(k)) return;
+      seen.add(k);
+      discoveryRules.push({ from, to, fromKey, toKey, label });
+    };
+    for (const idStr of Object.keys(registry)) {
+      const spec = registry[+idStr];
+      if (!spec) continue;
+      // Phase changes
+      if (spec.meltsTo)    push(spec.key, spec.meltsTo,   `${spec.key} melts → ${spec.meltsTo}`);
+      if (spec.boilsTo)    push(spec.key, spec.boilsTo,   `${spec.key} boils → ${spec.boilsTo}`);
+      if (spec.freezesTo)  push(spec.key, spec.freezesTo, `${spec.key} ${spec.kind === 'gas' ? 'condenses' : 'freezes'} → ${spec.freezesTo}`);
+      // Reactions
+      if (Array.isArray(spec.reactions)) {
+        for (const rx of spec.reactions) {
+          if (!rx || rx.explodes) continue;
+          if (rx.becomes) push(rx.other, rx.becomes, `${rx.other} + ${spec.key} → ${rx.becomes}`);
+          else            push(rx.other, null, null);
+        }
+      }
+    }
+  }
+
+  function discoveryReadback() {
+    if (!gl || !discoveryRules.length) return;
+    if (!discoveryReadBuf || discoveryReadBuf.length !== COLS * ROWS * 4) {
+      discoveryReadBuf = new Uint8Array(COLS * ROWS * 4);
+    }
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, stateFboA);
+    gl.readPixels(0, 0, COLS, ROWS, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, discoveryReadBuf);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    const present = new Set();
+    for (let i = 0; i < discoveryReadBuf.length; i += 4) {
+      const id = discoveryReadBuf[i];
+      if (id !== 0) present.add(id);
+    }
+    for (const rule of discoveryRules) {
+      const k = rule.from + '>' + rule.to;
+      if (discoveredKeys.has(k)) continue;
+      if (present.has(rule.from) && present.has(rule.to)) {
+        discoveredKeys.add(k);
+        if (rule.label) showDiscoveryToast(rule.label);
+      }
+    }
+  }
+
+  let discoveryToastTimer = null;
+  function showDiscoveryToast(label) {
+    const el = document.getElementById('discovery-toast');
+    if (!el) return;
+    el.textContent = 'discovered: ' + label;
+    // Re-trigger animation by removing/re-adding the class. The element keeps
+    // a visible state via the keyframe; we toggle classlist to restart it.
+    el.classList.add('hidden');
+    void el.offsetWidth;
+    el.classList.remove('hidden');
+    if (discoveryToastTimer) clearTimeout(discoveryToastTimer);
+    discoveryToastTimer = setTimeout(() => {
+      el.classList.add('hidden');
+    }, 4000);
   }
 
   // ── Pour ───────────────────────────────────────────────────────────────────
@@ -1734,6 +2160,50 @@
     [stateFboA, stateFboB] = [stateFboB, stateFboA];
   }
 
+  function corrosionStep() {
+    if (!progCorrosion) return;
+    gl.useProgram(progCorrosion);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progCorrosion, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.uniform1i(gl.getUniformLocation(progCorrosion, 'uTraits'), 1);
+    gl.uniform2i(gl.getUniformLocation(progCorrosion, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progCorrosion, 'uFrame'), frameCounter);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
+  function phaseStep() {
+    if (!progPhase) return;
+    gl.useProgram(progPhase);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progPhase, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexA);
+    gl.uniform1i(gl.getUniformLocation(progPhase, 'uTemp'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.uniform1i(gl.getUniformLocation(progPhase, 'uTraits'), 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
+    gl.uniform1i(gl.getUniformLocation(progPhase, 'uElemData'), 3);
+    gl.uniform2i(gl.getUniformLocation(progPhase, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progPhase, 'uFrame'), frameCounter);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
   function render() {
     gl.useProgram(progRender);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1831,10 +2301,13 @@
     simStep();
     explosionStep();
     reactStep();
+    corrosionStep();
     heatStep();
     ignitionStep();
+    phaseStep();
     cellularStep();
     render();
+    if (frameCounter % DISCOVERY_INTERVAL === 0) discoveryReadback();
     frameCounter++;
     animId = requestAnimationFrame(loop);
   }
@@ -2000,16 +2473,22 @@
       'Pick kind by what the name evokes (fire/smoke = gas; lava/water/oil = liquid; sand/snow/tnt = powder; wall/wood/metal = static; mold/coral/life = cellular).',
       'Match common intuition: fire MUST rise (gas, buoyancy>=0.9), water flows (liquid visc 0), honey is thick (liquid visc 0.9), tnt explodes on fire.',
       'Colors: 3-6 hex strings that read on near-black. Avoid pure black. Coherent palette per element.',
-      'Reactions are optional but strongly recommended for reactive elements (fire burns plant/oil, acid eats wall/sand, lava cools on water).',
+      'PREFER traits + phase transitions over hand-written reactions. The engine derives most chemistry from physics — only use the reactions[] array when the interaction is genuinely a unique chemical event (e.g. plant ignites into smoke). Heat-driven phase changes, melting, boiling, freezing, condensation, and acid-eats-soft-things all happen automatically from the trait/phase fields below.',
       '',
-      'TRAITS — additionally include this OPTIONAL block to describe the material physically. The engine will use these to derive emergent behaviour (heat propagation, ignition, corrosion). All values 0-255 unless noted; safe to omit.',
-      'Trait fields: { "emitTemp":0-255 (the ambient temperature this material radiates: ice=10, room=30, hot lava=210, fire=240),',
-      '  "ignitionPoint":0-255 (temperature above which it catches fire: oil=100, wood=140, paper=110, water=255 (never), explosives=80),',
-      '  "flammability":0-1 (per-frame chance of igniting once over ignitionPoint: paper=0.25, oil=0.20, wood=0.04, plant=0.05, tnt=0.30),',
-      '  "conductivity":0-255 (heat diffusion rate: insulator wood=40, water=140, metal=240, plasma=255),',
-      '  "corrosivity":0-255 (how aggressively this material eats less-hard neighbors: water=0, acid=200, lava=80),',
+      'TRAITS — describe the material physically. The engine reads these every frame for heat diffusion, ignition, corrosion, and phase changes. All values 0-255 unless noted; defaults are sensible if you omit.',
+      'Trait fields: { "emitTemp":0-255 (ambient temp it radiates: ice=10, room=30, hot lava=210, fire=240),',
+      '  "ignitionPoint":0-255 (temp above which it catches fire: oil=100, wood=140, paper=110, water=255 (never), explosives=80),',
+      '  "flammability":0-1 (per-frame ignite chance once over ignitionPoint: paper=0.25, oil=0.20, wood=0.04, plant=0.05, tnt=0.30),',
+      '  "conductivity":0-255 (heat diffusion rate: wood=40, water=140, metal=240, plasma=255),',
+      '  "corrosivity":0-255 (eats softer neighbors automatically: water=0, acid=200, lava=80),',
       '  "hardness":0-255 (resistance to corrosion: sand=60, plant=40, wall=200, metal=240, diamond=255) }',
-      'Use traits whenever they make the element\'s physical identity clearer; they are forward-compatible with the upcoming trait-driven physics.',
+      '',
+      'PHASE TRANSITIONS — automatic, temperature-driven id-swaps. The engine handles the cascade (lava cools to stone, ice melts in fire, water boils to steam over lava, steam condenses back to water as it cools). Each pointer is a key string that already exists in "Existing keys"; if the target doesn\'t exist yet the field is ignored.',
+      'Phase fields: { "meltingPoint":1-255, "meltsTo":"<key>" (e.g. ice meltsTo water at 35; stone meltsTo lava at 200),',
+      '  "boilingPoint":1-255, "boilsTo":"<key>" (e.g. water boilsTo steam at 100; oil boilsTo smoke at 180),',
+      '  "freezingPoint":1-255, "freezesTo":"<key>" (e.g. water freezesTo ice at 22; steam freezesTo water at 50; lava freezesTo stone at 80) }',
+      'Convention: 0 = "not applicable". A solid usually has only meltingPoint, a liquid often has both boilingPoint and freezingPoint, a gas has freezingPoint (condensation).',
+      '',
       'Output JSON only.',
     ].join('\n');
     const userPrompt = desc ? `Name: ${name}\nDescription: ${desc}` : `Name: ${name}`;
@@ -2218,9 +2697,8 @@
 
   // Trait normalization. Each trait field is optional in the AI's response;
   // when absent we fill in a name-based default so the data is always present.
-  // The current physics engine doesn't read these yet, but the AI prompt now
-  // mentions them and the element-feedback modal serializes them, so the next
-  // iteration cycle has structured signal to work with.
+  // Phase pointers are stored as keys (resolved to ids at uploadTraits time)
+  // so an element can reference a phase target that hasn't been registered yet.
   function applyTraits(out, raw, key, userDesc) {
     const defaults = traitDefaultsForName(key, out.kind);
     const raw255 = (v, d) => {
@@ -2233,12 +2711,31 @@
       if (!isFinite(n)) return d;
       return Math.max(0, Math.min(1, n));
     };
+    const phaseKey = (v) => {
+      if (typeof v !== 'string') return undefined;
+      const lc = v.toLowerCase().trim();
+      if (!lc) return undefined;
+      return lc;
+    };
     out.emitTemp      = raw255(raw && raw.emitTemp,      defaults.emitTemp);
     out.ignitionPoint = raw255(raw && raw.ignitionPoint, defaults.ignitionPoint);
     out.flammability  = raw01 (raw && raw.flammability,  defaults.flammability);
     out.conductivity  = raw255(raw && raw.conductivity,  defaults.conductivity);
     out.corrosivity   = raw255(raw && raw.corrosivity,   defaults.corrosivity);
     out.hardness      = raw255(raw && raw.hardness,      defaults.hardness);
+    // Phase transitions. Use 0 as sentinel for "not applicable" so we don't
+    // need a separate null. Pair the threshold with its target key; the
+    // upload step looks the key up. If only one of (point, target) is given
+    // we drop both — a half-defined transition would fire silently.
+    const meltAt = raw255(raw && raw.meltingPoint,  0);
+    const boilAt = raw255(raw && raw.boilingPoint,  0);
+    const freezeAt = raw255(raw && raw.freezingPoint, 0);
+    const meltTo   = phaseKey(raw && raw.meltsTo);
+    const boilTo   = phaseKey(raw && raw.boilsTo);
+    const freezeTo = phaseKey(raw && raw.freezesTo);
+    if (meltAt > 0 && meltTo)     { out.meltingPoint = meltAt;     out.meltsTo = meltTo; }
+    if (boilAt > 0 && boilTo)     { out.boilingPoint = boilAt;     out.boilsTo = boilTo; }
+    if (freezeAt > 0 && freezeTo) { out.freezingPoint = freezeAt;  out.freezesTo = freezeTo; }
   }
 
   // Default trait values derived from element name + kind. Picks sensible

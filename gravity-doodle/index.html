@@ -25,6 +25,7 @@
     <div id="controls">
       <div id="action-row">
         <button id="btn-drop" onclick="startDrop()">pour sand</button>
+        <button id="btn-probe" onclick="toggleProbe()" aria-pressed="false">probe</button>
         <button id="btn-reset" onclick="clearAll()">reset</button>
       </div>
 
@@ -43,9 +44,11 @@
     <div id="canvas-wrap">
       <canvas id="main-canvas"></canvas>
       <div id="overlay-msg" class="hidden"></div>
+      <div id="probe-tooltip" class="hidden"></div>
+      <div id="discovery-toast" class="hidden"></div>
     </div>
 
-    <p id="hint">build walls. pour sand or water from the top. paint smoke (it rises) or plant (a green static block, burns when lit). drop explosive (red, flickering) — trigger it with anything and blasts throw bright sparks that chain-react. invent more elements in plain words. long-press any invented element to flag it.</p>
+    <p id="hint">build walls. pour sand, gravel, water, or honey. drop ice next to lava: it melts → boils → steam → rains. acid eats sand and plant. fire ignites plant. mold creeps along plant. cool lava becomes stone. tap probe to read any cell's traits. invent more in plain words.</p>
   </div>
 
   <!-- Element feedback modal -->
