@@ -466,6 +466,12 @@ function resolveDecision(idx) {
     b.disabled = true;
     if (i === idx) b.classList.add('picked');
   });
+  // Release the mobile sticky-hover/focus that otherwise carries over to the
+  // freshly-rendered choice buttons in the next chapter (touch browsers keep
+  // the last-tapped element in :hover until something else is tapped).
+  if (document.activeElement && document.activeElement.blur) {
+    document.activeElement.blur();
+  }
 
   // Apply effect (single fortune axis).
   applyEffect(choice.effect);
