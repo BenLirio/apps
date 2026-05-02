@@ -82,13 +82,17 @@ function generateCivName() {
 let civName = '';
 let phase = 'setup'; // setup | running | thinking | decision | verdict
 
-// Stats: 0..100 typical range, but pop is unbounded.
+// Stats. All bounded 0..100 unless noted; pop and tech unbounded; treasury -50..100 (debt allowed).
+// Death conditions: pop<=0, food<=0, order<=0, health<=0, treasury<=-50, or military<=0 once pop>100.
 let stats = {
   population: 1,
-  food: 60,
-  order: 60,
-  tech: 0,
-  culture: 50
+  food: 55,        // feeds the people; drains with pop
+  order: 55,       // internal cohesion; erodes with crowding, debt, low health
+  health: 65,      // disease/sanitation; drops in plague, drains with low food/order
+  military: 25,    // defends against raids; small upkeep drains treasury
+  treasury: 15,    // wealth/debt; military upkeep drains it, prosperity refills it
+  tech: 0,         // unbounded; gates eras
+  culture: 50      // soft stat; affects verdict tone, no hard fail
 };
 let peakPopulation = 1;
 let peakTech = 0;
@@ -181,7 +185,7 @@ function rollName() {
 // the same next question — for any browser that's already walked there. We
 // also persist across reloads via localStorage so one player's exploration
 // helps the next.
-const CACHE_KEY = 'gmc_question_cache_v1';
+const CACHE_KEY = 'gmc_question_cache_v2';
 let questionCache = {};
 try {
   questionCache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
@@ -208,25 +212,25 @@ async function fetchQuestion(path, statsSnapshot, chronicleSnapshot) {
   const era = ERAS[eraIndexFromTech(statsSnapshot.tech)].name;
   const recent = chronicleSnapshot.slice(-3).map(c => `[${c.era}] ${c.choice}`).join(' | ') || 'none yet';
 
-  const sys = `You generate dilemmas for a civilization-survival game. The player is leading civilization "${civName}". Output ONLY valid JSON. Each dilemma must be era-appropriate, dramatic, and force a meaningful tradeoff. Choices have IMMEDIATE effects and a LONG-TERM effect that fires later (3-6 turns). Effects are integers in [-25, +25] on these stats: food, order, tech, culture, population. Long-term delay is an integer in [3, 6]. Provide 2-4 distinct choices. Make some choices look attractive but carry hidden long-term costs, others look harsh now but pay off later.`;
+  const sys = `You generate dilemmas for a HARSH civilization-survival game. The player leads "${civName}". Output ONLY valid JSON. Survival is hard — most civilizations die. Each dilemma is era-appropriate, dramatic, and forces a real cross-system tradeoff: gaining one stat almost always costs others. Choices have IMMEDIATE effects and a LONG-TERM effect that fires later (3-6 turns). Effects are integers on these stats: food, order, health, military, treasury, tech, culture, population (treasury can go negative — debt). Each immediate effect MUST touch at least 2 stats (typically one positive, one negative). "Safe" / "do nothing" choices should still bleed something — there is no costless option. Hidden long-term costs are encouraged: a tempting boost now should often have a brutal echo later.`;
 
-  const user = `Current era: ${era}. Stats: pop=${statsSnapshot.population}, food=${statsSnapshot.food}, order=${statsSnapshot.order}, tech=${statsSnapshot.tech}, culture=${statsSnapshot.culture}. Turn ${turnNumber + 1}. Recent decisions: ${recent}. Path key: ${cacheKey}.
+  const user = `Current era: ${era}. Stats: pop=${statsSnapshot.population}, food=${Math.round(statsSnapshot.food)}, order=${Math.round(statsSnapshot.order)}, health=${Math.round(statsSnapshot.health)}, military=${Math.round(statsSnapshot.military)}, treasury=${Math.round(statsSnapshot.treasury)}, tech=${Math.round(statsSnapshot.tech)}, culture=${Math.round(statsSnapshot.culture)}. Turn ${turnNumber + 1}. Recent decisions: ${recent}. Path key: ${cacheKey}.
 
 Respond with JSON exactly matching this schema:
 {
-  "event": "1-2 sentence dilemma description",
+  "event": "1-2 sentence dilemma description (reference current weak stats when relevant — e.g. famine pressure if food is low)",
   "choices": [
     {
       "label": "SHORT IMPERATIVE LABEL (2-5 words, all caps)",
-      "flavor": "One short evocative sentence after picking",
-      "effect": { "food": 0, "order": 0, "tech": 0, "culture": 0, "population": 0 },
+      "flavor": "One short evocative sentence after picking (do NOT narrate the numbers)",
+      "effect": { "food": 0, "order": 0, "health": 0, "military": 0, "treasury": 0, "tech": 0, "culture": 0, "population": 0 },
       "longTermDelay": 4,
-      "longTermEffect": { "food": 0, "order": 0, "tech": 0, "culture": 0, "population": 0 },
+      "longTermEffect": { "food": 0, "order": 0, "health": 0, "military": 0, "treasury": 0, "tech": 0, "culture": 0, "population": 0 },
       "longTermFlavor": "What unfolds when delayed effect fires (one short sentence)"
     }
   ]
 }
-Include 2-4 choices. Omit any stat keys that don't change. Keep numbers small (-15 to +15 typical, max ±25). Do not narrate stats in the flavor text.`;
+Include 2-4 choices. Omit any stat keys that don't change. Numbers: most ±5 to ±15, max ±30 for catastrophic decisions. Each immediate effect must contain at least 2 nonzero stats. Long-term effects may be empty for genuinely small choices, but most should land hard.`;
 
   const body = {
     slug: SLUG,
@@ -271,11 +275,11 @@ Include 2-4 choices. Omit any stat keys that don't change. Keep numbers small (-
 
 function clampEffect(e) {
   const out = {};
-  const keys = ['food', 'order', 'tech', 'culture', 'population'];
+  const keys = ['food', 'order', 'health', 'military', 'treasury', 'tech', 'culture', 'population'];
   if (!e || typeof e !== 'object') return out;
   for (const k of keys) {
     if (typeof e[k] === 'number' && e[k] !== 0) {
-      out[k] = Math.max(-25, Math.min(25, Math.round(e[k])));
+      out[k] = Math.max(-30, Math.min(30, Math.round(e[k])));
     }
   }
   return out;
@@ -290,22 +294,22 @@ function clampInt(v, lo, hi, dflt) {
 // ── Fallback question (used if AI is unreachable) ─────────────────────────────
 function fallbackQuestion() {
   return {
-    event: 'The oracles fall silent. Your council must decide blind.',
+    event: 'The oracles fall silent. Your council must decide blind, and the silence itself carries cost.',
     choices: [
       {
         label: 'PRESS ON',
         flavor: 'You march forward without their counsel.',
-        effect: { order: -3, tech: +2 },
+        effect: { order: -5, military: +4, treasury: -4, tech: +2 },
         longTermDelay: 4,
-        longTermEffect: { culture: +5 },
-        longTermFlavor: 'Tales of your boldness spread.'
+        longTermEffect: { culture: +6, health: -5 },
+        longTermFlavor: 'Tales of your boldness spread, but the wounded never fully recover.'
       },
       {
         label: 'WAIT IT OUT',
         flavor: 'You hold position, conserving strength.',
-        effect: { food: +3, order: +2 },
+        effect: { food: -4, order: +3, treasury: -3 },
         longTermDelay: 4,
-        longTermEffect: { tech: -4 },
+        longTermEffect: { tech: -5, military: -4 },
         longTermFlavor: 'Rivals out-pace you while you waited.'
       }
     ]
@@ -321,7 +325,7 @@ function startGame() {
   document.getElementById('civ-title').textContent = civName;
 
   // Reset state
-  stats = { population: 1, food: 60, order: 60, tech: 0, culture: 50 };
+  stats = { population: 1, food: 55, order: 55, health: 65, military: 25, treasury: 15, tech: 0, culture: 50 };
   peakPopulation = 1;
   peakTech = 0;
   turnNumber = 0;
@@ -461,43 +465,81 @@ function applyEffect(eff) {
   if (!eff) return;
   if (eff.food)       stats.food = clamp(stats.food + eff.food, 0, 100);
   if (eff.order)      stats.order = clamp(stats.order + eff.order, 0, 100);
+  if (eff.health)     stats.health = clamp(stats.health + eff.health, 0, 100);
+  if (eff.military)   stats.military = clamp(stats.military + eff.military, 0, 100);
+  if (eff.treasury)   stats.treasury = clamp(stats.treasury + eff.treasury, -50, 100);
   if (eff.tech)       stats.tech = Math.max(0, stats.tech + eff.tech);
   if (eff.culture)    stats.culture = clamp(stats.culture + eff.culture, 0, 100);
-
-  // Population responds both to direct deltas and to food/order pressure each turn.
   if (eff.population) stats.population = Math.max(0, stats.population + eff.population);
 
-  // Per-turn drift from food/order: this happens implicitly each turn even
-  // without direct population deltas (called once per turn in driftAfterTurn).
   peakPopulation = Math.max(peakPopulation, stats.population);
   peakTech = Math.max(peakTech, stats.tech);
 }
 
+// Per-turn drift. Interlocking and unforgiving — each system feeds the next:
+// pop consumes food, low food/order rots health, military upkeep drains
+// treasury, debt rots order, crowding erodes order. Growth is gated by the
+// WORST of food/order/health (bottleneck rule) — every system has to be
+// healthy to grow, but any one can sink the civ.
 function driftAfterTurn() {
-  // Food < 30 starves people; food > 70 grows them. Order matters too.
-  const foodPressure = (stats.food - 50) / 25; // -2..+2
-  const orderPressure = (stats.order - 40) / 30; // ~-1..+2
-  const techBonus = stats.tech / 60; // tech makes growth more efficient
-  const growth = (foodPressure + orderPressure) * (0.6 + techBonus * 0.4);
-  // Apply as a fraction of current pop (multiplicative-ish so big civs grow/shrink in scale).
-  const delta = Math.round(stats.population * growth * 0.08 + growth);
+  // 1. Food consumption scales with population (log so huge civs don't insta-starve).
+  const consumption = 1 + Math.log10(Math.max(10, stats.population)) * 1.2;
+  stats.food = clamp(stats.food - consumption, 0, 100);
+
+  // 2. Health drain — baseline trickle, plus penalties when food/order are weak.
+  let healthDrain = 0.8;
+  if (stats.food < 30)  healthDrain += 2.5;
+  if (stats.order < 30) healthDrain += 1.8;
+  stats.health = clamp(stats.health - healthDrain, 0, 100);
+
+  // 3. Military upkeep — bigger army costs more coin, AND the army slowly
+  //    decays without active investment.
+  const upkeep = stats.military / 25; // 0..4 coin/turn
+  stats.treasury = clamp(stats.treasury - upkeep, -50, 100);
+  stats.military = clamp(stats.military - 0.6, 0, 100);
+
+  // 4. Treasury can refill from a stable, sizable population (taxation).
+  if (stats.order > 50 && stats.population > 5) {
+    const tax = Math.min(3.5, Math.log10(Math.max(10, stats.population)) * 0.6 * (stats.order / 100));
+    stats.treasury = clamp(stats.treasury + tax, -50, 100);
+  }
+
+  // 5. Order pressures — crowding hurts; debt hurts; sickness hurts.
+  let orderDrain = 0;
+  if (stats.population > 100) orderDrain += (Math.log10(stats.population) - 2) * 0.7; // grows with size
+  if (stats.treasury < 0)     orderDrain += Math.abs(stats.treasury) / 18;            // debt rots cohesion
+  if (stats.health < 40)      orderDrain += (40 - stats.health) / 25;                 // sickness panics
+  stats.order = clamp(stats.order - orderDrain, 0, 100);
+
+  // 6. Population growth — bottlenecked by the WEAKEST of food/order/health.
+  //    A single failing pillar can collapse the population.
+  const minVital = Math.min(stats.food, stats.order, stats.health);
+  const vitalPressure = (minVital - 45) / 20; // -2.25..+2.75
+  const techBonus = stats.tech / 80;
+  const growth = vitalPressure * (0.55 + techBonus * 0.35);
+  const delta = Math.round(stats.population * growth * 0.10 + growth);
   stats.population = Math.max(0, stats.population + delta);
 
-  // Slight drift toward equilibrium so values don't park forever at extremes.
-  stats.food = clamp(stats.food + (50 - stats.food) * 0.05, 0, 100);
-  stats.order = clamp(stats.order + (50 - stats.order) * 0.04, 0, 100);
-
-  // Tech creeps up tiny bit each turn from baseline curiosity.
-  stats.tech = stats.tech + 0.5;
+  // 7. Tech creeps up only when there's an ordered population to do the work.
+  if (stats.population > 0 && stats.order > 25) {
+    stats.tech = stats.tech + 0.4 + Math.log10(Math.max(10, stats.population)) * 0.12;
+  }
 
   peakPopulation = Math.max(peakPopulation, stats.population);
   peakTech = Math.max(peakTech, stats.tech);
 }
 
 function checkCollapse() {
-  if (stats.population <= 0) { collapseReason = 'Your last hearth went cold. The civilization is no more.'; return true; }
+  if (stats.population <= 0)  { collapseReason = 'Your last hearth went cold. The civilization is no more.'; return true; }
   if (stats.food <= 0)        { collapseReason = 'Famine swept the land. None remained to bury the rest.'; return true; }
   if (stats.order <= 0)       { collapseReason = 'Civil war shattered every institution. Nothing held.'; return true; }
+  if (stats.health <= 0)      { collapseReason = 'Plague hollowed the streets. The healers died last.'; return true; }
+  if (stats.treasury <= -50)  { collapseReason = 'The treasury defaulted. Creditors descended; nothing remained.'; return true; }
+  // Once you're a real civilization, having no army means a single raid ends you.
+  if (stats.military <= 0 && stats.population > 100) {
+    collapseReason = 'Defenseless, the city was taken in a single night.';
+    return true;
+  }
   return false;
 }
 
@@ -609,14 +651,21 @@ function updateHUD() {
   document.getElementById('stat-pop').textContent = formatPop(stats.population);
   document.getElementById('stat-food').textContent = Math.round(stats.food);
   document.getElementById('stat-order').textContent = Math.round(stats.order);
+  document.getElementById('stat-health').textContent = Math.round(stats.health);
+  document.getElementById('stat-military').textContent = Math.round(stats.military);
+  document.getElementById('stat-treasury').textContent = Math.round(stats.treasury);
   document.getElementById('stat-tech').textContent = Math.round(stats.tech);
   document.getElementById('stat-turns').textContent = turnNumber;
   document.getElementById('age-badge').textContent = ERAS[eraIdx].name;
   document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · Turn ${turnNumber}`;
 
-  // Color stats red when dangerous.
+  // Warn-color anything dangerous. Treasury warns when in debt; military warns
+  // once the civ is large enough that defenselessness becomes lethal.
   document.getElementById('stat-food').classList.toggle('warn', stats.food < 25);
   document.getElementById('stat-order').classList.toggle('warn', stats.order < 25);
+  document.getElementById('stat-health').classList.toggle('warn', stats.health < 25);
+  document.getElementById('stat-military').classList.toggle('warn', stats.military < 15 && stats.population > 80);
+  document.getElementById('stat-treasury').classList.toggle('warn', stats.treasury < 0);
 }
 
 function formatPop(n) {
@@ -730,8 +779,8 @@ function draw(dt) {
     ctx.globalAlpha = 1;
   });
 
-  // Low-stat overlay tint (red flicker when food/order critical).
-  if (stats.food < 20 || stats.order < 20) {
+  // Low-stat overlay tint (red flicker when ANY hard-fail stat is critical).
+  if (stats.food < 20 || stats.order < 20 || stats.health < 20 || stats.treasury < -25) {
     ctx.globalAlpha = 0.08 + Math.sin(performance.now() * 0.003) * 0.04;
     ctx.fillStyle = '#ff0000';
     ctx.fillRect(0, 0, W, H);
