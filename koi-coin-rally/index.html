@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Koi Coin Rally</title>
+  <meta property="og:title" content="Koi Coin Rally">
+  <meta property="og:description" content="A 60-second kawaii pixel-art koi fish race. Today's river is the same for everyone — what license will you earn?">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/koi-coin-rally/">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="game-frame">
+    <canvas id="canvas" width="360" height="640"></canvas>
+
+    <!-- Pre-game intro -->
+    <div id="intro" class="overlay">
+      <div class="intro-card">
+        <div class="splash-koi">&#x1F420;</div>
+        <h1>Koi Coin Rally</h1>
+        <p class="tagline">today's river is set.<br>scoop coins. earn your license.</p>
+        <p class="hint" id="course-hint">course of the day: loading...</p>
+        <button id="start-btn" class="big-btn">tap to launch koi</button>
+        <p class="ctrl-hint">arrows on desktop &middot; tap left/right on mobile</p>
+      </div>
+    </div>
+
+    <!-- Live HUD during race -->
+    <div id="hud" class="hud hidden">
+      <div class="hud-row">
+        <div class="hud-coins"><span id="coin-count">0</span> <span class="coin-emoji">&#x1FA99;</span></div>
+        <div class="hud-timer"><span id="timer">60.0</span>s</div>
+      </div>
+    </div>
+
+    <!-- Mobile tap halves (hint zones; actual touch handlers cover full canvas) -->
+    <div id="touch-zones" class="hidden">
+      <div class="zone zone-left">&#x25C0;</div>
+      <div class="zone zone-right">&#x25B6;</div>
+    </div>
+
+    <!-- End-of-race screen -->
+    <div id="end" class="overlay hidden">
+      <div class="end-card">
+        <div class="fish-portrait" id="fish-portrait">&#x1F420;</div>
+        <p class="end-label">licensed as</p>
+        <h2 id="license-title">—</h2>
+        <p class="end-coins"><span id="final-coins">0</span> coins scooped</p>
+        <pre id="emoji-grid" class="emoji-grid"></pre>
+        <div id="share">
+          <button onclick="share()" class="big-btn">share your license</button>
+        </div>
+        <button id="replay-btn" class="ghost-btn">try again (same river)</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
