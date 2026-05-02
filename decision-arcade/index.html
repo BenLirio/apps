@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Decision Arcade</title>
   <meta property="og:title" content="Decision Arcade">
-  <meta property="og:description" content="10 lightning-fast moral dilemmas. The clock learns your pace. Discover your decision archetype.">
+  <meta property="og:description" content="10 rounds. 6 emojis. Pick the one that hits. Find your archetype.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/decision-arcade/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,12 +23,12 @@
       <div class="arcade-header">
         <div class="coin-slot">INSERT COIN</div>
         <h1>DECISION<br>ARCADE</h1>
-        <p class="tagline">10 dilemmas. The clock learns your pace.<br>No overthinking allowed.</p>
+        <p class="tagline">10 rounds. 6 emojis. Tap the one that hits.<br>The clock learns your pace.</p>
       </div>
       <div class="intro-rules">
-        <div class="rule"><span class="rule-key">←</span> swipe or tap left option</div>
-        <div class="rule"><span class="rule-key">→</span> swipe or tap right option</div>
-        <div class="rule"><span class="rule-key">↻</span> timer adapts to how fast you answer</div>
+        <div class="rule"><span class="rule-key">👆</span> tap an emoji</div>
+        <div class="rule"><span class="rule-key">⚡</span> no overthinking</div>
+        <div class="rule"><span class="rule-key">↻</span> clock adapts to you</div>
       </div>
       <button id="start-btn" class="arcade-btn" onclick="startGame()">START GAME</button>
       <div class="credit-count">CREDITS: 1</div>
@@ -41,30 +41,17 @@
           <div class="question-counter">
             <span id="q-current">1</span><span class="q-sep">of</span><span>10</span>
           </div>
-          <div class="timer-seconds" id="timer-seconds">4.5s</div>
+          <div class="timer-seconds" id="timer-seconds">2.5s</div>
         </div>
         <div class="timer-bar-wrap">
           <div class="timer-bar" id="timer-bar"></div>
         </div>
-        <div class="axis-label" id="axis-label">PRACTICAL / ADVENTUROUS</div>
       </div>
-      <div class="scenario-box" id="scenario-box">
-        <p class="scenario-text" id="scenario-text">Loading scenario...</p>
-      </div>
-      <div class="choice-zone">
-        <button class="choice-btn left" id="btn-left" onclick="choose('left')">
-          <span class="choice-emoji" id="emoji-left">🔥</span>
-          <span class="choice-label" id="label-left">Option A</span>
-        </button>
-        <div class="vs-divider"><span>OR</span></div>
-        <button class="choice-btn right" id="btn-right" onclick="choose('right')">
-          <span class="choice-emoji" id="emoji-right">💧</span>
-          <span class="choice-label" id="label-right">Option B</span>
-        </button>
+      <div class="emoji-grid" id="emoji-grid" aria-label="Pick one emoji">
+        <!-- 6 emoji buttons injected at runtime -->
       </div>
       <div class="game-foot">
-        <div id="hesitate-flash" class="hesitate-flash">HESITATION RECORDED</div>
-        <div id="pace-tag" class="pace-tag">clock: 4.5s · adapts to your pace</div>
+        <div id="hesitate-flash" class="hesitate-flash" aria-hidden="true">⏳</div>
       </div>
     </div>
 
@@ -84,6 +71,7 @@
         <div class="result-rank">YOUR ARCHETYPE</div>
         <h2 class="archetype-name" id="archetype-name">THE CALCULATED HEDONIST</h2>
         <p class="archetype-desc" id="archetype-desc">You optimize for pleasure but always read the fine print first.</p>
+        <div class="picked-strip" id="picked-strip" aria-hidden="true"></div>
         <div class="axis-chart" id="axis-chart"></div>
         <p class="result-flavor" id="result-flavor"></p>
       </div>
