@@ -44,15 +44,17 @@ function computeSleep(hrs) {
 function computeUnread(n) {
   const b = BENCHMARKS.unread.benchmark;
   const excess = Math.max(0, n - b);
-  // 3 units per excess message, lightly compressed on the tail.
-  const units = Math.round(excess * 3 * (excess > 200 ? 0.7 : 1));
+  // Log curve so 50 vs 50,000 unread can't dominate the audit. Hard cap
+  // at 250 keeps this line item in the same range as the other five.
+  const raw = excess > 0 ? 60 * Math.log10(1 + excess / 10) : 0;
+  const units = Math.min(Math.round(raw), 250);
   return {
     key: 'unread',
     name: BENCHMARKS.unread.itemName,
     code: BENCHMARKS.unread.code,
     inputText: `${n} unread`,
     formula: excess > 0
-      ? `${excess} msg above 10-msg allowance × 3`
+      ? `${excess} msg above 10-msg allowance — eased curve`
       : 'inbox within allowance',
     units,
   };

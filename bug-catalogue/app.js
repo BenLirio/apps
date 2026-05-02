@@ -5,103 +5,115 @@
 // ====================== CONFIG ======================
 const HUNT_SECONDS = 30;
 const MAX_CATCHES = 6;
-const POOL_SIZE = 12;          // species in today's drift
-const ACTIVE_BUGS_TARGET = 5;  // average bugs alive at once
+const POOL_SIZE = 14;          // species in today's drift
+const ACTIVE_BUGS_TARGET = 8;  // average bugs alive at once
 const CASE_STORE_BASE = 'https://rrun6q1lfk.execute-api.us-east-1.amazonaws.com';
 const APP_SLUG = 'bug-catalogue';
 
+// ====================== RARITY ======================
+// Each spawn weights by rarity. Pool is curated so at least one rare and
+// one legendary species drift today, salting the catch with a chance at
+// a real find. Visual treatment escalates with tier.
+const RARITY_TIERS = {
+  common:    { weight: 60, label: 'common',    score: 1 },
+  uncommon:  { weight: 25, label: 'uncommon',  score: 3 },
+  rare:      { weight: 12, label: 'rare',      score: 7 },
+  legendary: { weight:  3, label: 'legendary', score: 18 },
+};
+
 // ====================== SPECIES CATALOG ======================
-// Each species: { id, name, kind (crawler|flyer|drifter), palette, draw(svg builder) }
-// "kind" controls trajectory style. Palette is a riso-style 2-3 color set.
+// Each species: { id, name, kind, rarity, palette, draw }
+// kind = crawler | flyer | drifter | hopper | zigzag — controls trajectory.
+// rarity = common | uncommon | rare | legendary — controls spawn weight + visual treatment.
 const SPECIES = [
-  { id: 'clockroach',   name: 'Gold-banded clock-roach', kind: 'crawler', baseSpeed: 1.0,
+  { id: 'clockroach',   name: 'Gold-banded clock-roach', kind: 'crawler', rarity: 'common', baseSpeed: 1.0,
     palette: ['#5a3f24', '#b89149', '#241808'],
     draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:true,antennae:true,wings:false,legs:6}) },
-  { id: 'stainmoth',    name: 'Stained-glass moth', kind: 'flyer', baseSpeed: 1.6,
+  { id: 'stainmoth',    name: 'Stained-glass moth', kind: 'flyer', rarity: 'legendary', baseSpeed: 1.6,
     palette: ['#b3402a', '#2c5d63', '#f1e3c4'],
     draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:true}) },
-  { id: 'cigwalker',    name: 'Cigarette-bearer', kind: 'crawler', baseSpeed: 0.7,
+  { id: 'cigwalker',    name: 'Cigarette-bearer', kind: 'crawler', rarity: 'common', baseSpeed: 0.7,
     palette: ['#3a2418', '#d8c290', '#ff6b35'],
     draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:false,antennae:true,wings:false,legs:6,cig:true}) },
-  { id: 'velvetbumble', name: 'Velvet bumble-pretender', kind: 'flyer', baseSpeed: 1.2,
+  { id: 'velvetbumble', name: 'Velvet bumble-pretender', kind: 'flyer', rarity: 'common', baseSpeed: 1.2,
     palette: ['#1a140d', '#e0a82e', '#f1e3c4'],
     draw: (c1,c2,c3) => bumbleShape(c1,c2,c3) },
-  { id: 'paperwasp',    name: 'Hand-folded paper wasp', kind: 'flyer', baseSpeed: 1.8,
+  { id: 'paperwasp',    name: 'Hand-folded paper wasp', kind: 'flyer', rarity: 'uncommon', baseSpeed: 1.8,
     palette: ['#d4c08a', '#5a3f24', '#b3402a'],
     draw: (c1,c2,c3) => waspShape(c1,c2,c3) },
-  { id: 'glassbeetle',  name: 'Translucent glass beetle', kind: 'crawler', baseSpeed: 0.9,
+  { id: 'glassbeetle',  name: 'Translucent glass beetle', kind: 'crawler', rarity: 'rare', baseSpeed: 0.9,
     palette: ['#cfe7e7', '#2c5d63', '#1f2a23'],
     draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:true}) },
-  { id: 'inkmite',      name: 'Ink-spilling mite', kind: 'crawler', baseSpeed: 0.6,
+  { id: 'inkmite',      name: 'Ink-spilling mite', kind: 'crawler', rarity: 'common', baseSpeed: 0.6,
     palette: ['#1f1410', '#2c5d63', '#f1e3c4'],
     draw: (c1,c2,c3) => mitelikeShape(c1,c2,c3) },
-  { id: 'lampfly',      name: 'Streetlamp lace-fly', kind: 'flyer', baseSpeed: 2.0,
+  { id: 'lampfly',      name: 'Streetlamp lace-fly', kind: 'flyer', rarity: 'rare', baseSpeed: 2.0,
     palette: ['#f3dca3', '#5a3f24', '#fff'],
     draw: (c1,c2,c3) => laceflyShape(c1,c2,c3) },
-  { id: 'minerbug',     name: 'Coal-miner ground beetle', kind: 'crawler', baseSpeed: 0.85,
+  { id: 'minerbug',     name: 'Coal-miner ground beetle', kind: 'crawler', rarity: 'common', baseSpeed: 0.85,
     palette: ['#2a2018', '#7a6242', '#0f0a06'],
     draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'ribbonworm',   name: 'Ribbon-worm caterpillar', kind: 'crawler', baseSpeed: 0.5,
+  { id: 'ribbonworm',   name: 'Ribbon-worm caterpillar', kind: 'crawler', rarity: 'common', baseSpeed: 0.5,
     palette: ['#b3402a', '#f1e3c4', '#5a3f24'],
     draw: (c1,c2,c3) => caterpillarShape(c1,c2,c3) },
-  { id: 'jewelhopper',  name: 'Velvet-jeweled grasshopper', kind: 'crawler', baseSpeed: 1.1,
+  { id: 'jewelhopper',  name: 'Velvet-jeweled grasshopper', kind: 'hopper', rarity: 'uncommon', baseSpeed: 1.1,
     palette: ['#2c5d63', '#e0a82e', '#1f2a23'],
     draw: (c1,c2,c3) => grasshopperShape(c1,c2,c3) },
-  { id: 'mournfly',     name: 'Mourning bottle-fly', kind: 'flyer', baseSpeed: 2.2,
+  { id: 'mournfly',     name: 'Mourning bottle-fly', kind: 'zigzag', rarity: 'uncommon', baseSpeed: 2.2,
     palette: ['#1a140d', '#5a8071', '#2c5d63'],
     draw: (c1,c2,c3) => bottleflyShape(c1,c2,c3) },
-  { id: 'silkdrifter',  name: 'Silk-thread drifter', kind: 'drifter', baseSpeed: 0.4,
+  { id: 'silkdrifter',  name: 'Silk-thread drifter', kind: 'drifter', rarity: 'common', baseSpeed: 0.4,
     palette: ['#f1e3c4', '#cfe7e7', '#5a3f24'],
     draw: (c1,c2,c3) => silkShape(c1,c2,c3) },
-  { id: 'amberbee',     name: 'Amber-cased bee-mimic', kind: 'flyer', baseSpeed: 1.5,
+  { id: 'amberbee',     name: 'Amber-cased bee-mimic', kind: 'flyer', rarity: 'uncommon', baseSpeed: 1.5,
     palette: ['#e0a82e', '#5a3f24', '#1a140d'],
     draw: (c1,c2,c3) => bumbleShape(c1,c2,c3) },
-  { id: 'ironcricket',  name: 'Iron-shell cricket', kind: 'crawler', baseSpeed: 0.95,
+  { id: 'ironcricket',  name: 'Iron-shell cricket', kind: 'hopper', rarity: 'uncommon', baseSpeed: 0.95,
     palette: ['#3a3a3a', '#7a6242', '#1f1f1f'],
     draw: (c1,c2,c3) => grasshopperShape(c1,c2,c3) },
-  { id: 'paperghost',   name: 'Paper-ghost moth', kind: 'flyer', baseSpeed: 1.3,
+  { id: 'paperghost',   name: 'Paper-ghost moth', kind: 'flyer', rarity: 'uncommon', baseSpeed: 1.3,
     palette: ['#f1e3c4', '#d4c08a', '#5a3f24'],
     draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:false}) },
-  { id: 'rustbeetle',   name: 'Rusted hinge-beetle', kind: 'crawler', baseSpeed: 0.8,
+  { id: 'rustbeetle',   name: 'Rusted hinge-beetle', kind: 'crawler', rarity: 'common', baseSpeed: 0.8,
     palette: ['#7a3a1a', '#b89149', '#1a0e06'],
     draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'silvermidge',  name: 'Silver tax-collector midge', kind: 'flyer', baseSpeed: 2.4,
+  { id: 'silvermidge',  name: 'Silver tax-collector midge', kind: 'zigzag', rarity: 'common', baseSpeed: 2.4,
     palette: ['#cfd6d8', '#2c5d63', '#1f1f1f'],
     draw: (c1,c2,c3) => laceflyShape(c1,c2,c3) },
-  { id: 'velvetdarner', name: 'Velvet darner', kind: 'flyer', baseSpeed: 1.9,
+  { id: 'velvetdarner', name: 'Velvet darner', kind: 'flyer', rarity: 'rare', baseSpeed: 1.9,
     palette: ['#3a2a52', '#e0a82e', '#1a140d'],
     draw: (c1,c2,c3) => waspShape(c1,c2,c3) },
-  { id: 'bookworm',     name: 'Marginalia bookworm', kind: 'crawler', baseSpeed: 0.55,
+  { id: 'bookworm',     name: 'Marginalia bookworm', kind: 'crawler', rarity: 'common', baseSpeed: 0.55,
     palette: ['#a07a3a', '#f1e3c4', '#3a2418'],
     draw: (c1,c2,c3) => caterpillarShape(c1,c2,c3) },
-  { id: 'opalmoth',     name: 'Opal-eyed dusk moth', kind: 'flyer', baseSpeed: 1.4,
+  { id: 'opalmoth',     name: 'Opal-eyed dusk moth', kind: 'flyer', rarity: 'legendary', baseSpeed: 1.4,
     palette: ['#5a4a7a', '#e6c8d8', '#1a140d'],
     draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:true}) },
-  { id: 'leafmime',     name: 'Polite leaf-mime', kind: 'crawler', baseSpeed: 0.7,
+  { id: 'leafmime',     name: 'Polite leaf-mime', kind: 'crawler', rarity: 'common', baseSpeed: 0.7,
     palette: ['#5a8071', '#a8c099', '#2c3a30'],
     draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:false,antennae:true,wings:false,legs:6}) },
-  { id: 'bronzebug',    name: 'Bronze-collared sundial bug', kind: 'crawler', baseSpeed: 1.0,
+  { id: 'bronzebug',    name: 'Bronze-collared sundial bug', kind: 'crawler', rarity: 'common', baseSpeed: 1.0,
     palette: ['#b89149', '#3a2a10', '#e0c87a'],
     draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'foglace',      name: 'Fog-lace darner', kind: 'flyer', baseSpeed: 1.7,
+  { id: 'foglace',      name: 'Fog-lace darner', kind: 'zigzag', rarity: 'rare', baseSpeed: 1.7,
     palette: ['#c8d4d6', '#2c5d63', '#fff'],
     draw: (c1,c2,c3) => laceflyShape(c1,c2,c3) },
-  { id: 'porcelainbee', name: 'Porcelain-cup bee', kind: 'flyer', baseSpeed: 1.3,
+  { id: 'porcelainbee', name: 'Porcelain-cup bee', kind: 'flyer', rarity: 'rare', baseSpeed: 1.3,
     palette: ['#f5ecd6', '#b3402a', '#1a140d'],
     draw: (c1,c2,c3) => bumbleShape(c1,c2,c3) },
-  { id: 'spectrebug',   name: 'Spectacled assembly-bug', kind: 'crawler', baseSpeed: 0.75,
+  { id: 'spectrebug',   name: 'Spectacled assembly-bug', kind: 'crawler', rarity: 'common', baseSpeed: 0.75,
     palette: ['#5a3f24', '#cfe7e7', '#1f1410'],
     draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:true,antennae:true,wings:true,legs:6}) },
-  { id: 'sootmoth',     name: 'Soot-eating chimney moth', kind: 'flyer', baseSpeed: 1.5,
+  { id: 'sootmoth',     name: 'Soot-eating chimney moth', kind: 'flyer', rarity: 'common', baseSpeed: 1.5,
     palette: ['#2a2218', '#d4c08a', '#5a4a3a'],
     draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:false}) },
-  { id: 'spiralweevil', name: 'Spiral-shelled weevil', kind: 'crawler', baseSpeed: 0.65,
+  { id: 'spiralweevil', name: 'Spiral-shelled weevil', kind: 'crawler', rarity: 'common', baseSpeed: 0.65,
     palette: ['#6f4a24', '#e0c87a', '#2a1808'],
     draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'fernhopper',   name: 'Fern-frond hopper', kind: 'crawler', baseSpeed: 1.05,
+  { id: 'fernhopper',   name: 'Fern-frond hopper', kind: 'hopper', rarity: 'common', baseSpeed: 1.05,
     palette: ['#4a6a3a', '#e0c87a', '#1f2a18'],
     draw: (c1,c2,c3) => grasshopperShape(c1,c2,c3) },
-  { id: 'velvetfly',    name: 'Velvet seamstress fly', kind: 'flyer', baseSpeed: 2.1,
+  { id: 'velvetfly',    name: 'Velvet seamstress fly', kind: 'flyer', rarity: 'common', baseSpeed: 2.1,
     palette: ['#3a2418', '#b3402a', '#e0a82e'],
     draw: (c1,c2,c3) => bottleflyShape(c1,c2,c3) },
 ];
@@ -218,8 +230,34 @@ function todayKey() {
 function buildDailyPool() {
   const seed = hashStr('bug-catalogue-' + todayKey());
   const rng = mulberry32(seed);
-  const shuffled = seededShuffle(rng, SPECIES);
-  return shuffled.slice(0, POOL_SIZE);
+  // Guarantee at least one legendary, two rare, three uncommon — so a
+  // hunt always has something special to find. Fill the rest with commons.
+  const byTier = {
+    legendary: SPECIES.filter(s => s.rarity === 'legendary'),
+    rare:      SPECIES.filter(s => s.rarity === 'rare'),
+    uncommon:  SPECIES.filter(s => s.rarity === 'uncommon'),
+    common:    SPECIES.filter(s => s.rarity === 'common'),
+  };
+  const pick = (arr, n) => seededShuffle(rng, arr).slice(0, Math.min(n, arr.length));
+  const chosen = [
+    ...pick(byTier.legendary, 1),
+    ...pick(byTier.rare, 2),
+    ...pick(byTier.uncommon, 3),
+    ...pick(byTier.common, POOL_SIZE - 6),
+  ];
+  return seededShuffle(rng, chosen).slice(0, POOL_SIZE);
+}
+
+// Pick a species from the daily pool weighted by rarity.
+function pickSpawnSpecies() {
+  let total = 0;
+  for (const sp of pool) total += RARITY_TIERS[sp.rarity].weight;
+  let r = Math.random() * total;
+  for (const sp of pool) {
+    r -= RARITY_TIERS[sp.rarity].weight;
+    if (r <= 0) return sp;
+  }
+  return pool[pool.length - 1];
 }
 
 // ====================== BINOMIAL GENERATION ======================
@@ -540,14 +578,14 @@ function startHunt() {
   huntEnd = huntStart + HUNT_SECONDS * 1000;
   huntActive = true;
   lastSpawnT = 0;
-  // spawn a couple immediately so the board doesn't feel empty
-  for (let i = 0; i < 3; i++) spawnBug();
+  // spawn several immediately so the board doesn't feel empty
+  for (let i = 0; i < 5; i++) spawnBug();
   rafId = requestAnimationFrame(tick);
 }
 
 function resetSlots() {
   document.querySelectorAll('.slot').forEach(s => {
-    s.classList.remove('filled');
+    s.classList.remove('filled', 'rarity-common', 'rarity-uncommon', 'rarity-rare', 'rarity-legendary');
     s.innerHTML = '';
   });
 }
@@ -585,7 +623,7 @@ function endHunt() {
 function spawnBug() {
   const board = document.getElementById('board');
   const W = board.clientWidth, H = board.clientHeight - 80; // reserve slot strip
-  const species = pool[Math.floor(Math.random() * pool.length)];
+  const species = pickSpawnSpecies();
   const id = ++bugIdCounter;
 
   // entry edge
@@ -604,7 +642,7 @@ function spawnBug() {
 
   // DOM
   const el = document.createElement('div');
-  el.className = 'bug';
+  el.className = 'bug rarity-' + species.rarity;
   el.style.width = sizePx + 'px';
   el.style.height = sizePx + 'px';
   el.style.left = '0';
@@ -626,6 +664,17 @@ function spawnBug() {
     wobbleAmp, wobbleHz,
     born: performance.now(),
     kind: species.kind,
+    rarity: species.rarity,
+    baseSpeed,
+    // hopper bookkeeping: discrete jumps with rests between
+    nextHopAt: species.kind === 'hopper' ? performance.now() + 200 + Math.random() * 400 : 0,
+    hopUntil: 0,
+    // zigzag bookkeeping: scheduled sharp turns
+    nextZigAt: species.kind === 'zigzag' ? performance.now() + 250 + Math.random() * 500 : 0,
+    // panic from a nearby pin event — temporary speed-multiplier
+    panicUntil: 0,
+    panicVx: 0,
+    panicVy: 0,
   });
 }
 
@@ -635,21 +684,61 @@ function updateBugs(now) {
   for (let i = bugs.length - 1; i >= 0; i--) {
     const b = bugs[i];
     const t = now - b.born;
-    // wobble
-    const perpX = -Math.sin(b.rot);
-    const perpY =  Math.cos(b.rot);
-    const wob = Math.sin(t * b.wobbleHz) * b.wobbleAmp;
-    b.x += b.vx + perpX * wob;
-    b.y += b.vy + perpY * wob;
 
-    // gentle direction drift for flyers
-    if (b.kind === 'flyer' && Math.random() < 0.02) {
+    // movement-kind tweaks ----------------------------------------------
+    if (b.kind === 'hopper') {
+      // pulse: rest, then a quick burst, then rest. Velocity is gated.
+      if (now >= b.nextHopAt && b.hopUntil === 0) {
+        // begin a hop in the current general direction with a tilt
+        const a = Math.atan2(b.vy, b.vx) + (Math.random() - 0.5) * 0.5;
+        const sp = b.baseSpeed * (3.0 + Math.random() * 1.5);
+        b.vx = Math.cos(a) * sp;
+        b.vy = Math.sin(a) * sp;
+        b.rot = a;
+        b.hopUntil = now + 160;
+        b.el.classList.add('hop');
+      }
+      if (b.hopUntil > 0 && now >= b.hopUntil) {
+        // land — almost stop, schedule next hop
+        b.vx *= 0.05;
+        b.vy *= 0.05;
+        b.hopUntil = 0;
+        b.nextHopAt = now + 500 + Math.random() * 500;
+        b.el.classList.remove('hop');
+      }
+    } else if (b.kind === 'zigzag') {
+      if (now >= b.nextZigAt) {
+        const a = Math.atan2(b.vy, b.vx) + (Math.random() < 0.5 ? -1.1 : 1.1) + (Math.random() - 0.5) * 0.4;
+        const sp = Math.hypot(b.vx, b.vy);
+        b.vx = Math.cos(a) * sp;
+        b.vy = Math.sin(a) * sp;
+        b.rot = a;
+        b.nextZigAt = now + 240 + Math.random() * 320;
+      }
+    } else if (b.kind === 'flyer' && Math.random() < 0.02) {
+      // gentle direction drift for flyers (preserved from the original)
       const a = Math.atan2(b.vy, b.vx) + (Math.random() - 0.5) * 0.6;
       const sp = Math.hypot(b.vx, b.vy);
       b.vx = Math.cos(a) * sp;
       b.vy = Math.sin(a) * sp;
       b.rot = a;
     }
+
+    // wobble (perpendicular to travel)
+    const perpX = -Math.sin(b.rot);
+    const perpY =  Math.cos(b.rot);
+    const wob = Math.sin(t * b.wobbleHz) * b.wobbleAmp;
+
+    // panic boost (from a recent pin scatter)
+    let panicX = 0, panicY = 0;
+    if (b.panicUntil > now) {
+      const k = (b.panicUntil - now) / 600; // 1 → 0
+      panicX = b.panicVx * k;
+      panicY = b.panicVy * k;
+    }
+
+    b.x += b.vx + perpX * wob + panicX;
+    b.y += b.vy + perpY * wob + panicY;
 
     // off-screen culling
     if (b.x < -90 || b.x > W + 90 || b.y < -90 || b.y > H + 90) {
@@ -659,8 +748,25 @@ function updateBugs(now) {
     }
 
     // render — face direction of travel
-    const angle = Math.atan2(b.vy, b.vx) + Math.PI / 2; // svgs face up
+    const angle = Math.atan2(b.vy + panicY, b.vx + panicX) + Math.PI / 2; // svgs face up
     b.el.style.transform = `translate(${b.x - b.sizePx/2}px, ${b.y - b.sizePx/2}px) rotate(${angle}rad)`;
+  }
+}
+
+// Scatter nearby bugs away from a pin event — gives "interaction" feedback
+// when the user catches one and the rest of the board notices.
+function scatterFrom(cx, cy) {
+  const RADIUS = 130;
+  for (const b of bugs) {
+    const dx = b.x - cx;
+    const dy = b.y - cy;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > RADIUS * RADIUS) continue;
+    const d = Math.sqrt(d2) || 1;
+    const strength = (1 - d / RADIUS) * 5; // px/frame additive
+    b.panicVx = (dx / d) * strength;
+    b.panicVy = (dy / d) * strength;
+    b.panicUntil = performance.now() + 600;
   }
 }
 
@@ -671,12 +777,15 @@ function pinBug(id) {
   const b = bugs[idx];
   if (caught.length >= MAX_CATCHES) return;
 
-  // play squelch
-  squelch();
+  // play squelch (juicier for rares)
+  squelch(b.rarity);
 
-  // record
+  // scatter nearby bugs as a reaction to the pin
+  scatterFrom(b.x, b.y);
+
+  // record (preserve rarity + the actual species kind for the plate)
   const ts = Date.now();
-  caught.push({ speciesId: b.speciesId, ts });
+  caught.push({ speciesId: b.speciesId, ts, rarity: b.rarity });
 
   // pinned animation
   b.el.classList.add('pinned');
@@ -687,7 +796,7 @@ function pinBug(id) {
   const slotIdx = caught.length - 1;
   const slot = document.querySelector('.slot[data-i="' + slotIdx + '"]');
   if (slot) {
-    slot.classList.add('filled');
+    slot.classList.add('filled', 'rarity-' + b.rarity);
     const species = SPECIES.find(s => s.id === b.speciesId);
     slot.innerHTML = speciesSvg(species);
   }
@@ -700,7 +809,7 @@ function pinBug(id) {
 
 // ====================== SOUND (squelch / paper-thump) ======================
 let _audioCtx = null;
-function squelch() {
+function squelch(rarity) {
   try {
     if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const ctx = _audioCtx;
@@ -736,24 +845,71 @@ function squelch() {
     osc.connect(og).connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.13);
+
+    // bonus chime for rare/legendary — a quick rising glint
+    if (rarity === 'rare' || rarity === 'legendary') {
+      const ch = ctx.createOscillator();
+      ch.type = 'triangle';
+      const f0 = rarity === 'legendary' ? 880 : 660;
+      const f1 = rarity === 'legendary' ? 1480 : 990;
+      ch.frequency.setValueAtTime(f0, now + 0.04);
+      ch.frequency.exponentialRampToValueAtTime(f1, now + 0.32);
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.0001, now + 0.04);
+      cg.gain.exponentialRampToValueAtTime(rarity === 'legendary' ? 0.13 : 0.09, now + 0.08);
+      cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      ch.connect(cg).connect(ctx.destination);
+      ch.start(now + 0.04);
+      ch.stop(now + 0.45);
+    }
   } catch (e) { /* silent */ }
 }
 
 // ====================== PLATE ======================
 function buildAndShowPlate() {
+  renderPlate();
+  showScreen('plate');
+  // persist to share URL
+  persistShare();
+}
+
+function renderPlate() {
   // plate-level deterministic title/curator note seeded by date + caught ids
   const seedStr = todayKey() + '|' + caught.map(c => c.speciesId).join(',');
   const rng = mulberry32(hashStr(seedStr));
+
+  // Haul rarity: count tiers, sum scores. The framing changes if you've
+  // pulled something rare or legendary.
+  const counts = { common: 0, uncommon: 0, rare: 0, legendary: 0 };
+  let haulScore = 0;
+  for (const c of caught) {
+    const tier = c.rarity || (SPECIES.find(s => s.id === c.speciesId) || {}).rarity || 'common';
+    counts[tier] = (counts[tier] || 0) + 1;
+    haulScore += (RARITY_TIERS[tier] || RARITY_TIERS.common).score;
+  }
+
   const title = seededPick(rng, PLATE_TITLES);
-  const curator = caught.length === 0
-    ? "Curator's note: today, the case remained empty. Notable in itself."
-    : seededPick(rng, CURATOR_HEADERS);
+  let curator;
+  if (caught.length === 0) {
+    curator = "Curator's note: today, the case remained empty. Notable in itself.";
+  } else if (counts.legendary > 0) {
+    curator = "Curator's note: a legendary specimen filed today. The case has rarely seen better.";
+  } else if (counts.rare >= 2) {
+    curator = "Curator's note: a remarkable plate — two rares secured.";
+  } else if (counts.rare === 1) {
+    curator = "Curator's note: a rare among the regulars; the curator approves quietly.";
+  } else if (counts.uncommon >= 3) {
+    curator = "Curator's note: an uncommonly uncommon afternoon.";
+  } else {
+    curator = seededPick(rng, CURATOR_HEADERS);
+  }
 
   document.getElementById('plate-title').textContent = title;
   document.getElementById('plate-curator').textContent = curator;
   document.getElementById('plate-date').textContent = humanDate();
   document.getElementById('plate-catno').textContent = catNo();
 
+  // Haul score badge — rendered into the plate grid header
   const grid = document.getElementById('plate-grid');
   grid.innerHTML = '';
   if (caught.length === 0) {
@@ -761,28 +917,41 @@ function buildAndShowPlate() {
     empty.className = 'plate-empty';
     empty.textContent = 'No specimens were pinned. The board accepts that, too.';
     grid.appendChild(empty);
-  } else {
-    caught.forEach((c, i) => {
-      const species = SPECIES.find(s => s.id === c.speciesId);
-      if (!species) return;
-      const card = document.createElement('div');
-      card.className = 'specimen';
-      const genus = genusFor(c.speciesId, c.ts);
-      const epi = epithetFor(c.speciesId, c.ts);
-      const note = fieldNoteFor(c.speciesId, c.ts);
-      card.innerHTML = `
-        <div class="specimen-art"><div class="specimen-pin"></div>${speciesSvg(species)}</div>
-        <p class="specimen-num">Specimen ${String(i + 1).padStart(2, '0')} &middot; pinned ${fmtTime(c.ts)}</p>
-        <p class="specimen-latin">${genus} ${epi}</p>
-        <p class="specimen-note">— ${note}</p>
-      `;
-      grid.appendChild(card);
-    });
+    return;
   }
 
-  showScreen('plate');
-  // persist to share URL
-  persistShare();
+  const tally = document.createElement('div');
+  tally.className = 'haul-tally';
+  const parts = [];
+  if (counts.legendary) parts.push(`<span class="rk legendary">${counts.legendary} legendary</span>`);
+  if (counts.rare)      parts.push(`<span class="rk rare">${counts.rare} rare</span>`);
+  if (counts.uncommon)  parts.push(`<span class="rk uncommon">${counts.uncommon} uncommon</span>`);
+  if (counts.common)    parts.push(`<span class="rk common">${counts.common} common</span>`);
+  tally.innerHTML = `
+    <span class="haul-label">Haul</span>
+    <span class="haul-counts">${parts.join(' · ')}</span>
+    <span class="haul-score">${haulScore} pts</span>
+  `;
+  grid.appendChild(tally);
+
+  caught.forEach((c, i) => {
+    const species = SPECIES.find(s => s.id === c.speciesId);
+    if (!species) return;
+    const tier = c.rarity || species.rarity || 'common';
+    const card = document.createElement('div');
+    card.className = 'specimen rarity-' + tier;
+    const genus = genusFor(c.speciesId, c.ts);
+    const epi = epithetFor(c.speciesId, c.ts);
+    const note = fieldNoteFor(c.speciesId, c.ts);
+    card.innerHTML = `
+      <div class="specimen-art"><div class="specimen-pin"></div>${speciesSvg(species)}</div>
+      <p class="specimen-num">Specimen ${String(i + 1).padStart(2, '0')} &middot; pinned ${fmtTime(c.ts)}</p>
+      <p class="specimen-latin">${genus} ${epi}</p>
+      <p class="specimen-rarity">${RARITY_TIERS[tier].label}</p>
+      <p class="specimen-note">— ${note}</p>
+    `;
+    grid.appendChild(card);
+  });
 }
 
 function catNo() {
@@ -857,41 +1026,7 @@ async function hydrateFromShare() {
 }
 
 function showPlate(skipPersist) {
-  buildAndShowPlateNoPersist();
-}
-function buildAndShowPlateNoPersist() {
-  // same as buildAndShowPlate but skip persistShare (we already came from a link)
-  const seedStr = todayKey() + '|' + caught.map(c => c.speciesId).join(',');
-  const rng = mulberry32(hashStr(seedStr));
-  const title = seededPick(rng, PLATE_TITLES);
-  const curator = caught.length === 0
-    ? "Curator's note: today, the case remained empty. Notable in itself."
-    : seededPick(rng, CURATOR_HEADERS);
-
-  document.getElementById('plate-title').textContent = title;
-  document.getElementById('plate-curator').textContent = curator;
-  document.getElementById('plate-date').textContent = humanDate();
-  document.getElementById('plate-catno').textContent = catNo();
-
-  const grid = document.getElementById('plate-grid');
-  grid.innerHTML = '';
-  caught.forEach((c, i) => {
-    const species = SPECIES.find(s => s.id === c.speciesId);
-    if (!species) return;
-    const card = document.createElement('div');
-    card.className = 'specimen';
-    const genus = genusFor(c.speciesId, c.ts);
-    const epi = epithetFor(c.speciesId, c.ts);
-    const note = fieldNoteFor(c.speciesId, c.ts);
-    card.innerHTML = `
-      <div class="specimen-art"><div class="specimen-pin"></div>${speciesSvg(species)}</div>
-      <p class="specimen-num">Specimen ${String(i + 1).padStart(2, '0')} &middot; pinned ${fmtTime(c.ts)}</p>
-      <p class="specimen-latin">${genus} ${epi}</p>
-      <p class="specimen-note">— ${note}</p>
-    `;
-    grid.appendChild(card);
-  });
-
+  renderPlate();
   showScreen('plate');
 }
 

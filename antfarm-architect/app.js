@@ -16,6 +16,18 @@ const TRAIT_PARAMS = {
   engineers:  { scoutSwitchTimer: 50,  scoutSwitchChance: 0.02,  foodSwitchTimer: 100, foodSwitchChance: 0.008, digBias: 1.0, pheroDecay: 0.20 },
 };
 
+// Trait-driven objectives — each colony has a concrete goal so the player
+// sees what they're working toward and the run has a real ending. When the
+// objective hits 100%, the verdict reveal auto-triggers.
+const OBJECTIVES = {
+  hoarders:   { type: 'food',    goal: 32,  label: 'Stockpile 32 food at the nest', unit: 'delivered' },
+  excavators: { type: 'tunnels', goal: 240, label: 'Excavate 240 tunnels',          unit: 'tunnels' },
+  scouts:     { type: 'depth',   goal: 72,  label: 'Reach row 72',                  unit: 'deepest row' },
+  engineers:  { type: 'ants',    goal: 36,  label: 'Grow your colony to 36 ants',   unit: 'ants' },
+};
+
+let objectiveState = { type: '', goal: 0, value: 0, completed: false, depth: 0 };
+
 // ──────────────────────────────────────────────
 //  Canvas setup
 // ──────────────────────────────────────────────
@@ -102,6 +114,9 @@ function launchColony() {
   document.getElementById('colony-title').textContent = colonyName.toUpperCase();
   document.getElementById('subtitle').textContent = traitSubtitle(colonyTrait);
 
+  // Set up the trait-specific objective so the run has a concrete endpoint
+  initObjective();
+
   // Init and start simulation
   canvas = document.getElementById('antfarm');
   canvas.width = COLS * CELL;
@@ -116,12 +131,46 @@ function launchColony() {
   animId = requestAnimationFrame(tick);
 }
 
+function initObjective() {
+  const o = OBJECTIVES[colonyTrait] || OBJECTIVES.engineers;
+  objectiveState = { type: o.type, goal: o.goal, value: 0, completed: false, depth: 0, unit: o.unit, label: o.label };
+  const labelEl = document.getElementById('obj-label');
+  if (labelEl) labelEl.textContent = o.label.toUpperCase();
+  updateObjectiveUI();
+}
+
+function currentObjectiveValue() {
+  if (objectiveState.type === 'food')    return stats.food;
+  if (objectiveState.type === 'tunnels') return stats.tunnels;
+  if (objectiveState.type === 'ants')    return ants.length;
+  if (objectiveState.type === 'depth')   return objectiveState.depth;
+  return 0;
+}
+
+function updateObjectiveUI() {
+  const v = currentObjectiveValue();
+  objectiveState.value = v;
+  const pct = Math.min(100, Math.round((v / Math.max(1, objectiveState.goal)) * 100));
+  const fill = document.getElementById('obj-fill');
+  const prog = document.getElementById('obj-progress');
+  if (fill) fill.style.width = pct + '%';
+  if (prog) prog.textContent = `${Math.min(v, objectiveState.goal)} / ${objectiveState.goal}`;
+  if (!objectiveState.completed && v >= objectiveState.goal) {
+    objectiveState.completed = true;
+    const fillRow = document.getElementById('obj-fill');
+    if (fillRow) fillRow.classList.add('done');
+    showAction('OBJECTIVE COMPLETE — REVEALING COLONY');
+    // Auto-reveal the verdict so the run has a real ending
+    setTimeout(() => takeSnapshot(), 900);
+  }
+}
+
 function traitSubtitle(trait) {
   const map = {
-    hoarders:   'your colony hoards — tap to drop food & watch them swarm',
-    excavators: 'your colony digs — every tunnel is a monument',
-    scouts:     'your colony ranges far — redirect them with food drops',
-    engineers:  'your colony is methodical — watch the system emerge',
+    hoarders:   'your colony hoards — feed the nest until it overflows',
+    excavators: 'your colony digs — chase tunnels deeper into the dark',
+    scouts:     'your colony ranges far — drive them toward the deep soil',
+    engineers:  'your colony is methodical — grow it ant by ant',
   };
   return map[trait] || 'tap the soil to drop food — the colony will respond';
 }
@@ -134,6 +183,10 @@ function redesignColony() {
   showPheromones = true;
   const btn = document.getElementById('btn-pheromones');
   if (btn) { btn.textContent = 'PHEROMONES: ON'; btn.classList.remove('dim'); }
+  // Reset objective bar visuals so a re-launched colony starts fresh
+  objectiveState = { type: '', goal: 0, value: 0, completed: false, depth: 0 };
+  const fill = document.getElementById('obj-fill');
+  if (fill) { fill.style.width = '0%'; fill.classList.remove('done'); }
   closeReveal();
 }
 
@@ -358,11 +411,12 @@ function foodSourceAt(x, y) {
   return null;
 }
 
-// Each food delivery feeds the colony; every 4th delivery hatches a new ant
+// Each food delivery feeds the colony; every 3rd delivery hatches a new ant
+// (snappier than the original every-4-th so growth feels responsive).
 let foodDeliveryCounter = 0;
 function depositFoodAtNest() {
   foodDeliveryCounter++;
-  if (foodDeliveryCounter % 4 === 0 && ants.length < MAX_ANTS) {
+  if (foodDeliveryCounter % 3 === 0 && ants.length < MAX_ANTS) {
     const nestX = Math.floor(COLS / 2);
     const nestY = 6;
     ants.push(createAnt(nestX, nestY));
@@ -469,9 +523,12 @@ const antRng = seededRng(Date.now() & 0xffff);
 function tick() {
   tickCount++;
 
+  let deepest = objectiveState.depth || 0;
   for (const ant of ants) {
     stepAnt(ant, antRng);
+    if (ant.y > deepest) deepest = ant.y;
   }
+  objectiveState.depth = deepest;
 
   if (tickCount % 3 === 0) decayPheromones();
 
@@ -495,6 +552,9 @@ function tick() {
 
   updateStats();
   updateLegend();
+  // Throttle objective-UI to every few ticks — DOM writes are cheap but
+  // the reveal trigger inside it should fire only after a real change.
+  if (tickCount % 4 === 0) updateObjectiveUI();
   render();
   animId = requestAnimationFrame(tick);
 }

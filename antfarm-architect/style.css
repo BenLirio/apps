@@ -579,3 +579,57 @@ button.dim {
   font-size: 13px;
   min-width: 120px;
 }
+
+/* ── Objective bar ── */
+#objective-bar {
+  width: 100%;
+  max-width: 720px;
+  margin: 6px auto 4px;
+  padding: 6px 12px 8px;
+  background: rgba(12, 8, 2, 0.85);
+  border: 1px solid var(--amber-dim);
+  border-radius: 4px;
+}
+.obj-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  margin-bottom: 5px;
+}
+.obj-label {
+  color: var(--amber);
+  text-shadow: 0 0 6px rgba(232, 160, 32, 0.45);
+}
+.obj-progress {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--amber-bright);
+}
+.obj-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(122, 79, 8, 0.2);
+  border: 1px solid var(--amber-dim);
+  position: relative;
+  overflow: hidden;
+}
+.obj-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--amber-dim), var(--amber), var(--amber-bright));
+  transition: width 0.35s ease-out;
+  box-shadow: 0 0 8px rgba(232, 160, 32, 0.6);
+}
+.obj-fill.done {
+  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan), #b0ffff);
+  box-shadow: 0 0 14px rgba(80, 200, 200, 0.85);
+  animation: obj-pulse 1.2s ease-in-out infinite;
+}
+@keyframes obj-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.65; }
+}

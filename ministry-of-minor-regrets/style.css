@@ -556,10 +556,7 @@ body {
   grid-template-columns: 1fr auto;
   align-items: baseline;
   gap: 4px 12px;
-  position: sticky;
-  bottom: 8px;
-  z-index: 2;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  position: relative;
 }
 .running-tally::before {
   content: '';

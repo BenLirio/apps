@@ -591,6 +591,120 @@ html, body {
 
 #share { display: none; }
 
+/* ── FOOD WEB PANEL ──────────────────────────── */
+#foodweb-panel {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 4;
+  width: 200px;
+  background: rgba(26, 11, 46, 0.78);
+  border: 2px solid var(--grape);
+  border-radius: 14px;
+  padding: 8px 10px 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  font-family: 'Fredoka', sans-serif;
+  color: var(--ink);
+  transition: width 0.18s ease, height 0.18s ease, padding 0.18s ease;
+}
+#foodweb-panel:not(.open) {
+  width: 56px;
+  padding: 4px 4px;
+}
+#foodweb-panel:not(.open) .fw-body { display: none; }
+#foodweb-panel:not(.open) .fw-title { display: none; }
+
+.fw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.fw-title {
+  font-family: 'Bungee', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--warm);
+}
+#fw-toggle {
+  background: rgba(255,255,255,0.08);
+  color: var(--ink);
+  border: 1px solid var(--grape);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: 'Bungee', sans-serif;
+  padding: 0;
+}
+#fw-toggle:hover { background: var(--grape); }
+
+.fw-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+.fw-tier {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+}
+.fw-tier-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+  width: 56px;
+}
+.fw-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+.fw-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(176,124,255,0.35);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fw-cell .fw-emoji { font-size: 13px; }
+.fw-cell .fw-count {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--sun);
+}
+.fw-cell.empty {
+  opacity: 0.35;
+}
+.fw-cell.empty .fw-count { color: var(--ink-soft); }
+.fw-cell.plant {
+  background: rgba(123, 227, 159, 0.14);
+  border-color: var(--leaf);
+}
+.fw-cell.plant .fw-count { color: var(--leaf); }
+.fw-arrow {
+  font-size: 9px;
+  color: var(--ink-soft);
+  letter-spacing: 1px;
+  text-align: center;
+  margin: 1px 0;
+  font-family: 'Press Start 2P', monospace;
+  opacity: 0.7;
+}
+
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (max-width: 640px) {
   #hud { font-size: 11px; padding: 6px 10px; }
@@ -606,4 +720,7 @@ html, body {
   .critter-card .crit-emoji { font-size: 22px; }
   .critter-card .crit-name { font-size: 10px; }
   #open-builder { font-size: 11px; padding: 7px 12px; top: 8px; right: 8px; }
+  #foodweb-panel { width: 168px; bottom: 8px; left: 8px; padding: 6px 8px 8px; }
+  #foodweb-panel:not(.open) { width: 48px; }
+  .fw-tier-label { width: 44px; font-size: 7px; }
 }

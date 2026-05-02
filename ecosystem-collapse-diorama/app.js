@@ -131,8 +131,10 @@ const VIBES = {
 };
 
 // ─── CONFIG / DEFAULT WORLD ───────────────────────────────────────────────────
+// The default starts with three plant-eaters + one hunter, deliberately
+// prey-heavy so the food web has time to settle before predation pressure.
 const DEFAULT_WORLD = {
-  selected: ['fluffin', 'mossling', 'velvox'],
+  selected: ['sproutbug', 'fluffin', 'mossling', 'velvox'],
   knobs: {
     plants: 1.0,
     day: 1.0,
@@ -146,10 +148,25 @@ const DEFAULT_WORLD = {
 const CFG = {
   basePlantMax: 240,
   basePlantGrowRate: 0.08,
-  initPerSpecies: 9,
-  initPerApex: 3,
   milestoneSeconds: 90,
 };
+
+// Initial population per species — scaled to maxPop and trophic role so
+// hunters and apex don't outnumber the prey they need to survive on.
+// Previously every species started at 9, which let predators wipe out prey
+// before the simulation had a chance to find equilibrium.
+function initialCountFor(spec) {
+  let frac;
+  switch (spec.eats) {
+    case 'plants':     frac = 0.25; break;  // most prey
+    case 'omnivore':   frac = 0.18; break;
+    case 'herbivores': frac = 0.18; break;  // hunters — clearly fewer than prey
+    case 'predators':  frac = 0.40; break;  // apex (already capped tiny)
+    default:           frac = 0.20;
+  }
+  const minByRole = (spec.eats === 'predators' || spec.eats === 'herbivores') ? 2 : 6;
+  return Math.max(minByRole, Math.round(spec.maxPop * frac));
+}
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let canvas, ctx, W, H;
@@ -219,9 +236,10 @@ function initSim(seed) {
   for (let i = 0; i < Math.floor(pm * 0.9); i++)
     plants.push(mkPlant(rng() * W, rng() * H));
 
-  // Spawn each selected species
+  // Spawn each selected species — counts scale by trophic role so prey
+  // outnumber hunters (and hunters outnumber apex) at start.
   for (const spec of getActiveSpecs()) {
-    const init = spec.eats === 'predators' ? CFG.initPerApex : CFG.initPerSpecies;
+    const init = initialCountFor(spec);
     for (let i = 0; i < init; i++)
       critters.push(mkCritter(rng() * W, rng() * H, spec));
   }
@@ -432,6 +450,86 @@ function updatePopCounts() {
     txt += ` ${spec.emoji}${n}`;
   }
   document.getElementById('pop-counts').textContent = txt;
+  renderFoodWeb(counts);
+}
+
+// ─── FOOD WEB PANEL ───────────────────────────────────────────────────────────
+// Compact view of the trophic structure: who eats whom, with current
+// populations. Throttled to a few refreshes per second so we're not
+// rebuilding DOM on every animation frame.
+let _fwLastRender = 0;
+function renderFoodWeb(counts) {
+  const body = document.getElementById('foodweb-body');
+  if (!body) return;
+  const panel = document.getElementById('foodweb-panel');
+  if (!panel || !panel.classList.contains('open')) return;
+  const now = performance.now();
+  if (now - _fwLastRender < 250) return; // throttle
+  _fwLastRender = now;
+
+  const active = getActiveSpecs();
+  const byTier = {
+    plants:     [],
+    omnivore:   [],
+    herbivores: [],
+    predators:  [],
+  };
+  for (const sp of active) {
+    if (byTier[sp.eats]) byTier[sp.eats].push(sp);
+  }
+
+  const renderRow = (tierLabel, entries, plantCount) => {
+    if (entries.length === 0 && plantCount === undefined) return '';
+    const items = plantCount !== undefined
+      ? `<span class="fw-cell plant"><span class="fw-emoji">🌿</span><span class="fw-count">${plantCount}</span></span>`
+      : entries.map(sp => {
+          const n = counts[sp.id] || 0;
+          const dim = n === 0 ? ' empty' : '';
+          return `<span class="fw-cell${dim}" title="${sp.name}: ${n}"><span class="fw-emoji">${sp.emoji}</span><span class="fw-count">${n}</span></span>`;
+        }).join('');
+    return `<div class="fw-tier"><span class="fw-tier-label">${tierLabel}</span><span class="fw-row">${items}</span></div>`;
+  };
+
+  const eatsArrow = '<div class="fw-arrow">↑ eaten by</div>';
+  const parts = [];
+  parts.push(renderRow('Plants', [], plants.length));
+  // Plant-eaters tier (always show even if empty so the structure is visible)
+  if (byTier.plants.length || byTier.omnivore.length) {
+    parts.push(eatsArrow);
+    const grazers = [...byTier.plants];
+    parts.push(renderRow('Grazers', grazers));
+  }
+  if (byTier.omnivore.length) {
+    // Omnivores eat plants AND herbivores — slot them between tiers
+    parts.push(`<div class="fw-tier"><span class="fw-tier-label">Omnivores</span><span class="fw-row">${
+      byTier.omnivore.map(sp => {
+        const n = counts[sp.id] || 0;
+        const dim = n === 0 ? ' empty' : '';
+        return `<span class="fw-cell${dim}" title="${sp.name}: ${n}"><span class="fw-emoji">${sp.emoji}</span><span class="fw-count">${n}</span></span>`;
+      }).join('')
+    }</span></div>`);
+  }
+  if (byTier.herbivores.length) {
+    parts.push(eatsArrow);
+    parts.push(renderRow('Hunters', byTier.herbivores));
+  }
+  if (byTier.predators.length) {
+    parts.push(eatsArrow);
+    parts.push(renderRow('Apex', byTier.predators));
+  }
+
+  body.innerHTML = parts.join('');
+}
+
+function toggleFoodWeb() {
+  const panel = document.getElementById('foodweb-panel');
+  const btn = document.getElementById('fw-toggle');
+  panel.classList.toggle('open');
+  if (btn) btn.textContent = panel.classList.contains('open') ? '−' : '+';
+  if (panel.classList.contains('open')) {
+    _fwLastRender = 0; // force refresh on reopen
+    updatePopCounts();
+  }
 }
 
 // ─── STATE LABELS ─────────────────────────────────────────────────────────────
@@ -1044,6 +1142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('report-overlay').style.display = 'none';
     paused = false;
   });
+
+  const fwToggleBtn = document.getElementById('fw-toggle');
+  if (fwToggleBtn) fwToggleBtn.addEventListener('click', toggleFoodWeb);
 
   // Initial sim
   initSim(Date.now());

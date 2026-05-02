@@ -402,3 +402,119 @@ html, body {
   text-align: center;
   margin: 12px 0;
 }
+
+/* ===== Rarity treatments ===== */
+/* common: no treatment. uncommon/rare/legendary glow more strongly. */
+.bug.rarity-uncommon {
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)) drop-shadow(0 0 4px rgba(255,220,140,.35));
+}
+.bug.rarity-rare {
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)) drop-shadow(0 0 7px rgba(255,200,90,.6));
+  animation: rare-pulse 1.6s ease-in-out infinite;
+}
+.bug.rarity-legendary {
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.45)) drop-shadow(0 0 9px rgba(255,170,80,.85)) drop-shadow(0 0 16px rgba(180,80,255,.45));
+  animation: legendary-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rare-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes legendary-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.09); }
+}
+
+/* hop kind — small visual lift while airborne */
+.bug.hop {
+  transition: filter .08s ease;
+  filter: drop-shadow(0 6px 5px rgba(0,0,0,.5));
+}
+
+/* Slot rarity tints (filled-only) */
+.slot.filled.rarity-uncommon {
+  border-color: #d8a64a;
+  box-shadow: inset 0 0 0 1px rgba(216,166,74,.5);
+}
+.slot.filled.rarity-rare {
+  border-color: #ff9b3a;
+  box-shadow: inset 0 0 0 2px rgba(255,155,58,.55), 0 0 6px rgba(255,155,58,.35);
+}
+.slot.filled.rarity-legendary {
+  border-color: #c879ff;
+  box-shadow: inset 0 0 0 2px rgba(200,121,255,.65), 0 0 10px rgba(200,121,255,.5);
+}
+
+/* Plate haul tally */
+.haul-tally {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: rgba(255,235,200,.45);
+  border: 1px solid rgba(80,50,20,.35);
+  font-size: 13px;
+}
+.haul-label {
+  font-family: "Special Elite", monospace;
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.haul-counts {
+  flex: 1;
+  font-style: italic;
+  color: var(--ink);
+}
+.haul-counts .rk {
+  display: inline-block;
+  padding: 0 4px;
+}
+.haul-counts .rk.legendary { color: #6b3a99; font-weight: 700; }
+.haul-counts .rk.rare      { color: #b35a14; font-weight: 700; }
+.haul-counts .rk.uncommon  { color: #7a5a18; }
+.haul-counts .rk.common    { color: var(--ink-soft); }
+.haul-score {
+  font-family: "Special Elite", monospace;
+  font-size: 13px;
+  letter-spacing: .12em;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Specimen rarity badge + card tinting */
+.specimen-rarity {
+  font-family: "Special Elite", monospace;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  color: var(--ink-soft);
+}
+.specimen.rarity-uncommon {
+  border-color: rgba(180,135,40,.55);
+}
+.specimen.rarity-uncommon .specimen-rarity { color: #7a5a18; }
+.specimen.rarity-rare {
+  border-color: rgba(180,90,20,.7);
+  box-shadow: inset 0 0 0 1px rgba(255,155,58,.25), 0 0 8px rgba(255,155,58,.18);
+}
+.specimen.rarity-rare .specimen-rarity { color: #b35a14; font-weight: 700; }
+.specimen.rarity-legendary {
+  border-color: rgba(110,60,170,.75);
+  box-shadow: inset 0 0 0 1px rgba(200,121,255,.35), 0 0 12px rgba(200,121,255,.25);
+}
+.specimen.rarity-legendary .specimen-rarity { color: #6b3a99; font-weight: 700; }
+.specimen.rarity-legendary::before {
+  content: "★";
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: #6b3a99;
+  font-size: 16px;
+  z-index: 3;
+}
