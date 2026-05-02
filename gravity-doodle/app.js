@@ -1,23 +1,27 @@
-// Gravity Doodle — GPU-accelerated falling-sand sandbox.
+// Gravity Doodle — physics sandbox v2.
 //
-// MILESTONE 1 (this file): the simulation runs on the GPU via WebGL2 fragment
-// shaders. A 2×2 Margolus block cellular automaton handles falling/sinking
-// for powders and liquids. Painting, pours, and clears are also shader passes,
-// so the CPU never touches the simulation grid.
+// What's new vs v1:
+//   • Per-cell registers (ra/rb) — element-defined state for aging, decay,
+//     radioactivity, fermentation, anything that needs a counter per pixel.
+//   • Charge field — electricity propagates through conductors. Batteries
+//     emit, copper carries, lightning ignites flammables, gunpowder pops at
+//     a charge threshold. New full-resolution texture, diffusion shader.
+//   • Coarse pressure/airflow grid (1/4 res) — gases drift, fans push,
+//     explosions inject pressure pulses, balloons pop at high pressure.
+//   • Density-aware displacement — mercury (9) sinks through water (5),
+//     oil (2) floats on water, all liquids stack by density.
+//   • Stickiness wired into Margolus block — tar/honey actually cling to
+//     walls. Cells with stickiness > 0 skip their swap with probability
+//     stickiness when adjacent to a static or cellular cell.
+//   • Reaction conditions — minTemp/maxTemp gates, catalyst flag.
+//   • Anisotropic cellular growth — vines grow up, roots grow down.
 //
-// What works in milestone 1:
-//   • static (walls, ice, plant)
-//   • powder (sand, salt, snow, gunpowder)
-//   • liquid (water, oil, honey, acid) — with viscosity & density swaps
-//
-// Stubbed for milestone 2+ (will be added in follow-up commits):
-//   • gas (smoke rises) — currently renders but doesn't move
-//   • cellular (plant growth, mold) — currently renders but doesn't grow
-//   • reactions (acid eats walls, fire ignites oil)
-//   • explosions, sparks, flying debris
-//
-// AI invention still works; invented elements register with their full trait
-// spec, but only static/powder/liquid behave correctly until milestone 2.
+// Cell layout: RGBA8UI = (id, variant, ra, rb).
+// ra and rb are general-purpose 8-bit registers whose meaning is
+// element-defined. Existing semantics (explosive settle, gas life) are
+// special cases: explosive uses (ra=settle, rb=primedFlag); gas uses
+// (ra=life). The registerStep shader handles AI-defined registers via the
+// raInit/raDelta/raDiesAt/raTransformsTo trait fields.
 
 (function () {
   // ── Constants ──────────────────────────────────────────────────────────────
@@ -26,9 +30,6 @@
   const FEEDBACK_ENDPOINT = 'https://5c99bazuj0.execute-api.us-east-1.amazonaws.com/feedback';
   const SLUG = 'gravity-doodle';
 
-  const EMPTY = 0;
-
-  // Element kind packed into the lookup texture's R channel.
   const KIND_EMPTY    = 0;
   const KIND_STATIC   = 1;
   const KIND_POWDER   = 2;
@@ -62,6 +63,7 @@
       uploadReactions();
       uploadTraits();
       uploadCellular();
+      uploadRegisters();
     }
     rebuildDiscoveryRules();
   }
@@ -76,130 +78,179 @@
   const SMOKE_ID     = 5;
   const PLANT_ID     = 6;
   const SPARK_ID     = 7;
-  // ice / steam / lava seed the phase-transition system: ice melts to water,
-  // water boils to steam, steam condenses back to water, lava emits enough heat
-  // to drive the whole chain. Without these the demo of "discovering science"
-  // has nothing visible to show on first load.
   const ICE_ID       = 8;
   const STEAM_ID     = 9;
   const LAVA_ID      = 10;
-  // One built-in per "new physics axis" so each emergent behavior has
-  // something to play with on first load (no AI invent needed):
-  //   fire   — drives the ignition pipeline (flammable + temp >= ignition)
-  //   acid   — drives the corrosion pass (corrosivity > hardness)
-  //   honey  — high viscosity demos the fluidity gate in FS_SIM
-  //   gravel — low flow demos the same fluidity gate for powders
-  //   stone  — completes the lava↔stone phase loop alongside ice/water/steam
-  //   mold   — cellular CA + reaction; spreads on plant
   const FIRE_ID      = 11;
   const ACID_ID      = 12;
   const HONEY_ID     = 13;
   const GRAVEL_ID    = 14;
   const STONE_ID     = 15;
   const MOLD_ID      = 16;
+  // v2 showcase elements
+  const WOOD_ID      = 17;
+  const OIL_ID       = 18;
+  const MERCURY_ID   = 19;
+  const DUST_ID      = 20;
+  const COPPER_ID    = 21;
+  const BATTERY_ID   = 22;
+  const LIGHTNING_ID = 23;
+  const FAN_ID       = 24;
+  const BALLOON_ID   = 25;
+  const URANIUM_ID   = 26;
+  const TAR_ID       = 27;
+  const VINE_ID      = 28;
 
   const SAND_PALETTE = ['#e8a030', '#d89028', '#f0b848', '#e8a838'];
 
-  // Trait scale convention (all 0..255 for cheap shader packing later):
-  //   emitTemp:      ambient temperature this element radiates. 0=ambient (~30),
-  //                  fire/lava ~220, ice/snow ~10. Drives heat propagation.
-  //   ignitionPoint: temperature above which the element catches fire. 0..255.
-  //   flammability:  per-frame chance × 255 of igniting once above ignitionPoint.
-  //   conductivity:  how fast heat diffuses to neighbors (0=insulator, 255=metal).
-  //   corrosivity:   strength as a corrosive agent (acid 200, water 0).
-  //   hardness:      resistance to corrosion / eating (wall 200, sand 60).
-  // The current physics engine still uses explicit reactions, but registering
-  // these traits puts the data in place and gives the AI a richer vocabulary.
-  // A future commit will replace the reaction lookup with a trait-driven
-  // pass (heat diffusion → ignition → corrosion → phase change).
   function initBuiltIns() {
-    registry[WALL_ID]      = { id: WALL_ID,      key: 'wall',      displayName: 'wall',      kind: 'static', density: 10, colors: ['#d8c8a0', '#c8b890', '#b8a880', '#c0c090'], isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 60,  corrosivity: 0,   hardness: 200 };
-    registry[SAND_ID]      = { id: SAND_ID,      key: 'sand',      displayName: 'sand',      kind: 'powder', density: 5, flow: 0.55, stickiness: 0, colors: SAND_PALETTE, isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 80,  corrosivity: 0,   hardness: 60 };
-    registry[WATER_ID]     = { id: WATER_ID,     key: 'water',     displayName: 'water',     kind: 'liquid', density: 5, viscosity: 0, stickiness: 0, colors: ['#4aa8d8', '#3e9ac8', '#62b8e0', '#2e84b8'], isBuiltIn: true, reactions: [],
-      emitTemp: 25, ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0,
+    // Existing core ────────────────────────────────────────────────────────
+    registry[WALL_ID]      = { id: WALL_ID, key: 'wall', displayName: 'wall', kind: 'static', density: 10, colors: ['#d8c8a0','#c8b890','#b8a880','#c0c090'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0, conductivity: 60, corrosivity: 0, hardness: 200 };
+    registry[SAND_ID]      = { id: SAND_ID, key: 'sand', displayName: 'sand', kind: 'powder', density: 5, flow: 0.55, stickiness: 0, colors: SAND_PALETTE, isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0, conductivity: 80, corrosivity: 0, hardness: 60 };
+    registry[WATER_ID]     = { id: WATER_ID, key: 'water', displayName: 'water', kind: 'liquid', density: 5, viscosity: 0, stickiness: 0, colors: ['#4aa8d8','#3e9ac8','#62b8e0','#2e84b8'], isBuiltIn: true, reactions: [],
+      emitTemp: 25, ignitionPoint: 255, flammability: 0, conductivity: 140, corrosivity: 0, hardness: 0,
       boilingPoint: 100, boilsTo: 'steam', freezingPoint: 22, freezesTo: 'ice' };
-    registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#d01818', '#ff4030', '#ffae40', '#ffd060'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [],
-      emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
-    registry[SMOKE_ID]     = { id: SMOKE_ID,     key: 'smoke',     displayName: 'smoke',     kind: 'gas',    density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb'], isBuiltIn: true, reactions: [],
-      emitTemp: 70, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
-    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'static', density: 3, colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 120, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 40 };
-    // Sparks are spawned by explosions, not painted. Hidden from the palette UI
-    // but registered like any other element so the GPU data textures pick them
-    // up. Short-lived, hot, buoyant — a visceral byproduct of detonation.
-    registry[SPARK_ID]     = { id: SPARK_ID,     key: 'spark',     displayName: 'spark',     kind: 'gas',      density: 1, buoyancy: 1, lifeMin: 14, lifeMax: 34, colors: ['#ffe070', '#ffb030', '#fff0a0', '#ff6020'], isBuiltIn: true, isHidden: true, reactions: [],
-      emitTemp: 150, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 0,   hardness: 0 };
-    registry[ICE_ID]       = { id: ICE_ID,       key: 'ice',       displayName: 'ice',       kind: 'static',   density: 5, colors: ['#c0e0ff', '#a0d0f0', '#e0f0ff', '#80b0e0'], isBuiltIn: true, reactions: [],
-      emitTemp: 10, ignitionPoint: 255, flammability: 0,    conductivity: 160, corrosivity: 0,   hardness: 60,
+    registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#d01818','#ff4030','#ffae40','#ffd060'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [],
+      emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90, corrosivity: 0, hardness: 30,
+      ignitesAtCharge: 30 };
+    registry[SMOKE_ID]     = { id: SMOKE_ID, key: 'smoke', displayName: 'smoke', kind: 'gas', density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a','#aaaaaa','#888888','#bbbbbb'], isBuiltIn: true, reactions: [],
+      emitTemp: 70, ignitionPoint: 255, flammability: 0, conductivity: 200, corrosivity: 0, hardness: 0,
+      airflowFactor: 0.7 };
+    registry[PLANT_ID]     = { id: PLANT_ID, key: 'plant', displayName: 'plant', kind: 'static', density: 3, colors: ['#3aa040','#2c8c34','#4cb854','#226c2a'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 120, flammability: 0.05, conductivity: 70, corrosivity: 0, hardness: 40 };
+    registry[SPARK_ID]     = { id: SPARK_ID, key: 'spark', displayName: 'spark', kind: 'gas', density: 1, buoyancy: 1, lifeMin: 14, lifeMax: 34, colors: ['#ffe070','#ffb030','#fff0a0','#ff6020'], isBuiltIn: true, isHidden: true, reactions: [],
+      emitTemp: 150, ignitionPoint: 255, flammability: 0, conductivity: 220, corrosivity: 0, hardness: 0,
+      airflowFactor: 0.5 };
+    registry[ICE_ID]       = { id: ICE_ID, key: 'ice', displayName: 'ice', kind: 'static', density: 5, colors: ['#c0e0ff','#a0d0f0','#e0f0ff','#80b0e0'], isBuiltIn: true, reactions: [],
+      emitTemp: 10, ignitionPoint: 255, flammability: 0, conductivity: 160, corrosivity: 0, hardness: 60,
       meltingPoint: 33, meltsTo: 'water' };
-    registry[STEAM_ID]     = { id: STEAM_ID,     key: 'steam',     displayName: 'steam',     kind: 'gas',      density: 1, buoyancy: 0.95, lifeMin: 180, lifeMax: 240, colors: ['#d8e8f0', '#b0c8d8', '#f0f6fa', '#c0d8e0'], isBuiltIn: true, reactions: [],
-      emitTemp: 130, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0,
-      freezingPoint: 50, freezesTo: 'water' };
-    registry[LAVA_ID]      = { id: LAVA_ID,      key: 'lava',      displayName: 'lava',      kind: 'liquid',   density: 8, viscosity: 0.7, stickiness: 0, colors: ['#ff5020', '#ff8030', '#d03010', '#ffc040'], isBuiltIn: true, reactions: [],
-      emitTemp: 210, ignitionPoint: 255, flammability: 0,    conductivity: 180, corrosivity: 80,  hardness: 30,
+    registry[STEAM_ID]     = { id: STEAM_ID, key: 'steam', displayName: 'steam', kind: 'gas', density: 1, buoyancy: 0.95, lifeMin: 180, lifeMax: 240, colors: ['#d8e8f0','#b0c8d8','#f0f6fa','#c0d8e0'], isBuiltIn: true, reactions: [],
+      emitTemp: 130, ignitionPoint: 255, flammability: 0, conductivity: 200, corrosivity: 0, hardness: 0,
+      freezingPoint: 50, freezesTo: 'water', airflowFactor: 0.8 };
+    registry[LAVA_ID]      = { id: LAVA_ID, key: 'lava', displayName: 'lava', kind: 'liquid', density: 8, viscosity: 0.7, stickiness: 0, colors: ['#ff5020','#ff8030','#d03010','#ffc040'], isBuiltIn: true, reactions: [],
+      emitTemp: 210, ignitionPoint: 255, flammability: 0, conductivity: 180, corrosivity: 80, hardness: 30,
       freezingPoint: 80, freezesTo: 'stone' };
-    registry[FIRE_ID]      = { id: FIRE_ID,      key: 'fire',      displayName: 'fire',      kind: 'gas',      density: 1, buoyancy: 1, lifeMin: 30, lifeMax: 70, colors: ['#ff4020', '#ff8010', '#ffc040', '#ffe070'], isBuiltIn: true, reactions: [],
-      emitTemp: 240, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 40,  hardness: 0 };
-    registry[ACID_ID]      = { id: ACID_ID,      key: 'acid',      displayName: 'acid',      kind: 'liquid',   density: 4, viscosity: 0.1, stickiness: 0, colors: ['#60ff30', '#80ff40', '#30d020', '#b0ff60'], isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 200, flammability: 0,    conductivity: 110, corrosivity: 200, hardness: 0 };
-    registry[HONEY_ID]     = { id: HONEY_ID,     key: 'honey',     displayName: 'honey',     kind: 'liquid',   density: 6, viscosity: 0.92, stickiness: 0.7, colors: ['#e8a030', '#d48020', '#ffc050', '#b86020'], isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 180, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 0 };
-    registry[GRAVEL_ID]    = { id: GRAVEL_ID,    key: 'gravel',    displayName: 'gravel',    kind: 'powder',   density: 7, flow: 0.15, stickiness: 0, colors: ['#7a7060', '#605040', '#8a8278', '#504438'], isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 240, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 100 };
-    registry[STONE_ID]     = { id: STONE_ID,     key: 'stone',     displayName: 'stone',     kind: 'static',   density: 9, colors: ['#888080', '#706868', '#a09890', '#605850'], isBuiltIn: true, reactions: [],
-      emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 200,
+    registry[FIRE_ID]      = { id: FIRE_ID, key: 'fire', displayName: 'fire', kind: 'gas', density: 1, buoyancy: 1, lifeMin: 30, lifeMax: 70, colors: ['#ff4020','#ff8010','#ffc040','#ffe070'], isBuiltIn: true, reactions: [],
+      emitTemp: 240, ignitionPoint: 255, flammability: 0, conductivity: 220, corrosivity: 40, hardness: 0,
+      airflowFactor: 0.5 };
+    registry[ACID_ID]      = { id: ACID_ID, key: 'acid', displayName: 'acid', kind: 'liquid', density: 4, viscosity: 0.1, stickiness: 0, colors: ['#60ff30','#80ff40','#30d020','#b0ff60'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 200, flammability: 0, conductivity: 110, corrosivity: 200, hardness: 0 };
+    registry[HONEY_ID]     = { id: HONEY_ID, key: 'honey', displayName: 'honey', kind: 'liquid', density: 6, viscosity: 0.92, stickiness: 0.7, colors: ['#e8a030','#d48020','#ffc050','#b86020'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 180, flammability: 0.05, conductivity: 70, corrosivity: 0, hardness: 0 };
+    registry[GRAVEL_ID]    = { id: GRAVEL_ID, key: 'gravel', displayName: 'gravel', kind: 'powder', density: 7, flow: 0.15, stickiness: 0, colors: ['#7a7060','#605040','#8a8278','#504438'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 240, flammability: 0, conductivity: 100, corrosivity: 0, hardness: 100 };
+    registry[STONE_ID]     = { id: STONE_ID, key: 'stone', displayName: 'stone', kind: 'static', density: 9, colors: ['#888080','#706868','#a09890','#605850'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0, conductivity: 100, corrosivity: 0, hardness: 200,
       meltingPoint: 200, meltsTo: 'lava' };
-    // Mold: a cellular CA seeded by adjacent plant. The reactions list also
-    // converts plant cells in direct contact, so a single seed creeps through
-    // a plant patch over time. Slow tick + low growChance keep it from
-    // exploding instantly.
-    registry[MOLD_ID]      = { id: MOLD_ID,      key: 'mold',      displayName: 'mold',      kind: 'cellular', density: 3, born: [1,2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.06, surviveChance: 1, birthFrom: ['plant'], colors: ['#304820', '#405830', '#50682a', '#2a3818'], isBuiltIn: true,
+    registry[MOLD_ID]      = { id: MOLD_ID, key: 'mold', displayName: 'mold', kind: 'cellular', density: 3, born: [1,2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.06, surviveChance: 1, birthFrom: ['plant'], colors: ['#304820','#405830','#50682a','#2a3818'], isBuiltIn: true,
       reactions: [{ other: 'plant', becomes: 'mold', chance: 0.03 }],
-      emitTemp: 30, ignitionPoint: 150, flammability: 0.06, conductivity: 70,  corrosivity: 0,   hardness: 50 };
-    keyToId.wall = WALL_ID;
-    keyToId.sand = SAND_ID;
-    keyToId.water = WATER_ID;
-    keyToId.explosive = EXPLOSIVE_ID;
-    keyToId.smoke = SMOKE_ID;
-    keyToId.plant = PLANT_ID;
-    keyToId.spark = SPARK_ID;
-    keyToId.ice = ICE_ID;
-    keyToId.steam = STEAM_ID;
-    keyToId.lava = LAVA_ID;
-    keyToId.fire = FIRE_ID;
-    keyToId.acid = ACID_ID;
-    keyToId.honey = HONEY_ID;
-    keyToId.gravel = GRAVEL_ID;
-    keyToId.stone = STONE_ID;
-    keyToId.mold = MOLD_ID;
-    nextId = MOLD_ID + 1;
+      emitTemp: 30, ignitionPoint: 150, flammability: 0.06, conductivity: 70, corrosivity: 0, hardness: 50 };
+
+    // v2 showcase ──────────────────────────────────────────────────────────
+    // wood — flammable static. Burns through register-based aging instead of
+    // the gas life mechanism: when ignited, ra ticks down each frame; when
+    // ra hits zero, wood vanishes (becomes fire). This gives wood real burn
+    // duration. Without ignition, ra stays at raInit (no decay).
+    registry[WOOD_ID]      = { id: WOOD_ID, key: 'wood', displayName: 'wood', kind: 'static', density: 4, colors: ['#7a4820','#8a5828','#5a3010','#a06838'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 140, flammability: 0.04, conductivity: 40, corrosivity: 0, hardness: 100 };
+    // oil — light flammable liquid. Floats on water (density 2 vs 5). Boils
+    // straight to smoke at ~180; ignites easily.
+    registry[OIL_ID]       = { id: OIL_ID, key: 'oil', displayName: 'oil', kind: 'liquid', density: 2, viscosity: 0.3, stickiness: 0, colors: ['#2a1010','#4a2810','#1a0808','#603020'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 100, flammability: 0.20, conductivity: 90, corrosivity: 0, hardness: 0,
+      boilingPoint: 180, boilsTo: 'smoke' };
+    // mercury — heaviest liquid. Sinks through water/acid/oil. Conducts
+    // electricity (real-world mercury is conductive).
+    registry[MERCURY_ID]   = { id: MERCURY_ID, key: 'mercury', displayName: 'mercury', kind: 'liquid', density: 9, viscosity: 0.1, stickiness: 0, colors: ['#c0c0d0','#a0a0b8','#d8d8e0','#909098'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0, conductivity: 240, corrosivity: 0, hardness: 0,
+      conducts: true };
+    // dust — almost weightless powder. High airflow factor: blown around
+    // by fans and explosions. Bus fall slowly.
+    registry[DUST_ID]      = { id: DUST_ID, key: 'dust', displayName: 'dust', kind: 'powder', density: 1, flow: 0.95, stickiness: 0, colors: ['#d0c8b8','#b0a898','#e8e0d0','#988c7c'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 200, flammability: 0.02, conductivity: 50, corrosivity: 0, hardness: 10,
+      airflowFactor: 0.95 };
+    // copper — electrical conductor. Charge spreads through copper at near
+    // full speed; it doesn't emit charge itself.
+    registry[COPPER_ID]    = { id: COPPER_ID, key: 'copper', displayName: 'copper', kind: 'static', density: 8, colors: ['#c87838','#a85820','#d88848','#985020'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 240, corrosivity: 0, hardness: 140,
+      conducts: true };
+    // battery — charge source. Emits +120 charge constantly. Build a wire
+    // from copper, attach a battery, watch the charge propagate.
+    registry[BATTERY_ID]   = { id: BATTERY_ID, key: 'battery', displayName: 'battery', kind: 'static', density: 8, colors: ['#e0c020','#a08018','#fff060','#806010'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 200, flammability: 0, conductivity: 180, corrosivity: 0, hardness: 160,
+      conducts: true, chargeEmit: 120 };
+    // lightning — short-lived super-charged gas. Travels along conductors,
+    // ignites flammables on contact, dies fast (gas life ~ 14 frames).
+    registry[LIGHTNING_ID] = { id: LIGHTNING_ID, key: 'lightning', displayName: 'lightning', kind: 'gas', density: 1, buoyancy: 1, lifeMin: 12, lifeMax: 24, colors: ['#fff8e0','#a0d0ff','#ffffff','#80b0ff'], isBuiltIn: true, reactions: [],
+      emitTemp: 220, ignitionPoint: 255, flammability: 0, conductivity: 255, corrosivity: 60, hardness: 0,
+      conducts: true, chargeEmit: 110, airflowFactor: 0.3 };
+    // fan — airflow source. Emits velocity upward (vy > 0 in fragment-y-up).
+    // Drop a fan below smoke/dust/balloons to push them around.
+    registry[FAN_ID]       = { id: FAN_ID, key: 'fan', displayName: 'fan', kind: 'static', density: 6, colors: ['#506070','#3a4858','#607888','#404a55'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 100, corrosivity: 0, hardness: 120,
+      emitsAirflow: { vx: 0, vy: 6 } };
+    // balloon — gas you can paint. Long lifespan; floats with airflow;
+    // pops at high pressure (e.g. inside an explosion) into fire.
+    registry[BALLOON_ID]   = { id: BALLOON_ID, key: 'balloon', displayName: 'balloon', kind: 'gas', density: 1, buoyancy: 0.95, lifeMin: 400, lifeMax: 600, colors: ['#e84060','#d03050','#ff6080','#a02040'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 90, flammability: 0.30, conductivity: 80, corrosivity: 0, hardness: 0,
+      airflowFactor: 0.9, pressureBlast: 180, pressureBlastTo: 'fire' };
+    // uranium — radioactive. Emits heat constantly, slowly decays via ra
+    // register over ~250 frames, transforms to stone when register hits 0.
+    registry[URANIUM_ID]   = { id: URANIUM_ID, key: 'uranium', displayName: 'uranium', kind: 'static', density: 9, colors: ['#80b020','#608018','#a0d040','#506010'], isBuiltIn: true, reactions: [],
+      emitTemp: 110, ignitionPoint: 255, flammability: 0, conductivity: 180, corrosivity: 30, hardness: 180,
+      raInit: 250, raDelta: -1, raDiesAt: 0, raTransformsTo: 'stone' };
+    // tar — extremely sticky liquid. Stays where you paint it; clings to
+    // walls. Flammable.
+    registry[TAR_ID]       = { id: TAR_ID, key: 'tar', displayName: 'tar', kind: 'liquid', density: 6, viscosity: 0.95, stickiness: 0.85, colors: ['#1a1008','#2a1810','#3a2418','#1f1410'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 130, flammability: 0.10, conductivity: 60, corrosivity: 0, hardness: 0 };
+    // vine — anisotropic cellular. Grows upward preferentially; needs an
+    // adjacent vine or plant. Looks like climbing creeper.
+    registry[VINE_ID]      = { id: VINE_ID, key: 'vine', displayName: 'vine', kind: 'cellular', density: 3, born: [1,2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 12, growChance: 0.08, surviveChance: 1, birthFrom: ['plant'], growBias: 'up', colors: ['#3aa050','#2c8042','#4cb858','#1f6028'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 130, flammability: 0.05, conductivity: 70, corrosivity: 0, hardness: 40 };
+
+    keyToId.wall = WALL_ID;       keyToId.sand = SAND_ID;       keyToId.water = WATER_ID;
+    keyToId.explosive = EXPLOSIVE_ID; keyToId.smoke = SMOKE_ID;   keyToId.plant = PLANT_ID;
+    keyToId.spark = SPARK_ID;     keyToId.ice = ICE_ID;         keyToId.steam = STEAM_ID;
+    keyToId.lava = LAVA_ID;       keyToId.fire = FIRE_ID;       keyToId.acid = ACID_ID;
+    keyToId.honey = HONEY_ID;     keyToId.gravel = GRAVEL_ID;   keyToId.stone = STONE_ID;
+    keyToId.mold = MOLD_ID;       keyToId.wood = WOOD_ID;       keyToId.oil = OIL_ID;
+    keyToId.mercury = MERCURY_ID; keyToId.dust = DUST_ID;       keyToId.copper = COPPER_ID;
+    keyToId.battery = BATTERY_ID; keyToId.lightning = LIGHTNING_ID; keyToId.fan = FAN_ID;
+    keyToId.balloon = BALLOON_ID; keyToId.uranium = URANIUM_ID; keyToId.tar = TAR_ID;
+    keyToId.vine = VINE_ID;
+    nextId = VINE_ID + 1;
   }
 
   // ── State ──────────────────────────────────────────────────────────────────
   let canvas;
   let gl;
   let COLS, ROWS;
+  let AIR_COLS, AIR_ROWS;  // coarse pressure/airflow grid (1/4 res)
 
   // GPU resources
-  let stateTexA = null, stateTexB = null;     // ping-pong RGBA8UI grids
+  let stateTexA = null, stateTexB = null;
   let stateFboA = null, stateFboB = null;
-  let tempTexA = null, tempTexB = null;       // ping-pong RGBA8UI temperature (R=temp)
+  let tempTexA = null, tempTexB = null;
   let tempFboA = null, tempFboB = null;
-  let elementDataTex = null;                   // 256x1 RGBA8UI: kind, density, paramA, paramB
-  let paletteTex = null;                       // 256x4 RGBA8: 4 color variants per element
-  let reactionsTex = null;                     // 256x3 RGBA8UI: per-id reaction slots
-  let traitsTex = null;                        // 256x2 RGBA8UI: per-id trait slots
-  let cellularDataTex = null;                  // 256x2 RGBA8UI: per-id cellular CA params
+  let chargeTexA = null, chargeTexB = null;
+  let chargeFboA = null, chargeFboB = null;
+  let airTexA = null, airTexB = null;
+  let airFboA = null, airFboB = null;
+  let elementDataTex = null;
+  let paletteTex = null;
+  let reactionsTex = null;          // 256 wide × 6 tall (3 slots × 2 rows: payload + conditions)
+  let traitsTex = null;             // 256 wide × 6 tall — heat/phase/charge/airflow
+  let cellularDataTex = null;
+  let registersTex = null;          // 256 wide × 1 tall — register init/delta/diesAt/transformsTo
   let progSim = null, progPaint = null, progRender = null, progClear = null, progReact = null;
   let progContact = null, progBlast = null;
   let progHeat = null, progIgnition = null, progCellular = null;
   let progCorrosion = null, progPhase = null;
+  let progRegister = null, progCharge = null;
+  let progPressure = null, progAdvect = null, progPressureBlast = null;
   let quadVao = null;
   let frameCounter = 0;
-  // Settle frames live in the B channel of state texture for explosives. We
-  // decrement them in the sim shader.
 
   let selectedKey = 'wall';
   let isPointerDown = false;
@@ -209,16 +260,17 @@
   let animId = null;
   let probeMode = false;
 
-  // Pours: each entry is { id, kind, frames, total }. Top-row spawns each frame.
   let pours = [];
 
-  // Discovery tracking: known transformations the user could observe
-  // (reactions + phase changes), plus a Set of those they have. Rebuilt
-  // whenever the registry changes.
-  const DISCOVERY_INTERVAL = 60;          // frames between readbacks (~1s @ 60fps)
-  let discoveryRules = [];                // [{ from, to, fromKey, toKey, label }]
+  const DISCOVERY_INTERVAL = 60;
+  let discoveryRules = [];
   const discoveredKeys = new Set();
-  let discoveryReadBuf = null;            // Uint8Array of the grid for readback
+  let discoveryReadBuf = null;
+  // Discovery toast queue: discoveries pile up faster than 4s/each so we
+  // queue them and pop one at a time. The lab-notebook button shows count.
+  let discoveryToastQueue = [];
+  let discoveryToastActive = false;
+  let discoveryToastTimer = null;
 
   // ── Init ───────────────────────────────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', () => {
@@ -231,8 +283,6 @@
 
     initBuiltIns();
     rebuildDiscoveryRules();
-    // Build the palette UI first, so that even if a shader fails to compile
-    // the user still sees their paint options (and can read the error).
     rebuildPalette();
     try {
       initGL();
@@ -269,7 +319,7 @@
 
     animId = requestAnimationFrame(loop);
 
-    showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.\n\npaint smoke (rises) or invent fire\nwith the +invent button.');
+    showOverlay('paint walls or any element on the canvas.\npour from the top.\n\ntry: drop a battery onto copper, or paint lightning\non gunpowder. open invent for endless physics.');
     syncActionLabel();
     bindModal();
     bindElementFeedbackModal();
@@ -287,12 +337,13 @@
     if (rows & 1) rows--;
     COLS = cols;
     ROWS = rows;
+    AIR_COLS = Math.max(2, Math.floor(COLS / 4));
+    AIR_ROWS = Math.max(2, Math.floor(ROWS / 4));
     initGrid();
   }
 
   function initGrid() {
     if (!gl) return;
-    // Allocate ping-pong RGBA8UI textures sized COLS x ROWS.
     if (stateTexA) gl.deleteTexture(stateTexA);
     if (stateTexB) gl.deleteTexture(stateTexB);
     if (stateFboA) gl.deleteFramebuffer(stateFboA);
@@ -301,6 +352,14 @@
     if (tempTexB)  gl.deleteTexture(tempTexB);
     if (tempFboA)  gl.deleteFramebuffer(tempFboA);
     if (tempFboB)  gl.deleteFramebuffer(tempFboB);
+    if (chargeTexA) gl.deleteTexture(chargeTexA);
+    if (chargeTexB) gl.deleteTexture(chargeTexB);
+    if (chargeFboA) gl.deleteFramebuffer(chargeFboA);
+    if (chargeFboB) gl.deleteFramebuffer(chargeFboB);
+    if (airTexA) gl.deleteTexture(airTexA);
+    if (airTexB) gl.deleteTexture(airTexB);
+    if (airFboA) gl.deleteFramebuffer(airFboA);
+    if (airFboB) gl.deleteFramebuffer(airFboB);
 
     stateTexA = createUI8Texture(COLS, ROWS);
     stateTexB = createUI8Texture(COLS, ROWS);
@@ -312,11 +371,26 @@
     tempFboA = makeFbo(tempTexA);
     tempFboB = makeFbo(tempTexB);
 
-    // Clear state to empty, temperature to ambient (30).
-    clearStateTo(stateFboA, 0, 0, 0, 0);
-    clearStateTo(stateFboB, 0, 0, 0, 0);
-    clearStateTo(tempFboA, 30, 0, 0, 0);
-    clearStateTo(tempFboB, 30, 0, 0, 0);
+    // Charge texture: R = signed charge in offset binary (128 = 0).
+    chargeTexA = createUI8Texture(COLS, ROWS);
+    chargeTexB = createUI8Texture(COLS, ROWS);
+    chargeFboA = makeFbo(chargeTexA);
+    chargeFboB = makeFbo(chargeTexB);
+
+    // Air texture (coarse): R=pressure, G=vx_offset, B=vy_offset, A=ambient temp.
+    airTexA = createUI8Texture(AIR_COLS, AIR_ROWS);
+    airTexB = createUI8Texture(AIR_COLS, AIR_ROWS);
+    airFboA = makeFbo(airTexA);
+    airFboB = makeFbo(airTexB);
+
+    clearStateTo(stateFboA, COLS, ROWS, 0, 0, 0, 0);
+    clearStateTo(stateFboB, COLS, ROWS, 0, 0, 0, 0);
+    clearStateTo(tempFboA, COLS, ROWS, 30, 0, 0, 0);
+    clearStateTo(tempFboB, COLS, ROWS, 30, 0, 0, 0);
+    clearStateTo(chargeFboA, COLS, ROWS, 128, 0, 0, 0);
+    clearStateTo(chargeFboB, COLS, ROWS, 128, 0, 0, 0);
+    clearStateTo(airFboA, AIR_COLS, AIR_ROWS, 128, 128, 128, 30);
+    clearStateTo(airFboB, AIR_COLS, AIR_ROWS, 128, 128, 128, 30);
   }
 
   // ── GL helpers ─────────────────────────────────────────────────────────────
@@ -378,10 +452,9 @@
     return f;
   }
 
-  function clearStateTo(fbo, r, g, b, a) {
+  function clearStateTo(fbo, w, h, r, g, b, a) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.viewport(0, 0, COLS, ROWS);
-    // Use clear with explicit uint clear since FBO is RGBA8UI
+    gl.viewport(0, 0, w, h);
     gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([r, g, b, a]));
   }
 
@@ -395,23 +468,9 @@
     }
   `;
 
-  // Simulation shader: 2×2 Margolus block CA. Each block of 4 cells decides
-  // its own swap independently of others. Block origin alternates per phase
-  // so neighboring blocks meet over time.
-  const FS_SIM = `#version 300 es
-    precision highp float;
-    precision highp int;
-
-    in vec2 vUv;
-    out uvec4 outColor;
-
-    uniform highp usampler2D uState;     // current grid
-    uniform highp usampler2D uElemData;  // 256x1: (kind, density, paramA, paramB)
-    uniform int uPhase;                  // 0..3 — block-origin offset selector
-    uniform int uFrame;                  // monotonically increasing
-    uniform ivec2 uSize;                 // grid (COLS, ROWS)
-
-    // Hash for stochastic decisions in the block. Cheap but well-mixed.
+  // Common header injected into shaders that use trait/element data so we
+  // don't repeat struct definitions. JavaScript-level constant.
+  const SH_HASH = `
     uint hash3(uvec3 v) {
       v = v * 1664525u + 1013904223u;
       v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
@@ -420,14 +479,34 @@
       return v.x;
     }
     float rand01(uvec3 v) { return float(hash3(v) & 0xFFFFFFu) / float(0x1000000u); }
+  `;
 
-    struct Cell { uint id; uint variant; uint settle; uint life; };
+  // FS_SIM — Margolus 2×2 block CA. Now density-aware (any heavier
+  // powder/liquid sinks through any lighter one) and stickiness-aware
+  // (cells with stickiness > 0 next to a static/cellular skip swaps).
+  // Reads coarse air velocity to bias gas-rise / liquid-drift sideways.
+  const FS_SIM = `#version 300 es
+    precision highp float;
+    precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uElemData;
+    uniform highp usampler2D uTraits;
+    uniform highp usampler2D uAir;
+    uniform int uPhase;
+    uniform int uFrame;
+    uniform ivec2 uSize;
+    uniform ivec2 uAirSize;
+    ${SH_HASH}
+
+    struct Cell { uint id; uint variant; uint ra; uint rb; };
     Cell readCell(ivec2 p) {
       uvec4 c = texelFetch(uState, p, 0);
       return Cell(c.r, c.g, c.b, c.a);
     }
-    uvec4 packCell(Cell c) { return uvec4(c.id, c.variant, c.settle, c.life); }
-    Cell empty() { return Cell(0u, 0u, 0u, 0u); }
+    uvec4 packCell(Cell c) { return uvec4(c.id, c.variant, c.ra, c.rb); }
 
     struct ElemInfo { uint kind; uint density; uint paramA; uint paramB; };
     ElemInfo getInfo(uint id) {
@@ -435,19 +514,42 @@
       return ElemInfo(e.r, e.g, e.b, e.a);
     }
 
-    // Whether top should sink into / displace bot.
+    bool isStaticOrCellular(uint id) {
+      if (id == 0u) return false;
+      uint k = getInfo(id).kind;
+      return k == 1u || k == 5u;
+    }
+
+    // Density-aware sink: top wants to swap with bot when going down.
     bool wantsSink(Cell top, Cell bot) {
       if (top.id == 0u) return false;
       ElemInfo ti = getInfo(top.id);
-      // Only powders and liquids fall.
-      if (ti.kind != 2u && ti.kind != 3u) return false;
-      if (bot.id == 0u) return true;
+      if (ti.kind != 2u && ti.kind != 3u) return false;          // only powder/liquid sink
+      if (bot.id == 0u) return true;                              // empty: just fall
       ElemInfo bi = getInfo(bot.id);
-      // Powders/liquids can sink through liquids of lower density.
-      // Powders/liquids sink through liquids of equal-or-lower density,
-      // but never through the same liquid (would just flicker variants).
-      if (bi.kind == 3u && top.id != bot.id && ti.density >= bi.density) return true;
+      if (bi.kind == 1u || bi.kind == 5u) return false;          // static/cellular block
+      if (bi.kind == 4u) return true;                             // sink through gas
+      if (bi.kind == 3u) {                                        // liquid below
+        if (top.id == bot.id) return false;
+        return ti.density > bi.density;                           // heavier stuff sinks
+      }
+      // Powder below blocks (powders pile, don't trade).
       return false;
+    }
+
+    // Density-aware rise: bot (gas) wants to swap with top.
+    bool wantsRise(Cell bot, Cell top) {
+      if (bot.id == 0u) return false;
+      ElemInfo bi = getInfo(bot.id);
+      if (bi.kind != 4u) return false;                            // only gas rises
+      if (top.id == 0u) return true;
+      ElemInfo ti = getInfo(top.id);
+      if (ti.kind == 1u || ti.kind == 5u) return false;
+      if (ti.kind == 4u) {
+        if (bot.id == top.id) return false;
+        return bi.density < ti.density;                           // lighter gas rises
+      }
+      return false;                                               // can't push past liquid/powder
     }
 
     bool isLiquid(Cell c) {
@@ -459,145 +561,144 @@
       return getInfo(c.id).kind == 4u;
     }
 
-    // Per-element fluidity governs how readily a powder/liquid leaves a
-    // straight-down trajectory: powders use flow (paramA/255), liquids use
-    // 1 - viscosity (1 - paramA/255). Gates the diagonal-slide and
-    // sideways-flow swaps so honey piles, gravel piles steeply, water spreads.
-    float fluidity(uint id) {
-      if (id == 0u) return 1.0;
+    // paramB low 7 bits = stickiness × 127, high bit = isExplosive.
+    float stickiness(uint id) {
+      if (id == 0u) return 0.0;
       ElemInfo info = getInfo(id);
-      if (info.kind == 2u) return float(info.paramA) / 255.0;
-      if (info.kind == 3u) return 1.0 - float(info.paramA) / 255.0;
-      return 1.0;
+      return float(info.paramB & 0x7fu) / 127.0;
+    }
+    bool isStickyAdjacentToWall(ivec2 p, uint selfId) {
+      if (selfId == 0u) return false;
+      ivec2 D[4] = ivec2[4](ivec2(0,-1), ivec2(0,1), ivec2(-1,0), ivec2(1,0));
+      for (int i = 0; i < 4; i++) {
+        ivec2 np = p + D[i];
+        if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) return true;
+        uint nid = texelFetch(uState, np, 0).r;
+        if (nid == 0u || nid == selfId) continue;
+        if (isStaticOrCellular(nid)) return true;
+      }
+      return false;
     }
 
-    // Tick auxiliary state per frame: decrement explosive settle frames and
-    // tick gas life. When life hits zero the cell evaporates. Only called in
-    // phase 0 so each tick = one real frame, not 4× per frame.
-    Cell tickAux(Cell c, bool doTick) {
-      if (!doTick) return c;
-      if (c.id == 0u) return c;
-      if (c.settle > 0u) c.settle = c.settle - 1u;
-      ElemInfo info = getInfo(c.id);
-      if (info.kind == 4u && c.life > 0u) {
-        c.life = c.life - 1u;
-        if (c.life == 0u) c = Cell(0u, 0u, 0u, 0u);
-      }
-      return c;
+    // Per-element fluidity. Powders use flow (paramA/255); liquids use
+    // 1 - viscosity. Stickiness against a static reduces fluidity.
+    float fluidity(uint id, ivec2 p) {
+      if (id == 0u) return 1.0;
+      ElemInfo info = getInfo(id);
+      float f = 1.0;
+      if (info.kind == 2u) f = float(info.paramA) / 255.0;
+      else if (info.kind == 3u) f = 1.0 - float(info.paramA) / 255.0;
+      float s = stickiness(id);
+      if (s > 0.0 && isStickyAdjacentToWall(p, id)) f *= max(0.0, 1.0 - s);
+      return f;
+    }
+
+    // Sample the coarse air field at the full-res cell's position.
+    vec2 airVelocity(ivec2 p) {
+      ivec2 ap = p / 4;
+      ap = clamp(ap, ivec2(0), uAirSize - 1);
+      uvec4 a = texelFetch(uAir, ap, 0);
+      return vec2(float(int(a.g) - 128), float(int(a.b) - 128)) / 8.0;
     }
 
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
-      // GL fragments use y-up; we map fragment y directly into texture y.
-      // "Down" in gameplay = decreasing fragment y, "up" = increasing y.
 
-      bool isPhase0 = (uPhase == 0);
+      // Top-row gas escape.
+      if (px.y == uSize.y - 1) {
+        Cell self = readCell(px);
+        if (isGas(self)) self = Cell(0u, 0u, 0u, 0u);
+        outColor = packCell(self);
+        return;
+      }
 
-      // Phase chooses a 2×2 block origin offset. We rotate through
-      // (0,0),(1,1),(0,1),(1,0) for full coverage.
       ivec2 off;
       if (uPhase == 0) off = ivec2(0, 0);
       else if (uPhase == 1) off = ivec2(1, 1);
       else if (uPhase == 2) off = ivec2(1, 0);
       else off = ivec2(0, 1);
 
-      // Top-row gas escape: cells at the top edge (highest fragment y) evaporate
-      // if they're gas. Mirrors the CPU sim's open-sky-at-top rule.
-      if (px.y == uSize.y - 1) {
-        Cell self = tickAux(readCell(px), isPhase0);
-        if (isGas(self)) self = Cell(0u, 0u, 0u, 0u);
-        outColor = packCell(self);
-        return;
-      }
-
-      // Block origin (lower-left of the 2×2)
       ivec2 rel = px - off;
       ivec2 blockOrigin = (rel / 2) * 2 + off;
       ivec2 local = px - blockOrigin;
 
-      // Edge handling: if block goes out of bounds, pass cell through unchanged
-      // (apart from aux tick).
       if (local.x < 0 || local.y < 0 ||
           blockOrigin.x < 0 || blockOrigin.y < 0 ||
           blockOrigin.x + 1 >= uSize.x || blockOrigin.y + 1 >= uSize.y) {
-        outColor = packCell(tickAux(readCell(px), isPhase0));
+        outColor = packCell(readCell(px));
         return;
       }
 
-      // Read 4 cells of the block. (BL=lower-left, TL=upper-left, etc.)
-      Cell bl = readCell(blockOrigin + ivec2(0,0));
-      Cell br = readCell(blockOrigin + ivec2(1,0));
-      Cell tl = readCell(blockOrigin + ivec2(0,1));
-      Cell tr = readCell(blockOrigin + ivec2(1,1));
+      ivec2 blPos = blockOrigin + ivec2(0,0);
+      ivec2 brPos = blockOrigin + ivec2(1,0);
+      ivec2 tlPos = blockOrigin + ivec2(0,1);
+      ivec2 trPos = blockOrigin + ivec2(1,1);
 
-      // Tick aux on all four cells (only fires in phase 0).
-      bl = tickAux(bl, isPhase0); br = tickAux(br, isPhase0);
-      tl = tickAux(tl, isPhase0); tr = tickAux(tr, isPhase0);
+      Cell bl = readCell(blPos);
+      Cell br = readCell(brPos);
+      Cell tl = readCell(tlPos);
+      Cell tr = readCell(trPos);
 
-      // Decide swaps. We process gravity (top→bottom) then sideways (liquid),
-      // then gas rising (bottom→top).
-      // 1) Direct fall: TL→BL, TR→BR
+      // 1) Direct fall.
       if (wantsSink(tl, bl)) { Cell t = tl; tl = bl; bl = t; }
       if (wantsSink(tr, br)) { Cell t = tr; tr = br; br = t; }
 
-      // 2) Diagonal slide: TL→BR or TR→BL (after direct fall). Each slide
-      // is gated by the *moving* cell's fluidity so viscous liquids and
-      // low-flow powders stay put more often than freely-flowing ones.
+      // 2) Diagonal slide, gated by fluidity (which folds in stickiness).
       float r = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y), uint(uFrame)));
       bool preferLeft = r < 0.5;
       float gL = rand01(uvec3(uint(blockOrigin.x) + 11u, uint(blockOrigin.y), uint(uFrame) + 1u));
       float gR = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y) + 13u, uint(uFrame) + 2u));
       if (preferLeft) {
-        if (wantsSink(tl, br) && gL < fluidity(tl.id)) { Cell t = tl; tl = br; br = t; }
-        if (wantsSink(tr, bl) && gR < fluidity(tr.id)) { Cell t = tr; tr = bl; bl = t; }
+        if (wantsSink(tl, br) && gL < fluidity(tl.id, tlPos)) { Cell t = tl; tl = br; br = t; }
+        if (wantsSink(tr, bl) && gR < fluidity(tr.id, trPos)) { Cell t = tr; tr = bl; bl = t; }
       } else {
-        if (wantsSink(tr, bl) && gR < fluidity(tr.id)) { Cell t = tr; tr = bl; bl = t; }
-        if (wantsSink(tl, br) && gL < fluidity(tl.id)) { Cell t = tl; tl = br; br = t; }
+        if (wantsSink(tr, bl) && gR < fluidity(tr.id, trPos)) { Cell t = tr; tr = bl; bl = t; }
+        if (wantsSink(tl, br) && gL < fluidity(tl.id, tlPos)) { Cell t = tl; tl = br; br = t; }
       }
 
-      // 3) Liquid sideways flow on the bottom row, gated by 1 - viscosity.
+      // 3) Liquid sideways flow on the bottom row, gated by fluidity. Air
+      // velocity biases the choice — left flow boosted if vx<0, etc.
+      vec2 airBL = airVelocity(blPos);
       float sB = rand01(uvec3(uint(blockOrigin.x) + 17u, uint(blockOrigin.y), uint(uFrame) + 3u));
-      if (isLiquid(bl) && br.id == 0u && r >= 0.5 && sB < fluidity(bl.id)) {
-        Cell t = bl; bl = br; br = t;
-      } else if (isLiquid(br) && bl.id == 0u && r < 0.5 && sB < fluidity(br.id)) {
-        Cell t = br; br = bl; bl = t;
-      }
-      // 3b) Liquid sideways flow on the top row.
+      float sideBias = clamp(airBL.x * 0.05, -0.3, 0.3);
+      bool wantR = isLiquid(bl) && br.id == 0u && (r + sideBias) >= 0.5 && sB < fluidity(bl.id, blPos);
+      bool wantL = isLiquid(br) && bl.id == 0u && (r + sideBias) <  0.5 && sB < fluidity(br.id, brPos);
+      if (wantR) { Cell t = bl; bl = br; br = t; }
+      else if (wantL) { Cell t = br; br = bl; bl = t; }
+
       float r2 = rand01(uvec3(uint(blockOrigin.x), uint(blockOrigin.y) + 7919u, uint(uFrame)));
       float sT = rand01(uvec3(uint(blockOrigin.x) + 23u, uint(blockOrigin.y) + 19u, uint(uFrame) + 4u));
-      if (isLiquid(tl) && tr.id == 0u && r2 >= 0.5 && sT < fluidity(tl.id)) {
-        Cell t = tl; tl = tr; tr = t;
-      } else if (isLiquid(tr) && tl.id == 0u && r2 < 0.5 && sT < fluidity(tr.id)) {
-        Cell t = tr; tr = tl; tl = t;
-      }
+      vec2 airTL = airVelocity(tlPos);
+      float sideBiasT = clamp(airTL.x * 0.05, -0.3, 0.3);
+      bool wantTR = isLiquid(tl) && tr.id == 0u && (r2 + sideBiasT) >= 0.5 && sT < fluidity(tl.id, tlPos);
+      bool wantTL = isLiquid(tr) && tl.id == 0u && (r2 + sideBiasT) <  0.5 && sT < fluidity(tr.id, trPos);
+      if (wantTR) { Cell t = tl; tl = tr; tr = t; }
+      else if (wantTL) { Cell t = tr; tr = tl; tl = t; }
 
-      // 4) Gas rising: BL→TL, BR→TR if buoyancy roll passes. Gas in TL/TR
-      // also rises into a TL/TR... wait no — those are already at top of
-      // block. We rely on the next phase's offset to put TL into a BL slot
-      // of the block above. Buoyancy = paramA scaled to [0,1].
+      // 4) Density-aware gas rise. Buoyancy boosted by upward air velocity.
       float rGas = rand01(uvec3(uint(blockOrigin.x) + 1234u, uint(blockOrigin.y) + 5678u, uint(uFrame)));
-      // BL gas rises into empty TL.
-      if (isGas(bl) && tl.id == 0u) {
-        float buoy = float(getInfo(bl.id).paramA) / 255.0;
+      float airBoostBL = clamp(airBL.y * 0.08, -0.4, 0.4);
+      if (wantsRise(bl, tl)) {
+        float buoy = float(getInfo(bl.id).paramA) / 255.0 + airBoostBL;
         if (rGas < buoy) { Cell t = bl; bl = tl; tl = t; }
       }
-      // BR gas rises into empty TR (use a separate slice of the random).
+      vec2 airBR = airVelocity(brPos);
+      float airBoostBR = clamp(airBR.y * 0.08, -0.4, 0.4);
       float rGas2 = rand01(uvec3(uint(blockOrigin.x) + 4321u, uint(blockOrigin.y) + 8765u, uint(uFrame)));
-      if (isGas(br) && tr.id == 0u) {
-        float buoy = float(getInfo(br.id).paramA) / 255.0;
+      if (wantsRise(br, tr)) {
+        float buoy = float(getInfo(br.id).paramA) / 255.0 + airBoostBR;
         if (rGas2 < buoy) { Cell t = br; br = tr; tr = t; }
       }
-      // Diagonal rise: BL→TR or BR→TL when direct rise is blocked.
+      // Diagonal gas rise.
       if (isGas(bl) && tl.id != 0u && tr.id == 0u) {
-        float buoy = float(getInfo(bl.id).paramA) / 255.0;
+        float buoy = float(getInfo(bl.id).paramA) / 255.0 + airBoostBL;
         if (rGas < buoy * 0.5) { Cell t = bl; bl = tr; tr = t; }
       }
       if (isGas(br) && tr.id != 0u && tl.id == 0u) {
-        float buoy = float(getInfo(br.id).paramA) / 255.0;
+        float buoy = float(getInfo(br.id).paramA) / 255.0 + airBoostBR;
         if (rGas2 < buoy * 0.5) { Cell t = br; br = tl; tl = t; }
       }
 
-      // Output the cell at this fragment's local block position.
       Cell outc;
       if (local == ivec2(0, 0))      outc = bl;
       else if (local == ivec2(1, 0)) outc = br;
@@ -608,9 +709,9 @@
     }
   `;
 
-  // Paint shader: writes a circular brush of `id` (with random color variant
-  // per cell) into the state. Reads existing state so we can avoid overwriting
-  // walls/dynamic cells with rules matching the original CPU paintAt.
+  // FS_PAINT — paints with element-aware register init. Reads registersTex
+  // for default raInit; paint code passes uPaintRaOverride for randomized
+  // gas life. rb starts at 0 unless overridden.
   const FS_PAINT = `#version 300 es
     precision highp float;
     precision highp int;
@@ -619,51 +720,36 @@
 
     uniform highp usampler2D uState;
     uniform highp usampler2D uElemData;
+    uniform highp usampler2D uRegisters;
     uniform ivec2 uSize;
-    uniform ivec2 uCenter;       // brush center in fragment coords
-    uniform int uRadius;         // brush radius in cells (squared check)
-    uniform uint uPaintId;       // element id to paint (0 = erase)
-    uniform uint uVariantSeed;   // varies per frame so painted cells aren't all the same color
-    uniform uint uSettleFrames;  // settle frames to set on freshly-painted cells
-    uniform uint uLifeFrames;    // life frames (gas decay)
-    uniform uint uPaintKind;     // kind of the element being painted
-
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
+    uniform ivec2 uCenter;
+    uniform int uRadius;
+    uniform uint uPaintId;
+    uniform uint uVariantSeed;
+    uniform uint uPaintRaOverride;     // 256 = use registers default; <256 = use this
+    uniform uint uPaintRb;
+    uniform uint uPaintKind;
+    ${SH_HASH}
 
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
       uvec4 cur = texelFetch(uState, px, 0);
       ivec2 d = px - uCenter;
       int dist2 = d.x * d.x + d.y * d.y;
-
-      if (dist2 > uRadius * uRadius) {
-        outColor = cur;
-        return;
-      }
-      if (uPaintId == 0u) {
-        outColor = uvec4(0u);
-        return;
-      }
-      // Don't overwrite non-empty same-or-different dynamic cells with non-static.
-      // Static elements (walls) overwrite anything.
+      if (dist2 > uRadius * uRadius) { outColor = cur; return; }
+      if (uPaintId == 0u) { outColor = uvec4(0u); return; }
       if (uPaintKind != 1u) {
-        if (cur.r != 0u && cur.r != uPaintId) {
-          outColor = cur;
-          return;
-        }
+        if (cur.r != 0u && cur.r != uPaintId) { outColor = cur; return; }
       }
       uint v = hash3(uvec3(uint(px.x), uint(px.y), uVariantSeed)) & 3u;
-      outColor = uvec4(uPaintId, v, uSettleFrames, uLifeFrames);
+      uint ra;
+      if (uPaintRaOverride < 256u) ra = uPaintRaOverride & 0xFFu;
+      else ra = texelFetch(uRegisters, ivec2(int(uPaintId), 0), 0).r;
+      outColor = uvec4(uPaintId, v, ra, uPaintRb & 0xFFu);
     }
   `;
 
-  // Render shader: read state, look up palette, output regular RGB.
+  // FS_RENDER — element color with subtle hot-glow + charge halo.
   const FS_RENDER = `#version 300 es
     precision highp float;
     precision highp int;
@@ -671,36 +757,59 @@
     out vec4 outColor;
 
     uniform highp usampler2D uState;
-    uniform sampler2D uPalette;   // 256x4 RGBA8, srgb-ish
-    uniform highp usampler2D uElemData; // 256x1 RGBA8UI: kind, density, paramA, paramB
+    uniform sampler2D uPalette;
+    uniform highp usampler2D uElemData;
+    uniform highp usampler2D uTemp;
+    uniform highp usampler2D uCharge;
     uniform ivec2 uSize;
     uniform int uFrame;
+    ${SH_HASH}
 
     void main() {
       ivec2 px = ivec2(vUv * vec2(uSize));
       px = clamp(px, ivec2(0), uSize - ivec2(1));
       uvec4 c = texelFetch(uState, px, 0);
+      uint temp = texelFetch(uTemp, px, 0).r;
+      uint ch = texelFetch(uCharge, px, 0).r;
+
+      vec3 rgb;
       if (c.r == 0u) {
-        outColor = vec4(0.059, 0.055, 0.047, 1.0); // app bg #0f0e0c
-        return;
-      }
-      // Explosives shimmer: pick the palette variant from a time-modulated hash
-      // so each cell rotates through its 4 colors at ~15Hz, giving a fizzing
-      // fuse look. Non-explosive cells use the stable per-cell variant.
-      uvec4 e = texelFetch(uElemData, ivec2(int(c.r), 0), 0);
-      uint variant;
-      if ((e.a & 0x80u) != 0u) {
-        uint h = uint(px.x) * 73856093u ^ uint(px.y) * 19349663u ^ uint(uFrame >> 2) * 83492791u;
-        variant = h & 3u;
+        // Empty: dark background. Hint at temperature in the air via warm tint.
+        float warm = clamp((float(temp) - 30.0) / 100.0, 0.0, 1.0);
+        rgb = mix(vec3(0.059, 0.055, 0.047), vec3(0.18, 0.07, 0.04), warm * 0.5);
       } else {
-        variant = c.g & 3u;
+        uvec4 e = texelFetch(uElemData, ivec2(int(c.r), 0), 0);
+        uint variant;
+        if ((e.a & 0x80u) != 0u) {
+          uint h = uint(px.x) * 73856093u ^ uint(px.y) * 19349663u ^ uint(uFrame >> 2) * 83492791u;
+          variant = h & 3u;
+        } else {
+          variant = c.g & 3u;
+        }
+        rgb = texelFetch(uPalette, ivec2(int(c.r), int(variant)), 0).rgb;
+        // Hot-element glow: above 120, brighten toward warm.
+        if (temp > 120u) {
+          float k = clamp((float(temp) - 120.0) / 100.0, 0.0, 0.6);
+          rgb = mix(rgb, vec3(1.0, 0.7, 0.3), k * 0.45);
+        }
       }
-      vec3 rgb = texelFetch(uPalette, ivec2(int(c.r), int(variant)), 0).rgb;
+      // Charge halo: cells with strong charge get a blue/violet tint that
+      // shimmers per frame so charge is visible without a separate overlay.
+      int signedCharge = int(ch) - 128;
+      int chargeMag = abs(signedCharge);
+      if (chargeMag > 12) {
+        float k = clamp(float(chargeMag) / 127.0, 0.0, 1.0);
+        uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame >> 1)));
+        float flicker = float(h & 0xFFu) / 255.0;
+        vec3 chargeTint = (signedCharge > 0)
+          ? vec3(0.55, 0.75, 1.0)   // positive: cyan-white
+          : vec3(0.95, 0.55, 1.0);  // negative: magenta
+        rgb = mix(rgb, chargeTint, k * 0.45 * (0.6 + 0.4 * flicker));
+      }
       outColor = vec4(rgb, 1.0);
     }
   `;
 
-  // Clear shader (for clearAll): writes empty.
   const FS_CLEAR = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -708,11 +817,6 @@
     void main() { outColor = uvec4(0u); }
   `;
 
-  // Explosive contact shader: an explosive cell with settle==0 that touches
-  // any non-explosive non-empty neighbor gets primed (life=255). Primed cells
-  // will detonate in the next pass. Non-explosive cells pass through unchanged.
-  // Note: explosive elements are always powders in the seed/AI data, so the life
-  // channel is otherwise unused for them — safe to repurpose as the prime flag.
   const FS_CONTACT = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -732,11 +836,9 @@
       uvec4 self = texelFetch(uState, px, 0);
       if (self.r == 0u) { outColor = self; return; }
       if (!isExplosiveId(self.r)) { outColor = self; return; }
-      // Already primed?
-      if (self.a == 255u) { outColor = self; return; }
-      // Still in settle window — immune to contact detonation.
-      if (self.b > 0u) { outColor = self; return; }
-      // Scan 8 neighbors for any non-empty non-explosive cell.
+      if (self.a == 255u) { outColor = self; return; }   // already primed
+      if (self.b > 0u) { outColor = self; return; }      // settle window
+
       bool triggered = false;
       for (int dy = -1; dy <= 1 && !triggered; dy++) {
         for (int dx = -1; dx <= 1 && !triggered; dx++) {
@@ -754,11 +856,6 @@
     }
   `;
 
-  // Blast shader: any cell within BLAST_R of a primed explosive is cleared.
-  // Primed explosives clear themselves. Other explosives within radius become
-  // primed too — chain reaction propagates one cell-radius per frame. Cleared
-  // and detonating cells stochastically leave behind sparks (gas, short life)
-  // for visual flair.
   const FS_BLAST = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -769,6 +866,7 @@
     uniform uint uSparkId;
     uniform int uFrame;
     const int BLAST_R = 5;
+    ${SH_HASH}
 
     bool isExplosiveId(uint id) {
       if (id == 0u) return false;
@@ -776,20 +874,10 @@
       return (e.a & 0x80u) != 0u;
     }
 
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
-
-    // Build a spark cell with a hashed variant and life. life is 8-bit; we
-    // pick something in [16, 48) so individual sparks fade at different rates.
     uvec4 makeSpark(uint h) {
       uint variant = h & 3u;
       uint life = 16u + ((h >> 8u) & 31u);
-      return uvec4(uSparkId, variant, 0u, life);
+      return uvec4(uSparkId, variant, life, 0u);   // ra=life
     }
 
     void main() {
@@ -800,11 +888,9 @@
       uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
 
       if (selfPrimed) {
-        // Detonate: vanish, but leave a bright spark at the core.
         outColor = (uSparkId != 0u) ? makeSpark(h) : uvec4(0u);
         return;
       }
-      // Scan blast neighborhood for primed explosives.
       bool inBlast = false;
       for (int dy = -BLAST_R; dy <= BLAST_R && !inBlast; dy++) {
         for (int dx = -BLAST_R; dx <= BLAST_R && !inBlast; dx++) {
@@ -818,35 +904,156 @@
       }
       if (!inBlast) { outColor = self; return; }
       if (selfExp) {
-        // Chain detonation: also become primed for next frame's blast.
         outColor = uvec4(self.r, self.g, self.b, 255u);
         return;
       }
       if (self.r == 0u) {
-        // Empty cell in the blast cloud — sparkle ~25% of the time.
         if (uSparkId != 0u && (h & 3u) == 0u) { outColor = makeSpark(h); return; }
         outColor = self;
         return;
       }
-      // Non-explosive: cleared by blast, leave a spark roughly half the time.
       if (uSparkId != 0u && (h & 1u) == 0u) { outColor = makeSpark(h); return; }
       outColor = uvec4(0u);
     }
   `;
 
-  // Reaction shader: each cell looks at its 8 neighbors. For each neighbor's
-  // reaction list, if a slot's `other` matches this cell's id and a chance
-  // roll succeeds, this cell transforms to that slot's `becomes`. We also
-  // check this cell's OWN reactions for self-consume rolls — if any neighbor
-  // matches a self-consume reaction's `other` and both rolls succeed, this
-  // cell goes empty. Each fragment writes only itself, so the "neighbor changes
-  // me" inversion is the only fragment-shader-friendly formulation of the CPU
-  // sim's "I change my neighbors" rule. Reactions run once per frame.
-  // Heat shader: each cell's new temperature is a conductivity-weighted blend
-  // of (its previous temp, the average of its 8 neighbors' temps, the trait
-  // emitTemp of its element kind, and ambient 30). Hot elements force their
-  // emission temp; cold elements pull toward theirs. Cells decay slightly
-  // toward ambient so heat doesn't accumulate forever.
+  // FS_REACT — pairwise reactions, with optional minTemp/maxTemp gates and
+  // catalyst flag. Reactions texture is now 256×6: each of 3 slots uses 2
+  // rows. Slot row 0 = (other, becomes, chance, selfConsume); slot row 1 =
+  // (minTemp, maxTemp, conditionFlags, _). conditionFlags bit 0 = catalyst
+  // (other transforms but self stays). selfConsume row 0.a applies as
+  // before to self-death from reaction.
+  const FS_REACT = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uReactions;
+    uniform highp usampler2D uTemp;
+    uniform ivec2 uSize;
+    uniform int uFrame;
+    ${SH_HASH}
+
+    bool tempOk(uint t, uint minT, uint maxT) {
+      if (minT > 0u && t < minT) return false;
+      if (maxT > 0u && t > maxT) return false;
+      return true;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 selfCell = texelFetch(uState, px, 0);
+      uint selfId = selfCell.r;
+      uint selfTemp = texelFetch(uTemp, px, 0).r;
+
+      ivec2 D[8];
+      D[0] = ivec2(-1, -1); D[1] = ivec2(0, -1); D[2] = ivec2(1, -1);
+      D[3] = ivec2(-1,  0);                       D[4] = ivec2(1,  0);
+      D[5] = ivec2(-1,  1); D[6] = ivec2(0,  1); D[7] = ivec2(1,  1);
+      uint nIds[8];
+      for (int i = 0; i < 8; i++) {
+        ivec2 np = px + D[i];
+        if (np.x < 0 || np.x >= uSize.x || np.y < 0 || np.y >= uSize.y) {
+          nIds[i] = 0u;
+        } else {
+          nIds[i] = texelFetch(uState, np, 0).r;
+        }
+      }
+
+      uint newId = selfId;
+      uvec4 newCell = selfCell;
+      bool transformed = false;
+
+      // Inverse pass: a neighbor's reaction transforms me.
+      if (selfId != 0u) {
+        for (int i = 0; i < 8 && !transformed; i++) {
+          uint nid = nIds[i];
+          if (nid == 0u) continue;
+          uint nTemp = texelFetch(uTemp, px + D[i], 0).r;
+          for (int slot = 0; slot < 3 && !transformed; slot++) {
+            int row0 = slot * 2;
+            int row1 = slot * 2 + 1;
+            uvec4 rxA = texelFetch(uReactions, ivec2(int(nid), row0), 0);
+            uint other = rxA.r;
+            if (other == 0u) break;
+            if (other != selfId) continue;
+            uint becomes = rxA.g;
+            uint chance  = rxA.b;
+            uvec4 rxB = texelFetch(uReactions, ivec2(int(nid), row1), 0);
+            uint minT = rxB.r;
+            uint maxT = rxB.g;
+            uint flags = rxB.b;
+            // Use whichever side is hotter for the temp gate.
+            uint tCheck = max(selfTemp, nTemp);
+            if (!tempOk(tCheck, minT, maxT)) continue;
+            ivec2 a = px;
+            ivec2 b = px + D[i];
+            ivec2 lo = min(a, b);
+            ivec2 hi = max(a, b);
+            uint h = hash3(uvec3(uint(lo.x) | (uint(lo.y) << 16),
+                                 uint(hi.x) | (uint(hi.y) << 16),
+                                 uint(uFrame) * 31u + uint(slot)));
+            if ((h & 0xFFu) >= chance) continue;
+            newId = becomes;
+            transformed = true;
+          }
+        }
+      }
+
+      // Self-consume pass.
+      if (selfId != 0u && !transformed) {
+        bool consumed = false;
+        for (int slot = 0; slot < 3 && !consumed; slot++) {
+          int row0 = slot * 2;
+          int row1 = slot * 2 + 1;
+          uvec4 rxA = texelFetch(uReactions, ivec2(int(selfId), row0), 0);
+          uint other = rxA.r;
+          if (other == 0u) break;
+          uint chance      = rxA.b;
+          uint selfConsume = rxA.a;
+          if (selfConsume == 0u) continue;
+          uvec4 rxB = texelFetch(uReactions, ivec2(int(selfId), row1), 0);
+          uint minT = rxB.r;
+          uint maxT = rxB.g;
+          uint flags = rxB.b;
+          if ((flags & 0x01u) != 0u) continue;  // catalyst: self never consumed
+          for (int i = 0; i < 8 && !consumed; i++) {
+            if (nIds[i] != other) continue;
+            uint nTemp = texelFetch(uTemp, px + D[i], 0).r;
+            uint tCheck = max(selfTemp, nTemp);
+            if (!tempOk(tCheck, minT, maxT)) continue;
+            ivec2 a = px;
+            ivec2 b = px + D[i];
+            ivec2 lo = min(a, b);
+            ivec2 hi = max(a, b);
+            uint h1 = hash3(uvec3(uint(lo.x) | (uint(lo.y) << 16),
+                                  uint(hi.x) | (uint(hi.y) << 16),
+                                  uint(uFrame) * 31u + uint(slot)));
+            if ((h1 & 0xFFu) >= chance) continue;
+            uint h2 = hash3(uvec3(uint(px.x) * 1009u + 7u, uint(px.y) * 31u + 13u,
+                                  uint(uFrame) * 17u + uint(slot)));
+            if ((h2 & 0xFFu) < selfConsume) {
+              newId = 0u;
+              consumed = true;
+              transformed = true;
+            }
+          }
+        }
+      }
+
+      if (transformed) {
+        if (newId == 0u) newCell = uvec4(0u);
+        else {
+          uint v = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 9001u)) & 3u;
+          newCell = uvec4(newId, v, 0u, 0u);
+        }
+      }
+      outColor = newCell;
+    }
+  `;
+
+  // FS_HEAT — temperature diffusion plus emitTemp pull plus ambient decay.
   const FS_HEAT = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -874,7 +1081,6 @@
       ivec2 px = ivec2(gl_FragCoord.xy);
       uint selfId = texelFetch(uState, px, 0).r;
       uint cur = texelFetch(uTemp, px, 0).r;
-      // Average neighbor temperatures.
       uint sum = 0u;
       uint count = 0u;
       for (int dy = -1; dy <= 1; dy++) {
@@ -889,8 +1095,6 @@
       float avg = count > 0u ? float(sum) / float(count) : float(cur);
       float curF = float(cur);
 
-      // Diffusion strength scales with self's conductivity. Empty cells use
-      // air-like defaults (ambient temp, mild conductivity).
       TraitInfo t;
       if (selfId == 0u) {
         t.emitTemp = 30u; t.ignitionPoint = 255u; t.flammability = 0u;
@@ -901,12 +1105,10 @@
       float k = float(t.conductivity) / 255.0;
       float newT = mix(curF, avg, clamp(k * 0.5, 0.0, 0.5));
 
-      // Element-driven emission: hot/cold cells pull toward emitTemp.
       float emit = float(t.emitTemp);
       if (emit > newT) newT = mix(newT, emit, 0.30);
       else             newT = mix(newT, emit, 0.05);
 
-      // Slow decay toward ambient (30) so transient heat dissipates.
       newT = mix(newT, 30.0, 0.015);
 
       uint outT = uint(clamp(newT, 0.0, 255.0));
@@ -914,11 +1116,8 @@
     }
   `;
 
-  // Ignition shader: cells with non-zero flammability whose temperature is
-  // above their ignitionPoint roll a per-frame chance (= flammability/255)
-  // and convert to fire (if a "fire" element is registered) or to empty.
-  // Ignition-prone cells write themselves out as the "fire" id passed via
-  // uniform; non-ignitable cells pass through unchanged.
+  // FS_IGNITION — ignites cells either by temperature OR by charge magnitude
+  // (new: ignitesAtCharge trait, e.g. gunpowder pops at low charge).
   const FS_IGNITION = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -926,76 +1125,56 @@
     uniform highp usampler2D uState;
     uniform highp usampler2D uTemp;
     uniform highp usampler2D uTraits;
+    uniform highp usampler2D uCharge;
     uniform ivec2 uSize;
     uniform int uFrame;
-    uniform uint uFireId;   // id to convert to when igniting; 0 = vanish
-
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
-    struct TraitInfo {
-      uint emitTemp;
-      uint ignitionPoint;
-      uint flammability;
-      uint conductivity;
-      uint corrosivity;
-      uint hardness;
-    };
-    TraitInfo getTraits(uint id) {
-      uvec4 r0 = texelFetch(uTraits, ivec2(int(id), 0), 0);
-      uvec4 r1 = texelFetch(uTraits, ivec2(int(id), 1), 0);
-      return TraitInfo(r0.r, r0.g, r0.b, r0.a, r1.r, r1.g);
-    }
+    uniform uint uFireId;
+    ${SH_HASH}
 
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
       uvec4 self = texelFetch(uState, px, 0);
       if (self.r == 0u) { outColor = self; return; }
-      TraitInfo t = getTraits(self.r);
-      if (t.flammability == 0u) { outColor = self; return; }
+      uvec4 r0 = texelFetch(uTraits, ivec2(int(self.r), 0), 0);
+      uvec4 r4 = texelFetch(uTraits, ivec2(int(self.r), 4), 0);
+      uint ignitionPoint = r0.g;
+      uint flammability  = r0.b;
+      uint ignitesAtCh   = r4.b;       // trait row 4: (conductsBit, chargeEmit, ignitesAtCharge, airflowFactor)
       uint temp = texelFetch(uTemp, px, 0).r;
-      if (temp < t.ignitionPoint) { outColor = self; return; }
-      // Roll
-      uint h = hash3(uvec3(uint(px.x) * 1009u + 7u,
-                           uint(px.y) * 31u  + 13u,
-                           uint(uFrame) * 41u + 3u));
-      if ((h & 0xFFu) >= t.flammability) { outColor = self; return; }
-      // Ignite: become fire if registered, else vanish.
-      if (uFireId == 0u) {
-        outColor = uvec4(0u);
-      } else {
-        uint v = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 1234u)) & 3u;
-        outColor = uvec4(uFireId, v, 0u, 0u);
+      uint chRaw = texelFetch(uCharge, px, 0).r;
+      int chargeMag = abs(int(chRaw) - 128);
+
+      bool tempIgnite   = (flammability > 0u) && (temp >= ignitionPoint);
+      bool chargeIgnite = (ignitesAtCh > 0u) && (uint(chargeMag) >= ignitesAtCh);
+      if (!tempIgnite && !chargeIgnite) { outColor = self; return; }
+
+      // Charge ignition is strong (always rolls); temp ignition rolls
+      // against flammability.
+      uint h = hash3(uvec3(uint(px.x) * 1009u + 7u, uint(px.y) * 31u + 13u, uint(uFrame) * 41u + 3u));
+      if (chargeIgnite || ((h & 0xFFu) < flammability)) {
+        if (uFireId == 0u) outColor = uvec4(0u);
+        else {
+          uint v = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 1234u)) & 3u;
+          outColor = uvec4(uFireId, v, 0u, 0u);
+        }
+        return;
       }
+      outColor = self;
     }
   `;
 
-  // Cellular CA shader. Run once per frame per cellular element (gated by
-  // cellularTick on the JS side). For each cell, count neighbors that match
-  // the cellular id OR any of its birthFrom ids. If the cell is the cellular
-  // id, apply survive rule with surviveChance gate. If empty, apply born
-  // rule with growChance gate. Other cells pass through unchanged.
+  // FS_CELLULAR — Conway-like growth with optional anisotropy. growBias
+  // (cellularDataTex row 1 byte 4 high nibble): 0=any, 1=up, 2=down, 3=side.
   const FS_CELLULAR = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
     out uvec4 outColor;
     uniform highp usampler2D uState;
-    uniform highp usampler2D uCellularData;  // 256x2: row0=(bornLo,surviveLo,growChance,surviveChance), row1=(extras,bF0,bF1,bF2)
+    uniform highp usampler2D uCellularData;
     uniform ivec2 uSize;
     uniform uint uCellularId;
     uniform int uFrame;
-
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
+    ${SH_HASH}
 
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
@@ -1004,7 +1183,6 @@
       bool selfIsEmpty = (self.r == 0u);
       if (!selfIsThis && !selfIsEmpty) { outColor = self; return; }
 
-      // Decode cellular params for uCellularId.
       uvec4 cd0 = texelFetch(uCellularData, ivec2(int(uCellularId), 0), 0);
       uvec4 cd1 = texelFetch(uCellularData, ivec2(int(uCellularId), 1), 0);
       uint bornMask    = cd0.r | ((cd1.r & 1u) << 8u);
@@ -1014,9 +1192,10 @@
       uint bF0 = cd1.g;
       uint bF1 = cd1.b;
       uint bF2 = cd1.a;
+      uint growBias = (cd1.r >> 6u) & 0x3u;   // 0=any 1=up 2=down 3=side
 
-      // Count neighbors that count as "alive" for this cellular element.
       uint nCount = 0u;
+      uint nUp = 0u, nDown = 0u, nSide = 0u;
       for (int dy = -1; dy <= 1; dy++) {
         for (int dx = -1; dx <= 1; dx++) {
           if (dx == 0 && dy == 0) continue;
@@ -1029,25 +1208,37 @@
               || (bF1 != 0u && nId == bF1)
               || (bF2 != 0u && nId == bF2)) {
             nCount++;
+            // Track which side the support is on.
+            if (dy < 0) nDown++;       // support below me (in fragment-y-up, dy<0 = below)
+            else if (dy > 0) nUp++;    // support above me
+            else nSide++;
           }
         }
       }
       if (nCount > 8u) nCount = 8u;
       uint maskBit = 1u << nCount;
-
       uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
+
       if (selfIsThis) {
         bool survives = (surviveMask & maskBit) != 0u;
         if (!survives) {
-          // Stochastic death gate: surviveChance = chance to escape death.
           uint h2 = (h >> 8u) & 0xFFu;
           if (h2 >= survChance) { outColor = uvec4(0u); return; }
         }
         outColor = self;
         return;
       }
-      // self is empty: maybe birth.
+
       if ((bornMask & maskBit) != 0u) {
+        // growBias: vine grows from below (support comes from down → cell appears above)
+        // 1 = up: prefer to be born when support is below me (extend upward).
+        // 2 = down: prefer to be born when support is above me (root downward).
+        // 3 = side: prefer side support.
+        bool biasOk = true;
+        if (growBias == 1u) biasOk = (nDown >= 1u);
+        else if (growBias == 2u) biasOk = (nUp >= 1u);
+        else if (growBias == 3u) biasOk = (nSide >= 1u);
+        if (!biasOk) { outColor = self; return; }
         uint h3 = h & 0xFFu;
         if (h3 < growChance) {
           uint v = (h >> 16u) & 3u;
@@ -1059,151 +1250,21 @@
     }
   `;
 
-  const FS_REACT = `#version 300 es
-    precision highp float; precision highp int;
-    in vec2 vUv;
-    out uvec4 outColor;
-
-    uniform highp usampler2D uState;
-    uniform highp usampler2D uReactions;  // 256 wide × 3 tall, per-id reaction slots
-    uniform ivec2 uSize;
-    uniform int uFrame;
-
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
-
-    void main() {
-      ivec2 px = ivec2(gl_FragCoord.xy);
-      uvec4 selfCell = texelFetch(uState, px, 0);
-      uint selfId = selfCell.r;
-
-      // Read all 8 neighbors (clamped to edges by texture wrap mode).
-      ivec2 D[8];
-      D[0] = ivec2(-1, -1); D[1] = ivec2(0, -1); D[2] = ivec2(1, -1);
-      D[3] = ivec2(-1,  0);                       D[4] = ivec2(1,  0);
-      D[5] = ivec2(-1,  1); D[6] = ivec2(0,  1); D[7] = ivec2(1,  1);
-      uint nIds[8];
-      for (int i = 0; i < 8; i++) {
-        ivec2 np = px + D[i];
-        if (np.x < 0 || np.x >= uSize.x || np.y < 0 || np.y >= uSize.y) {
-          nIds[i] = 0u;
-        } else {
-          nIds[i] = texelFetch(uState, np, 0).r;
-        }
-      }
-
-      // 1) Inverse pass: did a neighbor's reaction transform me?
-      // If selfId == 0, skip (empty cells aren't transformed by reactions).
-      uint newId = selfId;
-      uvec4 newCell = selfCell;
-      bool transformed = false;
-
-      if (selfId != 0u) {
-        for (int i = 0; i < 8 && !transformed; i++) {
-          uint nid = nIds[i];
-          if (nid == 0u) continue;
-          for (int slot = 0; slot < 3 && !transformed; slot++) {
-            uvec4 rx = texelFetch(uReactions, ivec2(int(nid), slot), 0);
-            uint other = rx.r;
-            if (other == 0u) break;       // unused slot
-            if (other != selfId) continue; // not me
-            uint becomes = rx.g;
-            uint chance  = rx.b;
-            // Roll using a hash of (sorted-cell-pair, frame, slot) so both
-            // sides of the pair compute the same roll.
-            ivec2 a = px;
-            ivec2 b = px + D[i];
-            ivec2 lo = min(a, b);
-            ivec2 hi = max(a, b);
-            uint h = hash3(uvec3(uint(lo.x) | (uint(lo.y) << 16),
-                                 uint(hi.x) | (uint(hi.y) << 16),
-                                 uint(uFrame) * 31u + uint(slot)));
-            if ((h & 0xFFu) < chance) {
-              newId = becomes;
-              transformed = true;
-            }
-          }
-        }
-      }
-
-      // 2) Self-consume pass: do any of MY reactions trigger consumption?
-      // Only matters if I haven't already been transformed by step 1.
-      if (selfId != 0u && !transformed) {
-        bool consumed = false;
-        for (int slot = 0; slot < 3 && !consumed; slot++) {
-          uvec4 rx = texelFetch(uReactions, ivec2(int(selfId), slot), 0);
-          uint other = rx.r;
-          if (other == 0u) break;
-          uint chance      = rx.b;
-          uint selfConsume = rx.a;
-          if (selfConsume == 0u) continue;
-          for (int i = 0; i < 8 && !consumed; i++) {
-            if (nIds[i] != other) continue;
-            ivec2 a = px;
-            ivec2 b = px + D[i];
-            ivec2 lo = min(a, b);
-            ivec2 hi = max(a, b);
-            uint h1 = hash3(uvec3(uint(lo.x) | (uint(lo.y) << 16),
-                                  uint(hi.x) | (uint(hi.y) << 16),
-                                  uint(uFrame) * 31u + uint(slot)));
-            if ((h1 & 0xFFu) >= chance) continue;
-            uint h2 = hash3(uvec3(uint(px.x) * 1009u + 7u, uint(px.y) * 31u + 13u,
-                                  uint(uFrame) * 17u + uint(slot)));
-            if ((h2 & 0xFFu) < selfConsume) {
-              newId = 0u;
-              consumed = true;
-              transformed = true;
-            }
-          }
-        }
-      }
-
-      if (transformed) {
-        if (newId == 0u) {
-          newCell = uvec4(0u);
-        } else {
-          // Pick a fresh color variant for the new element.
-          uint v = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 9001u)) & 3u;
-          newCell = uvec4(newId, v, 0u, 0u);
-        }
-      }
-      outColor = newCell;
-    }
-  `;
-
-  // Corrosion shader: each cell scans its 8 neighbors for the maximum
-  // corrosivity trait. If that exceeds this cell's hardness, dissolve with
-  // probability proportional to the gap. Lets acid eat sand/plant emergent —
-  // no per-pair reaction needed. Same-id neighbors are skipped so a pool of
-  // acid doesn't dissolve itself.
+  // FS_CORROSION — unchanged from v1.
   const FS_CORROSION = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
     out uvec4 outColor;
-
     uniform highp usampler2D uState;
     uniform highp usampler2D uTraits;
     uniform ivec2 uSize;
     uniform int uFrame;
-
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
+    ${SH_HASH}
 
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
       uvec4 self = texelFetch(uState, px, 0);
       if (self.r == 0u) { outColor = self; return; }
-      // Self's hardness is in row 1 (channel g) of traits texture.
       uvec4 sr1 = texelFetch(uTraits, ivec2(int(self.r), 1), 0);
       uint hard = sr1.g;
       uint maxCorr = 0u;
@@ -1220,50 +1281,33 @@
         }
       }
       if (maxCorr <= hard) { outColor = self; return; }
-      uint diff = maxCorr - hard; // 1..255
-      // Per-frame dissolve chance ~ diff / 2048. Acid (200) on sand (60) gives
-      // ~6.8%/frame, so cells fizz away in ~15 frames. Acid on wall (200)
-      // gives diff=0 → no eating, which matches the milestone-3 baseline.
+      uint diff = maxCorr - hard;
       uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
-      if ((h & 0x7FFu) < diff) {
-        outColor = uvec4(0u);
-      } else {
-        outColor = self;
-      }
+      if ((h & 0x7FFu) < diff) outColor = uvec4(0u);
+      else outColor = self;
     }
   `;
 
-  // Phase-transition shader: reads each cell's temperature, looks up the
-  // (meltAt, boilAt, freezeAt) thresholds and (meltsTo, boilsTo, freezesTo)
-  // target ids in the traits texture (rows 2 + 3). Stochastic gates so phase
-  // fronts don't snap as a perfect line. A 0 threshold means "no transition",
-  // which is the default for elements without phase data.
+  // FS_PHASE — phase transitions (melt/boil/freeze) unchanged from v1.
   const FS_PHASE = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
     out uvec4 outColor;
-
     uniform highp usampler2D uState;
     uniform highp usampler2D uTemp;
     uniform highp usampler2D uTraits;
     uniform highp usampler2D uElemData;
+    uniform highp usampler2D uRegisters;
     uniform ivec2 uSize;
     uniform int uFrame;
+    ${SH_HASH}
 
-    uint hash3(uvec3 v) {
-      v = v * 1664525u + 1013904223u;
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      v ^= (v >> 16u);
-      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
-      return v.x;
-    }
-
-    // Phase-change products inherit a default 120-frame life when they are gas
-    // so they decay just like painted gas. Non-gas products clear life.
-    uvec4 transformTo(uint newId, uint h) {
+    uvec4 transformTo(uint newId, uint h, ivec2 px) {
       uvec4 e = texelFetch(uElemData, ivec2(int(newId), 0), 0);
       uint life = (e.r == 4u) ? 120u : 0u;
-      return uvec4(newId, h & 3u, 0u, life);
+      uint regRa = texelFetch(uRegisters, ivec2(int(newId), 0), 0).r;
+      uint ra = (regRa > 0u) ? regRa : life;
+      return uvec4(newId, h & 3u, ra, 0u);
     }
 
     void main() {
@@ -1272,33 +1316,322 @@
       if (self.r == 0u) { outColor = self; return; }
       uvec4 r2 = texelFetch(uTraits, ivec2(int(self.r), 2), 0);
       uvec4 r3 = texelFetch(uTraits, ivec2(int(self.r), 3), 0);
-      uint meltAt   = r2.r;
-      uint boilAt   = r2.g;
-      uint freezeAt = r2.b;
-      uint meltTo   = r3.r;
-      uint boilTo   = r3.g;
-      uint freezeTo = r3.b;
+      uint meltAt   = r2.r; uint boilAt   = r2.g; uint freezeAt = r2.b;
+      uint meltTo   = r3.r; uint boilTo   = r3.g; uint freezeTo = r3.b;
       uint temp = texelFetch(uTemp, px, 0).r;
       uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
       uint roll = h & 0xFFu;
-
-      // Boiling outranks melting — if water is over its boiling point, it
-      // skips the molten step (which it doesn't have anyway).
       if (boilAt > 0u && boilTo > 0u && temp >= boilAt) {
-        if (roll < 64u) { outColor = transformTo(boilTo, h); return; }
+        if (roll < 64u) { outColor = transformTo(boilTo, h, px); return; }
       }
       if (meltAt > 0u && meltTo > 0u && temp >= meltAt) {
-        if (roll < 32u) { outColor = transformTo(meltTo, h); return; }
+        if (roll < 32u) { outColor = transformTo(meltTo, h, px); return; }
       }
       if (freezeAt > 0u && freezeTo > 0u && temp <= freezeAt) {
-        if (roll < 24u) { outColor = transformTo(freezeTo, h); return; }
+        if (roll < 24u) { outColor = transformTo(freezeTo, h, px); return; }
       }
       outColor = self;
     }
   `;
 
+  // FS_REGISTER — per-element register tick. ra changes by raDelta each
+  // frame (signed via offset binary, 128 = no change). When ra hits raDiesAt,
+  // cell either dies (raTransformsTo == 0) or transforms (id swap). Also
+  // looks at registersTex row 1 for rb (currently unused but reserved).
+  const FS_REGISTER = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uRegisters;
+    uniform highp usampler2D uElemData;
+    uniform ivec2 uSize;
+    uniform int uFrame;
+    ${SH_HASH}
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      if (self.r == 0u) { outColor = self; return; }
+      uvec4 reg = texelFetch(uRegisters, ivec2(int(self.r), 0), 0);
+      uint raDeltaOffset = reg.g;
+      if (raDeltaOffset == 128u) { outColor = self; return; }   // no register tick
+
+      uint raDiesAt    = reg.b;
+      uint raTransform = reg.a;
+
+      int delta = int(raDeltaOffset) - 128;
+      uint oldRa = self.b;
+      int newRa = int(oldRa) + delta;
+      newRa = clamp(newRa, 0, 255);
+
+      // Hit the death/transform threshold? Require crossing it in the
+      // direction of the delta — otherwise an unreachable raDiesAt (e.g.,
+      // explosive's 255 with downward decay) would fire on every frame.
+      bool hit = false;
+      if (delta < 0 && uint(newRa) <= raDiesAt && oldRa > raDiesAt) hit = true;
+      else if (delta > 0 && uint(newRa) >= raDiesAt && oldRa < raDiesAt) hit = true;
+
+      if (hit) {
+        if (raTransform == 0u) { outColor = uvec4(0u); return; }
+        uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 7777u));
+        uint v = h & 3u;
+        // Inherit register defaults of the new element so the chain can
+        // continue (e.g., uranium → stone with stone's defaults).
+        uvec4 newReg = texelFetch(uRegisters, ivec2(int(raTransform), 0), 0);
+        uvec4 elem   = texelFetch(uElemData, ivec2(int(raTransform), 0), 0);
+        uint newRaVal = newReg.r;
+        if (elem.r == 4u && newRaVal == 0u) newRaVal = 120u;     // gas default life
+        outColor = uvec4(raTransform, v, newRaVal, 0u);
+        return;
+      }
+
+      outColor = uvec4(self.r, self.g, uint(newRa) & 0xFFu, self.a);
+    }
+  `;
+
+  // FS_CHARGE — propagates electrical charge through conductors. Sources
+  // (chargeEmit != 128) override their cell's charge each frame. Conductors
+  // diffuse with neighbors. Non-conductors decay toward neutral (128).
+  const FS_CHARGE = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uCharge;
+    uniform highp usampler2D uTraits;
+    uniform ivec2 uSize;
+
+    bool isConductor(uint id) {
+      if (id == 0u) return false;
+      // traits row 4: (conductsBit, chargeEmit, ignitesAtCharge, airflowFactor)
+      uvec4 r4 = texelFetch(uTraits, ivec2(int(id), 4), 0);
+      return r4.r != 0u;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uint selfId = texelFetch(uState, px, 0).r;
+      uint cur = texelFetch(uCharge, px, 0).r;
+
+      if (selfId == 0u) {
+        // Air: decay toward 128 (neutral).
+        uint outC;
+        if (cur > 128u) outC = cur - 1u;
+        else if (cur < 128u) outC = cur + 1u;
+        else outC = cur;
+        outColor = uvec4(outC, 0u, 0u, 0u);
+        return;
+      }
+
+      uvec4 r4 = texelFetch(uTraits, ivec2(int(selfId), 4), 0);
+      uint conductsBit = r4.r;
+      uint chargeEmit  = r4.g;
+
+      // Charge source overrides.
+      if (chargeEmit != 128u) {
+        outColor = uvec4(chargeEmit, 0u, 0u, 0u);
+        return;
+      }
+
+      if (conductsBit == 0u) {
+        // Insulator: decay slowly.
+        uint outC;
+        if (cur > 128u) outC = cur - 1u;
+        else if (cur < 128u) outC = cur + 1u;
+        else outC = cur;
+        outColor = uvec4(outC, 0u, 0u, 0u);
+        return;
+      }
+
+      // Conductor: average charge with conductor neighbors.
+      int sumDelta = 0;
+      int count = 0;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) continue;
+          uint nid = texelFetch(uState, np, 0).r;
+          if (nid == 0u) continue;
+          uvec4 nr4 = texelFetch(uTraits, ivec2(int(nid), 4), 0);
+          if (nr4.r == 0u && nr4.g == 128u) continue;            // neither conducts nor sources
+          uint nc = texelFetch(uCharge, np, 0).r;
+          sumDelta += int(nc) - int(cur);
+          count++;
+        }
+      }
+      int newCharge;
+      if (count > 0) {
+        // Move halfway toward the average.
+        newCharge = int(cur) + sumDelta / (count * 2);
+      } else {
+        // Isolated conductor: decay to neutral.
+        newCharge = int(cur);
+        if (newCharge > 128) newCharge -= 1;
+        else if (newCharge < 128) newCharge += 1;
+      }
+      newCharge = clamp(newCharge, 0, 255);
+      outColor = uvec4(uint(newCharge), 0u, 0u, 0u);
+    }
+  `;
+
+  // FS_PRESSURE — coarse-grid pressure + airflow. Each coarse cell samples
+  // its 4×4 region of full-res state, accumulates "mass" (count of solid
+  // cells weighted by density), updates pressure with neighbor-diffusion,
+  // computes velocity from the pressure gradient, applies buoyancy from
+  // local hot air, and overrides with airflow sources (fan elements).
+  const FS_PRESSURE = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uTemp;
+    uniform highp usampler2D uAir;
+    uniform highp usampler2D uElemData;
+    uniform highp usampler2D uTraits;
+    uniform ivec2 uSize;
+    uniform ivec2 uAirSize;
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      ivec2 baseFull = px * 4;
+
+      int solidCount = 0;
+      int gasCount = 0;
+      int totalDensity = 0;
+      uint sumTemp = 0u;
+      uint tempCount = 0u;
+      int srcVx = 0, srcVy = 0;
+      int srcCount = 0;
+      for (int dy = 0; dy < 4; dy++) {
+        for (int dx = 0; dx < 4; dx++) {
+          ivec2 fp = baseFull + ivec2(dx, dy);
+          if (fp.x >= uSize.x || fp.y >= uSize.y) continue;
+          uint id = texelFetch(uState, fp, 0).r;
+          if (id != 0u) {
+            uvec4 e = texelFetch(uElemData, ivec2(int(id), 0), 0);
+            uint kind = e.r;
+            if (kind == 1u || kind == 2u || kind == 3u || kind == 5u) {
+              solidCount++;
+              totalDensity += int(e.g);
+            } else if (kind == 4u) {
+              gasCount++;
+            }
+            // Airflow source from trait row 5: (airflowEmitVx, airflowEmitVy, _, _)
+            uvec4 r5 = texelFetch(uTraits, ivec2(int(id), 5), 0);
+            int vx = int(r5.r) - 128;
+            int vy = int(r5.g) - 128;
+            if (vx != 0 || vy != 0) { srcVx += vx; srcVy += vy; srcCount++; }
+          }
+          sumTemp += texelFetch(uTemp, fp, 0).r;
+          tempCount++;
+        }
+      }
+
+      uvec4 cur = texelFetch(uAir, px, 0);
+      uint curPressure = cur.r;
+      uint curVx = cur.g;
+      uint curVy = cur.b;
+      uint curAmb = cur.a;
+
+      // Pressure: target = 128 + density-deviation. Diffuse with neighbors.
+      uint pNeighSum = 0u;
+      int pCount = 0;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uAirSize.x || np.y >= uAirSize.y) continue;
+          pNeighSum += texelFetch(uAir, np, 0).r;
+          pCount++;
+        }
+      }
+      float pAvg = pCount > 0 ? float(pNeighSum) / float(pCount) : 128.0;
+      float densityP = 128.0 + float(totalDensity - 32) * 0.6;
+      float newP = mix(float(curPressure), pAvg, 0.45);
+      newP = mix(newP, densityP, 0.08);
+      newP = clamp(newP, 0.0, 255.0);
+
+      // Velocity from pressure gradient.
+      ivec2 pxL = px - ivec2(1,0); pxL = clamp(pxL, ivec2(0), uAirSize - 1);
+      ivec2 pxR = px + ivec2(1,0); pxR = clamp(pxR, ivec2(0), uAirSize - 1);
+      ivec2 pxD = px - ivec2(0,1); pxD = clamp(pxD, ivec2(0), uAirSize - 1);
+      ivec2 pxU = px + ivec2(0,1); pxU = clamp(pxU, ivec2(0), uAirSize - 1);
+      float pL = float(texelFetch(uAir, pxL, 0).r);
+      float pR = float(texelFetch(uAir, pxR, 0).r);
+      float pD = float(texelFetch(uAir, pxD, 0).r);
+      float pU = float(texelFetch(uAir, pxU, 0).r);
+      float gradX = (pR - pL) * 0.5;
+      float gradY = (pU - pD) * 0.5;
+
+      float ambTempF = tempCount > 0u ? float(sumTemp) / float(tempCount) : 30.0;
+      // Buoyancy: hot air rises (vy positive in fragment-y-up).
+      float buoy = clamp((ambTempF - 30.0) * 0.06, 0.0, 8.0);
+
+      float vxF = float(int(curVx) - 128) - gradX * 0.35;
+      float vyF = float(int(curVy) - 128) - gradY * 0.35 + buoy * 0.4;
+
+      // Damp.
+      vxF *= 0.9; vyF *= 0.9;
+
+      // Sources override: a fan in this coarse cell sets the velocity.
+      if (srcCount > 0) {
+        vxF = float(srcVx) / float(srcCount);
+        vyF = float(srcVy) / float(srcCount);
+      }
+
+      // Decay ambient temp toward 30.
+      float ambNew = mix(ambTempF, 30.0, 0.05);
+
+      uint outVx = uint(clamp(vxF + 128.0, 0.0, 255.0));
+      uint outVy = uint(clamp(vyF + 128.0, 0.0, 255.0));
+      uint outP = uint(clamp(newP, 0.0, 255.0));
+      uint outAmb = uint(clamp(ambNew, 0.0, 255.0));
+      outColor = uvec4(outP, outVx, outVy, outAmb);
+    }
+  `;
+
+  // FS_PRESSURE_BLAST — pop cells with `pressureBlast` trait when local
+  // pressure exceeds threshold. Replacement id is in trait row 5 byte 3.
+  const FS_PRESSURE_BLAST = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uAir;
+    uniform highp usampler2D uTraits;
+    uniform highp usampler2D uElemData;
+    uniform highp usampler2D uRegisters;
+    uniform ivec2 uSize;
+    uniform ivec2 uAirSize;
+    uniform int uFrame;
+    ${SH_HASH}
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      if (self.r == 0u) { outColor = self; return; }
+      uvec4 r5 = texelFetch(uTraits, ivec2(int(self.r), 5), 0);
+      uint blastAt = r5.b;
+      uint blastTo = r5.a;
+      if (blastAt == 0u) { outColor = self; return; }
+      ivec2 ap = clamp(px / 4, ivec2(0), uAirSize - 1);
+      uint pressure = texelFetch(uAir, ap, 0).r;
+      if (pressure < blastAt) { outColor = self; return; }
+      // Roll a die: 25%/frame to actually pop, so blast has a "fizz" feel.
+      uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 31337u));
+      if ((h & 3u) != 0u) { outColor = self; return; }
+      if (blastTo == 0u) { outColor = uvec4(0u); return; }
+      uvec4 e = texelFetch(uElemData, ivec2(int(blastTo), 0), 0);
+      uint regRa = texelFetch(uRegisters, ivec2(int(blastTo), 0), 0).r;
+      uint life = (e.r == 4u) ? 120u : 0u;
+      uint ra = (regRa > 0u) ? regRa : life;
+      outColor = uvec4(blastTo, h & 3u, ra, 0u);
+    }
+  `;
+
   function initGL() {
-    // Core shaders — must succeed for the sim to run at all.
     progSim    = linkProgram(VS_QUAD, FS_SIM);
     progPaint  = linkProgram(VS_QUAD, FS_PAINT);
     progRender = linkProgram(VS_QUAD, FS_RENDER);
@@ -1306,16 +1639,16 @@
     progReact  = linkProgram(VS_QUAD, FS_REACT);
     progContact= linkProgram(VS_QUAD, FS_CONTACT);
     progBlast  = linkProgram(VS_QUAD, FS_BLAST);
-    // Optional shaders — if any of these fails to compile (driver quirks,
-    // GLSL ES extensions), skip just that pass instead of breaking the whole
-    // sim. The loop below checks for null progs before calling.
-    try { progHeat     = linkProgram(VS_QUAD, FS_HEAT);     } catch (e) { console.warn('progHeat compile failed, heat pass disabled:', e); }
-    try { progIgnition = linkProgram(VS_QUAD, FS_IGNITION); } catch (e) { console.warn('progIgnition compile failed, ignition pass disabled:', e); }
-    try { progCellular = linkProgram(VS_QUAD, FS_CELLULAR); } catch (e) { console.warn('progCellular compile failed, cellular pass disabled:', e); }
-    try { progCorrosion= linkProgram(VS_QUAD, FS_CORROSION);} catch (e) { console.warn('progCorrosion compile failed, corrosion pass disabled:', e); }
-    try { progPhase    = linkProgram(VS_QUAD, FS_PHASE);    } catch (e) { console.warn('progPhase compile failed, phase pass disabled:', e); }
+    try { progHeat          = linkProgram(VS_QUAD, FS_HEAT);          } catch (e) { console.warn('progHeat compile failed:', e); }
+    try { progIgnition      = linkProgram(VS_QUAD, FS_IGNITION);      } catch (e) { console.warn('progIgnition compile failed:', e); }
+    try { progCellular      = linkProgram(VS_QUAD, FS_CELLULAR);      } catch (e) { console.warn('progCellular compile failed:', e); }
+    try { progCorrosion     = linkProgram(VS_QUAD, FS_CORROSION);     } catch (e) { console.warn('progCorrosion compile failed:', e); }
+    try { progPhase         = linkProgram(VS_QUAD, FS_PHASE);         } catch (e) { console.warn('progPhase compile failed:', e); }
+    try { progRegister      = linkProgram(VS_QUAD, FS_REGISTER);      } catch (e) { console.warn('progRegister compile failed:', e); }
+    try { progCharge        = linkProgram(VS_QUAD, FS_CHARGE);        } catch (e) { console.warn('progCharge compile failed:', e); }
+    try { progPressure      = linkProgram(VS_QUAD, FS_PRESSURE);      } catch (e) { console.warn('progPressure compile failed:', e); }
+    try { progPressureBlast = linkProgram(VS_QUAD, FS_PRESSURE_BLAST);} catch (e) { console.warn('progPressureBlast compile failed:', e); }
 
-    // Fullscreen triangle (covers the framebuffer with two tris).
     quadVao = gl.createVertexArray();
     gl.bindVertexArray(quadVao);
     const buf = gl.createBuffer();
@@ -1328,39 +1661,35 @@
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
-    // Element data lookup texture (256x1 RGBA8UI).
     elementDataTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 1);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    // Palette texture (256x4 RGBA8). Width=ids, Height=variants.
     paletteTex = createU8Texture2D(256, 4);
 
-    // Reactions texture: 256 wide × 3 tall, RGBA8UI per slot.
     reactionsTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 3);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 6);   // 3 slots × 2 rows
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    // Traits texture: 256 wide × 4 tall, RGBA8UI.
-    // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
-    // Row 1 = (corrosivity, hardness, _, _)
-    // Row 2 = (meltingPoint, boilingPoint, freezingPoint, _)         — phase thresholds
-    // Row 3 = (meltsToId, boilsToId, freezesToId, _)                 — phase products
-    // 0 in any threshold byte means "no transition for this element."
     traitsTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 4);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 6);   // 6 rows now
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    // Cellular CA params texture: 256 wide × 2 tall, RGBA8UI.
     cellularDataTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, cellularDataTex);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 2);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    registersTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, registersTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 2);   // row 0 ra, row 1 reserved
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
@@ -1369,26 +1698,21 @@
     uploadReactions();
     uploadTraits();
     uploadCellular();
+    uploadRegisters();
   }
 
-  // Pack registry into the lookup texture.
   function uploadElementData() {
     const buf = new Uint8Array(256 * 4);
     for (let id = 0; id < 256; id++) {
       const spec = registry[id];
-      if (!spec) {
-        buf[id * 4 + 0] = KIND_EMPTY;
-        continue;
-      }
+      if (!spec) { buf[id * 4 + 0] = KIND_EMPTY; continue; }
       buf[id * 4 + 0] = kindCode(spec.kind);
       buf[id * 4 + 1] = Math.max(1, Math.min(15, Math.round(spec.density || 1)));
-      // paramA: kind-specific (flow for powder, viscosity for liquid, buoyancy for gas)
       let paramA = 128;
       if (spec.kind === 'powder') paramA = Math.round(((typeof spec.flow === 'number') ? spec.flow : 0.55) * 255);
       else if (spec.kind === 'liquid') paramA = Math.round(((typeof spec.viscosity === 'number') ? spec.viscosity : 0) * 255);
       else if (spec.kind === 'gas') paramA = Math.round(((typeof spec.buoyancy === 'number') ? spec.buoyancy : 0.9) * 255);
       buf[id * 4 + 2] = paramA;
-      // paramB: low 7 bits = stickiness × 127, high bit = isExplosive flag.
       let paramB = Math.round(((typeof spec.stickiness === 'number') ? spec.stickiness : 0) * 127) & 0x7f;
       if (spec.isExplosive) paramB |= 0x80;
       buf[id * 4 + 3] = paramB;
@@ -1397,7 +1721,6 @@
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
-  // Pack registry palettes into the palette texture: 4 variants per element.
   function uploadPalette() {
     const buf = new Uint8Array(256 * 4 * 4);
     for (let id = 0; id < 256; id++) {
@@ -1425,12 +1748,11 @@
     return [parseInt(h.slice(0,2),16)|0, parseInt(h.slice(2,4),16)|0, parseInt(h.slice(4,6),16)|0];
   }
 
-  // Pack each element's reaction list into 3 slots × 256 ids.
-  // Per slot: (otherId, becomesId, chanceByte, selfConsumeByte).
-  // otherId == 0 marks an unused slot. Reactions with explodes:true are
-  // skipped here (they belong to the milestone-3 explosion path).
+  // Pack reactions: 3 slots × 2 rows × 256 ids.
+  // Row 0 (per slot): (otherId, becomesId, chance, selfConsume)
+  // Row 1 (per slot): (minTemp, maxTemp, conditionFlags, _)
   function uploadReactions() {
-    const buf = new Uint8Array(256 * 3 * 4);
+    const buf = new Uint8Array(256 * 6 * 4);
     for (let id = 0; id < 256; id++) {
       const spec = registry[id];
       if (!spec || !Array.isArray(spec.reactions)) continue;
@@ -1447,30 +1769,37 @@
         }
         const chance = Math.max(0, Math.min(255, Math.round((rx.chance || 0) * 255)));
         const selfConsume = Math.max(0, Math.min(255, Math.round(((typeof rx.selfConsume === 'number') ? rx.selfConsume : 0) * 255)));
-        // Slot row layout: slot 0 = top row of texture (y=0), etc.
-        const o = (slot * 256 + id) * 4;
-        buf[o + 0] = otherId;
-        buf[o + 1] = becomesId;
-        buf[o + 2] = chance;
-        buf[o + 3] = selfConsume;
+        const minTemp = clamp255(rx.minTemp, 0);
+        const maxTemp = clamp255(rx.maxTemp, 0);
+        let flags = 0;
+        if (rx.catalyst) flags |= 0x01;
+        const r0 = (slot * 2 + 0) * 256 * 4 + id * 4;
+        buf[r0 + 0] = otherId;
+        buf[r0 + 1] = becomesId;
+        buf[r0 + 2] = chance;
+        buf[r0 + 3] = selfConsume;
+        const r1 = (slot * 2 + 1) * 256 * 4 + id * 4;
+        buf[r1 + 0] = minTemp;
+        buf[r1 + 1] = maxTemp;
+        buf[r1 + 2] = flags;
+        buf[r1 + 3] = 0;
         slot++;
       }
     }
     gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 3, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 6, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
-  // Pack each element's traits into 4 rows of RGBA8UI per id.
-  // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
-  // Row 1 = (corrosivity, hardness, _, _)
-  // Row 2 = (meltingPoint, boilingPoint, freezingPoint, _)
-  // Row 3 = (meltsToId, boilsToId, freezesToId, _)
-  // Phase target keys are resolved against keyToId at upload time, so an
-  // element registered before its phase target still picks up the link as
-  // soon as the target is registered (registerElement re-uploads traits).
+  // Traits: 256 wide × 6 rows.
+  // Row 0: (emitTemp, ignitionPoint, flammability, conductivity)
+  // Row 1: (corrosivity, hardness, stickiness*127, _)
+  // Row 2: (meltAt, boilAt, freezeAt, _)
+  // Row 3: (meltsToId, boilsToId, freezesToId, _)
+  // Row 4: (conductsBit, chargeEmit_offset, ignitesAtCharge, airflowFactor*255)
+  // Row 5: (airflowEmitVx_offset, airflowEmitVy_offset, pressureBlast, pressureBlastToId)
   function uploadTraits() {
     if (!traitsTex) return;
-    const buf = new Uint8Array(256 * 4 * 4);
+    const buf = new Uint8Array(256 * 6 * 4);
     const resolveId = (key) => {
       if (typeof key !== 'string' || !key) return 0;
       const lc = key.toLowerCase();
@@ -1480,21 +1809,15 @@
     for (let id = 0; id < 256; id++) {
       const spec = registry[id];
       if (!spec) continue;
-      const emitTemp      = clamp255(spec.emitTemp,      30);
-      const ignitionPoint = clamp255(spec.ignitionPoint, 255);
-      const flammability  = clamp255(Math.round(((typeof spec.flammability === 'number') ? spec.flammability : 0) * 255), 0);
-      const conductivity  = clamp255(spec.conductivity,  100);
-      const corrosivity   = clamp255(spec.corrosivity,   0);
-      const hardness      = clamp255(spec.hardness,      80);
       const o0 = (0 * 256 + id) * 4;
-      buf[o0+0] = emitTemp;
-      buf[o0+1] = ignitionPoint;
-      buf[o0+2] = flammability;
-      buf[o0+3] = conductivity;
+      buf[o0+0] = clamp255(spec.emitTemp,      30);
+      buf[o0+1] = clamp255(spec.ignitionPoint, 255);
+      buf[o0+2] = clamp255(Math.round(((typeof spec.flammability === 'number') ? spec.flammability : 0) * 255), 0);
+      buf[o0+3] = clamp255(spec.conductivity,  100);
       const o1 = (1 * 256 + id) * 4;
-      buf[o1+0] = corrosivity;
-      buf[o1+1] = hardness;
-      buf[o1+2] = 0;
+      buf[o1+0] = clamp255(spec.corrosivity, 0);
+      buf[o1+1] = clamp255(spec.hardness, 80);
+      buf[o1+2] = Math.round(((typeof spec.stickiness === 'number') ? spec.stickiness : 0) * 127);
       buf[o1+3] = 0;
       const o2 = (2 * 256 + id) * 4;
       buf[o2+0] = clamp255(spec.meltingPoint,   0);
@@ -1506,9 +1829,29 @@
       buf[o3+1] = resolveId(spec.boilsTo);
       buf[o3+2] = resolveId(spec.freezesTo);
       buf[o3+3] = 0;
+      const o4 = (4 * 256 + id) * 4;
+      buf[o4+0] = spec.conducts ? 1 : 0;
+      // chargeEmit: signed -127..127 → offset binary 1..255 (128 = no source, default).
+      const ce = (typeof spec.chargeEmit === 'number') ? Math.max(-127, Math.min(127, spec.chargeEmit | 0)) : 0;
+      buf[o4+1] = (spec.chargeEmit === undefined || spec.chargeEmit === null) ? 128 : (ce + 128);
+      buf[o4+2] = clamp255(spec.ignitesAtCharge, 0);
+      buf[o4+3] = Math.round(((typeof spec.airflowFactor === 'number') ? spec.airflowFactor : 0) * 255);
+      const o5 = (5 * 256 + id) * 4;
+      const emit = spec.emitsAirflow || null;
+      if (emit && (emit.vx || emit.vy)) {
+        const evx = Math.max(-127, Math.min(127, (emit.vx || 0) | 0));
+        const evy = Math.max(-127, Math.min(127, (emit.vy || 0) | 0));
+        buf[o5+0] = evx + 128;
+        buf[o5+1] = evy + 128;
+      } else {
+        buf[o5+0] = 128;
+        buf[o5+1] = 128;
+      }
+      buf[o5+2] = clamp255(spec.pressureBlast, 0);
+      buf[o5+3] = resolveId(spec.pressureBlastTo);
     }
     gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 4, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 6, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
   function clamp255(v, def) {
@@ -1516,10 +1859,6 @@
     return Math.max(0, Math.min(255, Math.round(v)));
   }
 
-  // Pack cellular CA parameters per id into 2 rows of RGBA8UI.
-  // Row 0 = (bornMaskLo, surviveMaskLo, growChance, surviveChance)
-  // Row 1 = (extras, birthFrom0, birthFrom1, birthFrom2)
-  // extras byte: bit0 = bornMask>>8, bit1 = surviveMask>>8, bits 2-7 = cellularTick
   function uploadCellular() {
     if (!cellularDataTex) return;
     const buf = new Uint8Array(256 * 2 * 4);
@@ -1541,9 +1880,15 @@
       const surviveChance = clamp255(Math.round((typeof spec.surviveChance === 'number' ? spec.surviveChance : 0.92) * 255), 235);
       const bF = (spec.birthFrom || []).map(k => keyToId[k] || 0).slice(0, 3);
       while (bF.length < 3) bF.push(0);
+      // growBias: 0=any 1=up 2=down 3=side
+      let growBias = 0;
+      if (spec.growBias === 'up') growBias = 1;
+      else if (spec.growBias === 'down') growBias = 2;
+      else if (spec.growBias === 'side') growBias = 3;
       const extras = ((bornMask >> 8) & 1)
                    | (((surviveMask >> 8) & 1) << 1)
-                   | ((tick & 0x3F) << 2);
+                   | ((tick & 0x0F) << 2)
+                   | ((growBias & 0x3) << 6);
       const o0 = (0 * 256 + id) * 4;
       buf[o0+0] = bornMask & 0xff;
       buf[o0+1] = surviveMask & 0xff;
@@ -1556,6 +1901,53 @@
       buf[o1+3] = bF[2];
     }
     gl.bindTexture(gl.TEXTURE_2D, cellularDataTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
+  }
+
+  // Registers texture:
+  // Row 0: (raInit, raDelta_offset, raDiesAt, raTransformsToId)
+  // Row 1: reserved (rb)
+  // raDelta offset: 128 = no tick. <128 = negative delta. >128 = positive.
+  // For gas elements we leave row 0 raInit = lifeMin (paint may override
+  // with a randomized value via uniform). raDelta = 127 (= -1).
+  function uploadRegisters() {
+    if (!registersTex) return;
+    const buf = new Uint8Array(256 * 2 * 4);
+    const resolveId = (key) => {
+      if (typeof key !== 'string' || !key) return 0;
+      if (key.toLowerCase() === 'empty') return 0;
+      return keyToId[key.toLowerCase()] || 0;
+    };
+    for (let id = 0; id < 256; id++) {
+      const spec = registry[id];
+      if (!spec) continue;
+      let raInit = 0, raDelta = 128, raDiesAt = 0, raTransforms = 0;
+      if (spec.kind === 'gas' && spec.lifeMin) {
+        raInit = clamp255(spec.lifeMin, 60);
+        raDelta = 127;             // -1
+        raDiesAt = 0;
+        raTransforms = 0;          // dies on hitting 0
+      }
+      if (spec.isExplosive) {
+        raInit = 28;               // settle frames
+        raDelta = 127;             // -1
+        raDiesAt = 255;            // never dies (clamp at 0 stops countdown)
+        raTransforms = 0;
+      }
+      // AI / built-in custom registers override the above defaults.
+      if (typeof spec.raInit === 'number') raInit = clamp255(spec.raInit, 0);
+      if (typeof spec.raDelta === 'number') {
+        raDelta = Math.max(1, Math.min(255, (spec.raDelta | 0) + 128));
+      }
+      if (typeof spec.raDiesAt === 'number') raDiesAt = clamp255(spec.raDiesAt, 0);
+      if (typeof spec.raTransformsTo === 'string') raTransforms = resolveId(spec.raTransformsTo);
+      const o0 = (0 * 256 + id) * 4;
+      buf[o0+0] = raInit;
+      buf[o0+1] = raDelta;
+      buf[o0+2] = raDiesAt;
+      buf[o0+3] = raTransforms;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, registersTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
@@ -1574,16 +1966,18 @@
     if (!host) return;
     host.innerHTML = '';
 
-    // Logical grouping: solids first, then powders, liquids, the cold→hot
-    // phase chain, hot+volatile, and finally life. Keeps related elements
-    // adjacent so users discover pairs (water+ice, lava+stone, plant+mold).
+    // Logical grouping for v2: solids → powders → liquids → cold↔hot
+    // → volatile → life → electrical → airflow.
     const orderedIds = [
-      WALL_ID, STONE_ID,
-      SAND_ID, GRAVEL_ID,
-      WATER_ID, HONEY_ID, ACID_ID,
+      WALL_ID, STONE_ID, WOOD_ID,
+      SAND_ID, GRAVEL_ID, DUST_ID,
+      WATER_ID, OIL_ID, MERCURY_ID, HONEY_ID, TAR_ID, ACID_ID,
       ICE_ID, STEAM_ID,
-      LAVA_ID, FIRE_ID, EXPLOSIVE_ID, SMOKE_ID,
-      PLANT_ID, MOLD_ID,
+      LAVA_ID, FIRE_ID, EXPLOSIVE_ID, SMOKE_ID, BALLOON_ID,
+      PLANT_ID, MOLD_ID, VINE_ID,
+      COPPER_ID, BATTERY_ID, LIGHTNING_ID,
+      FAN_ID,
+      URANIUM_ID,
     ];
     const customIds = Object.keys(registry)
       .map(n => +n)
@@ -1597,7 +1991,6 @@
       host.appendChild(buildMaterialButton(spec));
     }
     host.appendChild(buildEraseButton());
-
     refreshActiveClass();
   }
 
@@ -1613,7 +2006,6 @@
     const label = document.createElement('span');
     label.textContent = spec.displayName.slice(0, 14);
     btn.appendChild(label);
-
     if (!spec.isBuiltIn) {
       const flag = document.createElement('span');
       flag.className = 'flag-el';
@@ -1627,7 +2019,6 @@
       btn.appendChild(flag);
       attachLongPress(btn, () => openElementFeedback(spec.key));
     }
-
     btn.addEventListener('click', (e) => {
       if (e.target && e.target.classList && e.target.classList.contains('flag-el')) return;
       setMaterial(spec.key);
@@ -1693,7 +2084,6 @@
     if (drop) drop.textContent = 'pour ' + pourableKeyFor(selectedKey);
   }
 
-  // ── Reset ──────────────────────────────────────────────────────────────────
   window.clearAll = function () {
     pours = [];
     if (gl) {
@@ -1703,31 +2093,41 @@
       gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
       gl.viewport(0, 0, COLS, ROWS);
       gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([0,0,0,0]));
-      // Reset temperature to ambient.
       gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboA);
       gl.viewport(0, 0, COLS, ROWS);
       gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([30,0,0,0]));
       gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboB);
       gl.viewport(0, 0, COLS, ROWS);
       gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([30,0,0,0]));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, chargeFboA);
+      gl.viewport(0, 0, COLS, ROWS);
+      gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([128,0,0,0]));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, chargeFboB);
+      gl.viewport(0, 0, COLS, ROWS);
+      gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([128,0,0,0]));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, airFboA);
+      gl.viewport(0, 0, AIR_COLS, AIR_ROWS);
+      gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([128,128,128,30]));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, airFboB);
+      gl.viewport(0, 0, AIR_COLS, AIR_ROWS);
+      gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([128,128,128,30]));
     }
     selectedKey = 'wall';
     refreshActiveClass();
     syncActionLabel();
     discoveredKeys.clear();
-    showOverlay('paint walls or any element on the canvas.\npour sand or water from the top.');
+    discoveryToastQueue = [];
+    showOverlay('paint walls or any element on the canvas.\npour from the top.\n\ntry: drop a battery onto copper, or paint lightning\non gunpowder. open invent for endless physics.');
   };
 
-  // ── Drawing ────────────────────────────────────────────────────────────────
   function canvasCell(e) {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    // Convert to fragment-coord space: bottom-left origin, so flip y.
     const fx = Math.floor(x * COLS / rect.width);
     const fyRow = Math.floor(y * ROWS / rect.height);
     const fy = (ROWS - 1 - fyRow);
-    return { c: fx, r: fy }; // c = column (frag x), r = row (frag y, y-up)
+    return { c: fx, r: fy };
   }
 
   function brushRadiusFor(key) {
@@ -1745,25 +2145,19 @@
     if (spec.kind === 'liquid') {
       const stick = (typeof spec.stickiness === 'number') ? spec.stickiness : 0;
       if (stick >= 0.7) return 1;
-      const visc = (typeof spec.viscosity === 'number') ? spec.viscosity : 0;
-      if (visc >= 0.8) return 2;
       return 2;
     }
     if (spec.kind === 'powder') {
       const flow = (typeof spec.flow === 'number') ? spec.flow : 0.55;
       if (flow >= 0.9) return 3;
-      if (flow <= 0.2) return 2;
       return 2;
     }
     return 2;
   }
 
-  // Issues a paint pass at (cx, cy) frag coords with the currently-selected
-  // material. Renders into stateB (reading from stateA) then swaps.
   function paintAtFrag(cx, cy, brushR) {
     const key = selectedKey;
-    let id = 0;
-    let spec = null;
+    let id = 0; let spec = null;
     if (key !== 'erase') {
       id = keyToId[key] || 0;
       if (!id) return;
@@ -1773,10 +2167,16 @@
   }
 
   function paintPass(cx, cy, brushR, id, spec) {
-    const settleFrames = (spec && spec.isExplosive) ? 28 : 0;
-    let lifeFrames = 0;
+    let raOverride = 256;     // 256 = use registers texture default
+    let rb = 0;
     if (spec && spec.kind === 'gas' && spec.lifeMin) {
-      lifeFrames = Math.min(255, spec.lifeMin + Math.floor(Math.random() * Math.max(1, (spec.lifeMax || spec.lifeMin) - spec.lifeMin)));
+      const lifeMin = spec.lifeMin;
+      const lifeMax = spec.lifeMax || (lifeMin + 40);
+      raOverride = Math.min(255, lifeMin + Math.floor(Math.random() * Math.max(1, lifeMax - lifeMin)));
+    }
+    if (spec && spec.isExplosive) {
+      raOverride = 28;        // settle window
+      rb = 0;
     }
     const kind = spec ? kindCode(spec.kind) : 0;
 
@@ -1789,24 +2189,23 @@
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
     gl.uniform1i(gl.getUniformLocation(progPaint, 'uElemData'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, registersTex);
+    gl.uniform1i(gl.getUniformLocation(progPaint, 'uRegisters'), 2);
     gl.uniform2i(gl.getUniformLocation(progPaint, 'uSize'), COLS, ROWS);
     gl.uniform2i(gl.getUniformLocation(progPaint, 'uCenter'), cx, cy);
     gl.uniform1i(gl.getUniformLocation(progPaint, 'uRadius'), brushR);
     gl.uniform1ui(gl.getUniformLocation(progPaint, 'uPaintId'), id >>> 0);
     gl.uniform1ui(gl.getUniformLocation(progPaint, 'uVariantSeed'), (frameCounter * 2654435761) >>> 0);
-    gl.uniform1ui(gl.getUniformLocation(progPaint, 'uSettleFrames'), settleFrames);
-    gl.uniform1ui(gl.getUniformLocation(progPaint, 'uLifeFrames'), lifeFrames);
+    gl.uniform1ui(gl.getUniformLocation(progPaint, 'uPaintRaOverride'), raOverride >>> 0);
+    gl.uniform1ui(gl.getUniformLocation(progPaint, 'uPaintRb'), rb >>> 0);
     gl.uniform1ui(gl.getUniformLocation(progPaint, 'uPaintKind'), kind);
-
     gl.bindVertexArray(quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    // Swap A/B
     [stateTexA, stateTexB] = [stateTexB, stateTexA];
     [stateFboA, stateFboB] = [stateFboB, stateFboA];
   }
 
-  // Stroke from (c0,r0) to (c1,r1) in frag coords with brush radius.
   function paintLineFrag(c0, r0, c1, r1, brushR) {
     let dx = Math.abs(c1 - c0), sx = c0 < c1 ? 1 : -1;
     let dy = -Math.abs(r1 - r0), sy = r0 < r1 ? 1 : -1;
@@ -1828,7 +2227,6 @@
       paintAtFrag(lastPointer.c, lastPointer.r, brushRadiusFor(selectedKey));
     }, 33);
   }
-
   function stopHoldPaint() {
     if (holdPaintTimer) { clearInterval(holdPaintTimer); holdPaintTimer = null; }
   }
@@ -1837,10 +2235,7 @@
     e.preventDefault();
     canvas.setPointerCapture(e.pointerId);
     const cell = canvasCell(e);
-    if (probeMode) {
-      probeAt(cell.c, cell.r);
-      return;
-    }
+    if (probeMode) { probeAt(cell.c, cell.r); return; }
     isPointerDown = true;
     lastCell = cell;
     lastPointer = cell;
@@ -1848,10 +2243,8 @@
     hideOverlay();
     startHoldPaint();
   }
-
   function onPointerMove(e) {
     if (probeMode) {
-      // Drag-to-probe: tracks under the finger so the user can scrub a region.
       if (e.buttons || (e.pointerType === 'touch')) {
         e.preventDefault();
         const cell = canvasCell(e);
@@ -1866,7 +2259,6 @@
     lastCell = cell;
     lastPointer = cell;
   }
-
   function onPointerUp() {
     isPointerDown = false;
     lastCell = null;
@@ -1875,10 +2267,6 @@
   }
 
   // ── Probe mode ─────────────────────────────────────────────────────────────
-  // Tap-to-inspect: reads back one cell from the state + temperature textures
-  // and renders a small lab-readout tooltip. Intended to make heat/traits
-  // observable so phase transitions and corrosion feel like discoverable
-  // physics rather than magic.
   window.toggleProbe = function () {
     probeMode = !probeMode;
     const btn = document.getElementById('btn-probe');
@@ -1892,26 +2280,39 @@
       hideProbeTooltip();
       return;
     }
-    // The most-recently-written state is whichever fbo we last drew into;
-    // since every step ends with a swap, stateFboA is current.
     const cell = new Uint8Array(4);
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, stateFboA);
     gl.readPixels(col, row, 1, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, cell);
     const tempPixel = new Uint8Array(4);
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, tempFboA);
     gl.readPixels(col, row, 1, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, tempPixel);
+    const chargePixel = new Uint8Array(4);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, chargeFboA);
+    gl.readPixels(col, row, 1, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, chargePixel);
+    const airPixel = new Uint8Array(4);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, airFboA);
+    const ax = Math.max(0, Math.min(AIR_COLS - 1, Math.floor(col / 4)));
+    const ay = Math.max(0, Math.min(AIR_ROWS - 1, Math.floor(row / 4)));
+    gl.readPixels(ax, ay, 1, 1, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, airPixel);
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
-    const id = cell[0];
-    const temp = tempPixel[0];
-    showProbeTooltip(id, temp);
+    showProbeTooltip(cell[0], cell[2], cell[3], tempPixel[0], chargePixel[0], airPixel);
   }
 
-  function showProbeTooltip(id, temp) {
+  function showProbeTooltip(id, ra, rb, temp, charge, airPixel) {
     const el = document.getElementById('probe-tooltip');
     if (!el) return;
+    const signedCharge = charge - 128;
+    const pressure = airPixel[0] - 128;
+    const airVx = airPixel[1] - 128;
+    const airVy = airPixel[2] - 128;
+
     if (id === 0) {
-      el.innerHTML = `<span class="probe-name">empty</span>\n` +
-        `temp     ${pad3(temp)}  ${heatBar(temp)}`;
+      const lines = [`<span class="probe-name">empty</span>`,
+        `temp     ${pad3(temp)}  ${heatBar(temp)}`,
+        `charge   ${signCh(signedCharge)}  ${chargeBar(charge)}`,
+        `pres     ${signNum(pressure)}  ${pressureBar(airPixel[0])}`,
+        `wind     ${signNum(airVx)},${signNum(airVy)}`];
+      el.innerHTML = lines.join('\n');
       el.classList.remove('hidden');
       return;
     }
@@ -1927,6 +2328,14 @@
     if (typeof spec.buoyancy === 'number')     lines.push(`buoyant  ${spec.buoyancy.toFixed(2)}  ${unitBar(spec.buoyancy)}`);
     if (typeof spec.stickiness === 'number' && spec.stickiness > 0)
       lines.push(`sticky   ${spec.stickiness.toFixed(2)}  ${unitBar(spec.stickiness)}`);
+    if (typeof spec.airflowFactor === 'number' && spec.airflowFactor > 0)
+      lines.push(`drift    ${spec.airflowFactor.toFixed(2)}  ${unitBar(spec.airflowFactor)}`);
+    lines.push(`charge   ${signCh(signedCharge)}  ${chargeBar(charge)}`);
+    lines.push(`pres     ${signNum(pressure)}  ${pressureBar(airPixel[0])}`);
+    lines.push(`wind     ${signNum(airVx)},${signNum(airVy)}`);
+    if (spec.conducts) lines.push(`conducts yes`);
+    if (typeof spec.chargeEmit === 'number' && spec.chargeEmit !== 0) lines.push(`emit-c   ${signNum(spec.chargeEmit)}`);
+    if (typeof spec.ignitesAtCharge === 'number' && spec.ignitesAtCharge > 0) lines.push(`pop@chg  ${pad3(spec.ignitesAtCharge)}+`);
     if (typeof spec.emitTemp === 'number' && spec.emitTemp !== 30)
       lines.push(`emits    ${pad3(spec.emitTemp)}  ${heatBar(spec.emitTemp)}`);
     if (typeof spec.ignitionPoint === 'number' && spec.ignitionPoint < 255)
@@ -1938,6 +2347,11 @@
     if (spec.meltingPoint && spec.meltsTo)     lines.push(`melts→${spec.meltsTo} @ ${spec.meltingPoint}`);
     if (spec.boilingPoint && spec.boilsTo)     lines.push(`boils→${spec.boilsTo} @ ${spec.boilingPoint}`);
     if (spec.freezingPoint && spec.freezesTo)  lines.push(`freeze→${spec.freezesTo} @ ${spec.freezingPoint}`);
+    if (spec.pressureBlast > 0)                lines.push(`pop@P    ${pad3(spec.pressureBlast)}+ → ${spec.pressureBlastTo || 'empty'}`);
+    if (typeof spec.raDelta === 'number' && spec.raDelta !== 0)
+      lines.push(`reg-a    ${pad3(ra)} (Δ${spec.raDelta > 0 ? '+' : ''}${spec.raDelta})`);
+    else if (ra > 0)
+      lines.push(`reg-a    ${pad3(ra)}`);
     el.innerHTML = lines.join('\n');
     el.classList.remove('hidden');
   }
@@ -1948,6 +2362,8 @@
   }
 
   function pad3(n) { return ('  ' + (n|0)).slice(-3); }
+  function signNum(n) { const x = (n|0); return (x >= 0 ? '+' : '') + x; }
+  function signCh(n) { const x = (n|0); return (x >= 0 ? '+' : '') + pad3(Math.abs(x)).trim(); }
   function unitBar(v) {
     const w = Math.max(0, Math.min(60, Math.round(v * 60)));
     return `<span class="probe-bar"><span style="width:${w}px"></span></span>`;
@@ -1960,17 +2376,23 @@
     const w = Math.max(0, Math.min(60, Math.round((t / 255) * 60)));
     return `<span class="probe-bar heat"><span style="width:${w}px"></span></span>`;
   }
+  function chargeBar(c) {
+    const mag = Math.abs(c - 128);
+    const w = Math.max(0, Math.min(60, Math.round((mag / 127) * 60)));
+    const cls = c >= 128 ? 'pos' : 'neg';
+    return `<span class="probe-bar charge ${cls}"><span style="width:${w}px"></span></span>`;
+  }
+  function pressureBar(p) {
+    const mag = Math.abs(p - 128);
+    const w = Math.max(0, Math.min(60, Math.round((mag / 127) * 60)));
+    const cls = p >= 128 ? 'pos' : 'neg';
+    return `<span class="probe-bar pres ${cls}"><span style="width:${w}px"></span></span>`;
+  }
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   }
 
   // ── Discovery log ─────────────────────────────────────────────────────────
-  // Builds a list of "what could happen" from the registry — every named
-  // reaction product and every phase-transition target. Periodically reads
-  // the grid back and detects when a product appears alongside its source for
-  // the first time, surfacing it as a small toast. The user is meant to feel
-  // like a curious chemist: do something to a material, and the sandbox names
-  // what they discovered.
   function rebuildDiscoveryRules() {
     discoveryRules = [];
     const seen = new Set();
@@ -1987,16 +2409,15 @@
     for (const idStr of Object.keys(registry)) {
       const spec = registry[+idStr];
       if (!spec) continue;
-      // Phase changes
       if (spec.meltsTo)    push(spec.key, spec.meltsTo,   `${spec.key} melts → ${spec.meltsTo}`);
       if (spec.boilsTo)    push(spec.key, spec.boilsTo,   `${spec.key} boils → ${spec.boilsTo}`);
       if (spec.freezesTo)  push(spec.key, spec.freezesTo, `${spec.key} ${spec.kind === 'gas' ? 'condenses' : 'freezes'} → ${spec.freezesTo}`);
-      // Reactions
+      if (spec.raTransformsTo) push(spec.key, spec.raTransformsTo, `${spec.key} decays → ${spec.raTransformsTo}`);
+      if (spec.pressureBlastTo) push(spec.key, spec.pressureBlastTo, `${spec.key} pops → ${spec.pressureBlastTo}`);
       if (Array.isArray(spec.reactions)) {
         for (const rx of spec.reactions) {
           if (!rx || rx.explodes) continue;
           if (rx.becomes) push(rx.other, rx.becomes, `${rx.other} + ${spec.key} → ${rx.becomes}`);
-          else            push(rx.other, null, null);
         }
       }
     }
@@ -2020,25 +2441,34 @@
       if (discoveredKeys.has(k)) continue;
       if (present.has(rule.from) && present.has(rule.to)) {
         discoveredKeys.add(k);
-        if (rule.label) showDiscoveryToast(rule.label);
+        if (rule.label) queueDiscoveryToast(rule.label);
       }
     }
   }
 
-  let discoveryToastTimer = null;
-  function showDiscoveryToast(label) {
+  function queueDiscoveryToast(label) {
+    discoveryToastQueue.push(label);
+    if (!discoveryToastActive) showNextDiscoveryToast();
+  }
+  function showNextDiscoveryToast() {
     const el = document.getElementById('discovery-toast');
     if (!el) return;
+    if (!discoveryToastQueue.length) {
+      discoveryToastActive = false;
+      el.classList.add('hidden');
+      return;
+    }
+    discoveryToastActive = true;
+    const label = discoveryToastQueue.shift();
     el.textContent = 'discovered: ' + label;
-    // Re-trigger animation by removing/re-adding the class. The element keeps
-    // a visible state via the keyframe; we toggle classlist to restart it.
     el.classList.add('hidden');
     void el.offsetWidth;
     el.classList.remove('hidden');
     if (discoveryToastTimer) clearTimeout(discoveryToastTimer);
     discoveryToastTimer = setTimeout(() => {
-      el.classList.add('hidden');
-    }, 4000);
+      discoveryToastActive = false;
+      showNextDiscoveryToast();
+    }, 3200);
   }
 
   // ── Pour ───────────────────────────────────────────────────────────────────
@@ -2051,7 +2481,6 @@
     hideOverlay();
   };
 
-  // Each frame, pour a stripe near the top edge for active pours.
   function spawnFromPours() {
     if (!pours.length) return;
     const next = [];
@@ -2059,20 +2488,10 @@
       if (p.frames > p.total) continue;
       const spec = registry[p.id];
       if (!spec) continue;
-      // Top of canvas in frag coords = high y.
       const sprayRow = (spec.kind === 'gas') ? 1 : (ROWS - 2);
-      // Random scatter centers across the row to create a curtain.
       for (let s = 0; s < 6; s++) {
         const cx = Math.floor(Math.random() * COLS);
-        // Use a tiny brush so we don't smear; but bursts of small dots create
-        // a natural pour curtain.
-        const settle = spec.isExplosive ? 28 : 0;
-        let life = 0;
-        if (spec.kind === 'gas' && spec.lifeMin) {
-          life = Math.min(255, spec.lifeMin + Math.floor(Math.random() * Math.max(1, (spec.lifeMax || spec.lifeMin) - spec.lifeMin)));
-        }
         paintPass(cx, sprayRow, 1, p.id, spec);
-        // (settle/life were applied via paintPass through uniforms.)
       }
       p.frames++;
       next.push(p);
@@ -2080,23 +2499,38 @@
     pours = next;
   }
 
-  // ── Sim step ──────────────────────────────────────────────────────────────
+  // ── Sim orchestration ─────────────────────────────────────────────────────
+  function bindStateA(prog, name, unit) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(prog, name), unit);
+  }
+  function bindElementData(prog, name, unit) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
+    gl.uniform1i(gl.getUniformLocation(prog, name), unit);
+  }
+  function bindTraits(prog, name, unit) {
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.uniform1i(gl.getUniformLocation(prog, name), unit);
+  }
+
   function simStep() {
-    // Run several phases per frame so cells can fall faster than 1 row / 4 frames.
-    // Each phase rotates the block origin so all cells get covered over time.
     for (let phase = 0; phase < 4; phase++) {
       gl.useProgram(progSim);
       gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
       gl.viewport(0, 0, COLS, ROWS);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-      gl.uniform1i(gl.getUniformLocation(progSim, 'uState'), 0);
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
-      gl.uniform1i(gl.getUniformLocation(progSim, 'uElemData'), 1);
+      bindStateA(progSim, 'uState', 0);
+      bindElementData(progSim, 'uElemData', 1);
+      bindTraits(progSim, 'uTraits', 2);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, airTexA);
+      gl.uniform1i(gl.getUniformLocation(progSim, 'uAir'), 3);
       gl.uniform1i(gl.getUniformLocation(progSim, 'uPhase'), (frameCounter * 4 + phase) & 3);
       gl.uniform1i(gl.getUniformLocation(progSim, 'uFrame'), frameCounter * 4 + phase);
       gl.uniform2i(gl.getUniformLocation(progSim, 'uSize'), COLS, ROWS);
+      gl.uniform2i(gl.getUniformLocation(progSim, 'uAirSize'), AIR_COLS, AIR_ROWS);
       gl.bindVertexArray(quadVao);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       [stateTexA, stateTexB] = [stateTexB, stateTexA];
@@ -2105,34 +2539,22 @@
   }
 
   function explosionStep() {
-    // Pass 1: contact detection — mark explosives that touch non-explosive.
     gl.useProgram(progContact);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progContact, 'uState'), 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
-    gl.uniform1i(gl.getUniformLocation(progContact, 'uElemData'), 1);
+    bindStateA(progContact, 'uState', 0);
+    bindElementData(progContact, 'uElemData', 1);
     gl.uniform2i(gl.getUniformLocation(progContact, 'uSize'), COLS, ROWS);
     gl.bindVertexArray(quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     [stateTexA, stateTexB] = [stateTexB, stateTexA];
     [stateFboA, stateFboB] = [stateFboB, stateFboA];
 
-    // Pass 2: blast — clear cells within blast radius of any primed explosive,
-    // detonate primed cells themselves, and prime any other explosive within
-    // radius (chain reaction).
     gl.useProgram(progBlast);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progBlast, 'uState'), 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
-    gl.uniform1i(gl.getUniformLocation(progBlast, 'uElemData'), 1);
+    bindStateA(progBlast, 'uState', 0);
+    bindElementData(progBlast, 'uElemData', 1);
     gl.uniform2i(gl.getUniformLocation(progBlast, 'uSize'), COLS, ROWS);
     gl.uniform1ui(gl.getUniformLocation(progBlast, 'uSparkId'), (keyToId.spark || 0) >>> 0);
     gl.uniform1i(gl.getUniformLocation(progBlast, 'uFrame'), frameCounter);
@@ -2146,12 +2568,13 @@
     gl.useProgram(progReact);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progReact, 'uState'), 0);
+    bindStateA(progReact, 'uState', 0);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
     gl.uniform1i(gl.getUniformLocation(progReact, 'uReactions'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexA);
+    gl.uniform1i(gl.getUniformLocation(progReact, 'uTemp'), 2);
     gl.uniform2i(gl.getUniformLocation(progReact, 'uSize'), COLS, ROWS);
     gl.uniform1i(gl.getUniformLocation(progReact, 'uFrame'), frameCounter);
     gl.bindVertexArray(quadVao);
@@ -2165,12 +2588,8 @@
     gl.useProgram(progCorrosion);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progCorrosion, 'uState'), 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.uniform1i(gl.getUniformLocation(progCorrosion, 'uTraits'), 1);
+    bindStateA(progCorrosion, 'uState', 0);
+    bindTraits(progCorrosion, 'uTraits', 1);
     gl.uniform2i(gl.getUniformLocation(progCorrosion, 'uSize'), COLS, ROWS);
     gl.uniform1i(gl.getUniformLocation(progCorrosion, 'uFrame'), frameCounter);
     gl.bindVertexArray(quadVao);
@@ -2184,18 +2603,15 @@
     gl.useProgram(progPhase);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progPhase, 'uState'), 0);
+    bindStateA(progPhase, 'uState', 0);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, tempTexA);
     gl.uniform1i(gl.getUniformLocation(progPhase, 'uTemp'), 1);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.uniform1i(gl.getUniformLocation(progPhase, 'uTraits'), 2);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
-    gl.uniform1i(gl.getUniformLocation(progPhase, 'uElemData'), 3);
+    bindTraits(progPhase, 'uTraits', 2);
+    bindElementData(progPhase, 'uElemData', 3);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, registersTex);
+    gl.uniform1i(gl.getUniformLocation(progPhase, 'uRegisters'), 4);
     gl.uniform2i(gl.getUniformLocation(progPhase, 'uSize'), COLS, ROWS);
     gl.uniform1i(gl.getUniformLocation(progPhase, 'uFrame'), frameCounter);
     gl.bindVertexArray(quadVao);
@@ -2204,39 +2620,16 @@
     [stateFboA, stateFboB] = [stateFboB, stateFboA];
   }
 
-  function render() {
-    gl.useProgram(progRender);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progRender, 'uState'), 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, paletteTex);
-    gl.uniform1i(gl.getUniformLocation(progRender, 'uPalette'), 1);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
-    gl.uniform1i(gl.getUniformLocation(progRender, 'uElemData'), 2);
-    gl.uniform2i(gl.getUniformLocation(progRender, 'uSize'), COLS, ROWS);
-    gl.uniform1i(gl.getUniformLocation(progRender, 'uFrame'), frameCounter);
-    gl.bindVertexArray(quadVao);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-  }
-
   function heatStep() {
     if (!progHeat) return;
     gl.useProgram(progHeat);
     gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progHeat, 'uState'), 0);
+    bindStateA(progHeat, 'uState', 0);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, tempTexA);
     gl.uniform1i(gl.getUniformLocation(progHeat, 'uTemp'), 1);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.uniform1i(gl.getUniformLocation(progHeat, 'uTraits'), 2);
+    bindTraits(progHeat, 'uTraits', 2);
     gl.uniform2i(gl.getUniformLocation(progHeat, 'uSize'), COLS, ROWS);
     gl.bindVertexArray(quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -2250,15 +2643,14 @@
     gl.useProgram(progIgnition);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
     gl.viewport(0, 0, COLS, ROWS);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uState'), 0);
+    bindStateA(progIgnition, 'uState', 0);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, tempTexA);
     gl.uniform1i(gl.getUniformLocation(progIgnition, 'uTemp'), 1);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
-    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uTraits'), 2);
+    bindTraits(progIgnition, 'uTraits', 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, chargeTexA);
+    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uCharge'), 3);
     gl.uniform2i(gl.getUniformLocation(progIgnition, 'uSize'), COLS, ROWS);
     gl.uniform1i(gl.getUniformLocation(progIgnition, 'uFrame'), frameCounter);
     gl.uniform1ui(gl.getUniformLocation(progIgnition, 'uFireId'), fireId >>> 0);
@@ -2270,19 +2662,16 @@
 
   function cellularStep() {
     if (!progCellular) return;
-    // Run a separate pass per cellular element. cellularTick gates evaluation.
     for (const idStr of Object.keys(registry)) {
       const id = +idStr;
       const spec = registry[id];
       if (!spec || spec.kind !== 'cellular') continue;
-      const tick = Math.max(1, Math.min(30, Math.round(spec.cellularTick || 6)));
+      const tick = Math.max(1, Math.min(15, Math.round(spec.cellularTick || 6)));
       if (frameCounter % tick !== 0) continue;
       gl.useProgram(progCellular);
       gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
       gl.viewport(0, 0, COLS, ROWS);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, stateTexA);
-      gl.uniform1i(gl.getUniformLocation(progCellular, 'uState'), 0);
+      bindStateA(progCellular, 'uState', 0);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, cellularDataTex);
       gl.uniform1i(gl.getUniformLocation(progCellular, 'uCellularData'), 1);
@@ -2296,6 +2685,107 @@
     }
   }
 
+  function registerStep() {
+    if (!progRegister) return;
+    gl.useProgram(progRegister);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    bindStateA(progRegister, 'uState', 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, registersTex);
+    gl.uniform1i(gl.getUniformLocation(progRegister, 'uRegisters'), 1);
+    bindElementData(progRegister, 'uElemData', 2);
+    gl.uniform2i(gl.getUniformLocation(progRegister, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progRegister, 'uFrame'), frameCounter);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
+  function chargeStep() {
+    if (!progCharge) return;
+    gl.useProgram(progCharge);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, chargeFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    bindStateA(progCharge, 'uState', 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, chargeTexA);
+    gl.uniform1i(gl.getUniformLocation(progCharge, 'uCharge'), 1);
+    bindTraits(progCharge, 'uTraits', 2);
+    gl.uniform2i(gl.getUniformLocation(progCharge, 'uSize'), COLS, ROWS);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [chargeTexA, chargeTexB] = [chargeTexB, chargeTexA];
+    [chargeFboA, chargeFboB] = [chargeFboB, chargeFboA];
+  }
+
+  function pressureStep() {
+    if (!progPressure) return;
+    gl.useProgram(progPressure);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, airFboB);
+    gl.viewport(0, 0, AIR_COLS, AIR_ROWS);
+    bindStateA(progPressure, 'uState', 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexA);
+    gl.uniform1i(gl.getUniformLocation(progPressure, 'uTemp'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, airTexA);
+    gl.uniform1i(gl.getUniformLocation(progPressure, 'uAir'), 2);
+    bindElementData(progPressure, 'uElemData', 3);
+    bindTraits(progPressure, 'uTraits', 4);
+    gl.uniform2i(gl.getUniformLocation(progPressure, 'uSize'), COLS, ROWS);
+    gl.uniform2i(gl.getUniformLocation(progPressure, 'uAirSize'), AIR_COLS, AIR_ROWS);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [airTexA, airTexB] = [airTexB, airTexA];
+    [airFboA, airFboB] = [airFboB, airFboA];
+  }
+
+  function pressureBlastStep() {
+    if (!progPressureBlast) return;
+    gl.useProgram(progPressureBlast);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    bindStateA(progPressureBlast, 'uState', 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, airTexA);
+    gl.uniform1i(gl.getUniformLocation(progPressureBlast, 'uAir'), 1);
+    bindTraits(progPressureBlast, 'uTraits', 2);
+    bindElementData(progPressureBlast, 'uElemData', 3);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, registersTex);
+    gl.uniform1i(gl.getUniformLocation(progPressureBlast, 'uRegisters'), 4);
+    gl.uniform2i(gl.getUniformLocation(progPressureBlast, 'uSize'), COLS, ROWS);
+    gl.uniform2i(gl.getUniformLocation(progPressureBlast, 'uAirSize'), AIR_COLS, AIR_ROWS);
+    gl.uniform1i(gl.getUniformLocation(progPressureBlast, 'uFrame'), frameCounter);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
+  function render() {
+    gl.useProgram(progRender);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    bindStateA(progRender, 'uState', 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, paletteTex);
+    gl.uniform1i(gl.getUniformLocation(progRender, 'uPalette'), 1);
+    bindElementData(progRender, 'uElemData', 2);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexA);
+    gl.uniform1i(gl.getUniformLocation(progRender, 'uTemp'), 3);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, chargeTexA);
+    gl.uniform1i(gl.getUniformLocation(progRender, 'uCharge'), 4);
+    gl.uniform2i(gl.getUniformLocation(progRender, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progRender, 'uFrame'), frameCounter);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
   function loop() {
     spawnFromPours();
     simStep();
@@ -2306,6 +2796,10 @@
     ignitionStep();
     phaseStep();
     cellularStep();
+    registerStep();
+    chargeStep();
+    pressureStep();
+    pressureBlastStep();
     render();
     if (frameCounter % DISCOVERY_INTERVAL === 0) discoveryReadback();
     frameCounter++;
@@ -2376,20 +2870,7 @@
       .map(c => c.getAttribute('data-reason')).filter(Boolean);
     const note = (document.getElementById('elfb-note').value || '').trim();
     if (!reasons.length && !note) { setElfbStatus('pick a reason or add a note.', true); return; }
-    const report = {
-      type: 'element_feedback',
-      element: {
-        displayName: spec.displayName, key: spec.key, userDesc: spec.userDesc || '',
-        kind: spec.kind, density: spec.density, viscosity: spec.viscosity,
-        flow: spec.flow, stickiness: spec.stickiness, buoyancy: spec.buoyancy,
-        lifeMin: spec.lifeMin, lifeMax: spec.lifeMax, colors: spec.colors,
-        reactions: spec.reactions,
-        emitTemp: spec.emitTemp, ignitionPoint: spec.ignitionPoint,
-        flammability: spec.flammability, conductivity: spec.conductivity,
-        corrosivity: spec.corrosivity, hardness: spec.hardness,
-      },
-      reasons, note,
-    };
+    const report = { type: 'element_feedback', element: spec, reasons, note };
     const text = '[element_feedback] ' + spec.displayName
       + (reasons.length ? ' — ' + reasons.join('; ') : '')
       + (note ? ' — ' + note : '')
@@ -2462,38 +2943,63 @@
     return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);
   }
 
-  // ── AI call (unchanged from CPU version) ──────────────────────────────────
+  // ── AI call ────────────────────────────────────────────────────────────────
   async function generateElement(name, desc) {
     const existing = Object.keys(keyToId);
     const otherList = existing.join(', ');
     const SYSTEM_PROMPT = [
-      'You design elements for a falling-sand physics sandbox. Output ONE strict JSON object, no prose, no code fence.',
-      'Schema: { "kind":"static"|"powder"|"liquid"|"gas"|"cellular", "density":1-9, "viscosity":0-1 (liquid), "flow":0-1 (powder), "stickiness":0-1 (liquid/powder), "buoyancy":0-1 (gas), "lifeMin":0-150 (gas), "lifeMax":0-200 (gas), "born":[int 0-8] (cellular), "survive":[int 0-8] (cellular), "cellularTick":1-30 (cellular,opt), "growChance":0.05-1 (cellular,opt), "surviveChance":0.5-1 (cellular,opt), "birthFrom":[key] (cellular,opt), "colors":[3-6 hex], "reactions":[ { "other":"<key>", "becomes":"<key|empty>", "chance":0.005-0.25, "selfConsume":0-1 (opt), "selfBecomes":"<key|empty>" (opt), "explodes":bool (opt), "explosionRadius":int 4-16 (opt), "explosionPower":0.5-2 (opt) } ] }',
+      'You design elements for a falling-sand physics sandbox with rich emergent physics. Output ONE strict JSON object, no prose, no code fence.',
+      '',
+      'KIND determines movement: static (immobile), powder (falls, piles), liquid (flows, density-stacks), gas (rises, drifts in wind, finite life), cellular (Conway-like growth).',
+      'DENSITY 1-9 orders stacking; heavier sinks under lighter (helium 1, oil 2, water 5, blood 6, mercury 9).',
+      '',
+      'PHYSICS AXES — each unlocks dozens of element ideas:',
+      '',
+      '1. HEAT / PHASE — emitTemp 0-255 (fire 240, ice 10), ignitionPoint, flammability 0-1, conductivity 0-255 (metal 240). meltingPoint+meltsTo, boilingPoint+boilsTo, freezingPoint+freezesTo for cascades like ice→water→steam.',
+      '',
+      '2. CORROSION — corrosivity (acid 200, lava 80) eats neighbors with lower hardness (sand 60, wall 200, diamond 255).',
+      '',
+      '3. STICKINESS 0-1 — cells cling to walls. tar 0.85, honey 0.7.',
+      '',
+      '4. CHARGE — invisible electrical field through conductors:',
+      '   conducts: bool — charge propagates through this element',
+      '   chargeEmit: -127..127 — sets charge here every frame (battery 120, ground -60)',
+      '   ignitesAtCharge: 0-255 — |charge| above this triggers ignition (gunpowder 20)',
+      '   Examples: copper conducts; battery emits +120; lightning emits +110 and ignites at 1; saltwater conducts weakly.',
+      '',
+      '5. AIRFLOW / PRESSURE — coarse velocity field:',
+      '   airflowFactor: 0-1 — how much wind pushes this cell (gas/dust)',
+      '   emitsAirflow: { vx: -8..8, vy: -8..8 } — fan or jet (positive vy = upward push)',
+      '   pressureBlast: 0-255 — cell pops at local pressure above this (balloon 180)',
+      '   pressureBlastTo: "<key>" — what pop produces (balloon→fire, glass→empty)',
+      '',
+      '6. REGISTERS — per-cell stateful behavior. Engine ticks ra each frame:',
+      '   raInit: 0-255 starting value',
+      '   raDelta: -127..127 per-frame change',
+      '   raDiesAt: value that triggers death/transform',
+      '   raTransformsTo: "<key>" — what it becomes; omit = die (empty)',
+      '   Examples:',
+      '     ember:    raInit 80, raDelta -1, raDiesAt 0 → dies in 80 frames',
+      '     uranium:  raInit 250, raDelta -1, raDiesAt 0, raTransformsTo "lead"',
+      '     wine:     raInit 200, raDelta -1, raDiesAt 0, raTransformsTo "vinegar"',
+      '     ripening: raInit 0, raDelta +1, raDiesAt 200, raTransformsTo "rot"',
+      '',
+      '7. ANISOTROPIC GROWTH — for cellular elements: growBias "up"|"down"|"side"|"any". Vines grow up, roots grow down, mold spreads anywhere.',
+      '',
+      'REACTIONS — pair-events with optional gates: { other, becomes, chance 0.005-0.25, selfConsume? 0-1, minTemp? 0-255, maxTemp? 0-255, catalyst? bool, explodes? }. Use catalyst:true for true catalysts (self stays).',
+      '',
+      'The engine handles heat, phase changes, corrosion, charge, airflow, pressure, registers, and growth bias automatically. Use reactions[] only for genuinely unique chemical events (e.g., yeast + sugar → alcohol; iron + acid → rust).',
+      '',
       'Existing keys: ' + otherList + '.',
-      'Pick kind by what the name evokes (fire/smoke = gas; lava/water/oil = liquid; sand/snow/tnt = powder; wall/wood/metal = static; mold/coral/life = cellular).',
-      'Match common intuition: fire MUST rise (gas, buoyancy>=0.9), water flows (liquid visc 0), honey is thick (liquid visc 0.9), tnt explodes on fire.',
-      'Colors: 3-6 hex strings that read on near-black. Avoid pure black. Coherent palette per element.',
-      'PREFER traits + phase transitions over hand-written reactions. The engine derives most chemistry from physics — only use the reactions[] array when the interaction is genuinely a unique chemical event (e.g. plant ignites into smoke). Heat-driven phase changes, melting, boiling, freezing, condensation, and acid-eats-soft-things all happen automatically from the trait/phase fields below.',
       '',
-      'TRAITS — describe the material physically. The engine reads these every frame for heat diffusion, ignition, corrosion, and phase changes. All values 0-255 unless noted; defaults are sensible if you omit.',
-      'Trait fields: { "emitTemp":0-255 (ambient temp it radiates: ice=10, room=30, hot lava=210, fire=240),',
-      '  "ignitionPoint":0-255 (temp above which it catches fire: oil=100, wood=140, paper=110, water=255 (never), explosives=80),',
-      '  "flammability":0-1 (per-frame ignite chance once over ignitionPoint: paper=0.25, oil=0.20, wood=0.04, plant=0.05, tnt=0.30),',
-      '  "conductivity":0-255 (heat diffusion rate: wood=40, water=140, metal=240, plasma=255),',
-      '  "corrosivity":0-255 (eats softer neighbors automatically: water=0, acid=200, lava=80),',
-      '  "hardness":0-255 (resistance to corrosion: sand=60, plant=40, wall=200, metal=240, diamond=255) }',
-      '',
-      'PHASE TRANSITIONS — automatic, temperature-driven id-swaps. The engine handles the cascade (lava cools to stone, ice melts in fire, water boils to steam over lava, steam condenses back to water as it cools). Each pointer is a key string that already exists in "Existing keys"; if the target doesn\'t exist yet the field is ignored.',
-      'Phase fields: { "meltingPoint":1-255, "meltsTo":"<key>" (e.g. ice meltsTo water at 35; stone meltsTo lava at 200),',
-      '  "boilingPoint":1-255, "boilsTo":"<key>" (e.g. water boilsTo steam at 100; oil boilsTo smoke at 180),',
-      '  "freezingPoint":1-255, "freezesTo":"<key>" (e.g. water freezesTo ice at 22; steam freezesTo water at 50; lava freezesTo stone at 80) }',
-      'Convention: 0 = "not applicable". A solid usually has only meltingPoint, a liquid often has both boilingPoint and freezingPoint, a gas has freezingPoint (condensation).',
+      'Pick traits based on physical intuition. Schema:',
+      '{ "kind":..., "density":1-9, "viscosity":0-1, "flow":0-1, "stickiness":0-1, "buoyancy":0-1, "lifeMin":int, "lifeMax":int, "born":[0-8], "survive":[0-8], "growBias":"up|down|side|any", "growChance":0.05-1, "surviveChance":0.5-1, "birthFrom":[key], "cellularTick":1-30, "colors":["#hex"], "emitTemp":0-255, "ignitionPoint":0-255, "flammability":0-1, "conductivity":0-255, "corrosivity":0-255, "hardness":0-255, "meltingPoint":1-255, "meltsTo":"<key>", "boilingPoint":1-255, "boilsTo":"<key>", "freezingPoint":1-255, "freezesTo":"<key>", "conducts":bool, "chargeEmit":-127..127, "ignitesAtCharge":0-255, "airflowFactor":0-1, "emitsAirflow":{"vx":-8..8,"vy":-8..8}, "pressureBlast":0-255, "pressureBlastTo":"<key>", "raInit":0-255, "raDelta":-127..127, "raDiesAt":0-255, "raTransformsTo":"<key>", "reactions":[...] }',
       '',
       'Output JSON only.',
     ].join('\n');
     const userPrompt = desc ? `Name: ${name}\nDescription: ${desc}` : `Name: ${name}`;
     const body = {
-      slug: SLUG, model: 'gpt-5.4', temperature: 0.7, max_tokens: 600,
+      slug: SLUG, model: 'gpt-5.4', temperature: 0.75, max_tokens: 900,
       response_format: 'json_object',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -2519,53 +3025,65 @@
       return false;
     }
     const name = (key || '').toLowerCase();
-    if (hits(name, ['fire','flame','inferno','ember','plasma','lightning','spark'])) return 'gas';
-    if (hits(name, ['smoke','steam','vapor','mist','fog','cloud','haze'])) return 'gas';
-    if (hits(name, ['wall','brick','concrete','bedrock','stone','rock'])) return 'static';
-    if (hits(name, ['wood','timber','log','bark'])) return 'static';
-    if (hits(name, ['metal','iron','steel','copper','brass','gold','silver'])) return 'static';
+    if (hits(name, ['fire','flame','inferno','ember','plasma','lightning','spark','arc'])) return 'gas';
+    if (hits(name, ['smoke','steam','vapor','mist','fog','cloud','haze','aroma'])) return 'gas';
+    if (hits(name, ['balloon','helium','bubble'])) return 'gas';
+    if (hits(name, ['wall','brick','concrete','bedrock','stone','rock','marble','granite'])) return 'static';
+    if (hits(name, ['wood','timber','log','bark','plank'])) return 'static';
+    if (hits(name, ['metal','iron','steel','copper','brass','gold','silver','aluminum','tin'])) return 'static';
     if (hits(name, ['ice','icicle','glacier'])) return 'static';
-    if (hits(name, ['plant','leaf','vine','tree','grass','moss'])) return 'static';
+    if (hits(name, ['plant','leaf','vine','tree','grass','moss','fern'])) return 'static';
     if (hits(name, ['glass','crystal','gem','diamond'])) return 'static';
+    if (hits(name, ['battery','wire','circuit','cable','capacitor'])) return 'static';
+    if (hits(name, ['fan','vent','jet'])) return 'static';
     if (hits(name, ['lava','magma'])) return 'liquid';
-    if (hits(name, ['water','ocean','river'])) return 'liquid';
-    if (hits(name, ['oil','gasoline','petrol','fuel'])) return 'liquid';
-    if (hits(name, ['acid','poison'])) return 'liquid';
+    if (hits(name, ['water','ocean','river','sea'])) return 'liquid';
+    if (hits(name, ['oil','gasoline','petrol','fuel','kerosene'])) return 'liquid';
+    if (hits(name, ['acid','poison','venom'])) return 'liquid';
     if (hits(name, ['honey','syrup','molasses','caramel','tar'])) return 'liquid';
     if (hits(name, ['blood','slime','goo','ooze'])) return 'liquid';
-    if (hits(name, ['juice','milk','wine','soda','ink','paint'])) return 'liquid';
+    if (hits(name, ['mercury','quicksilver'])) return 'liquid';
+    if (hits(name, ['juice','milk','wine','soda','ink','paint','beer'])) return 'liquid';
     if (hits(name, ['sand','salt','sugar','flour','dust','talc'])) return 'powder';
-    if (hits(name, ['ash','soot','cinder','glitter','gravel'])) return 'powder';
+    if (hits(name, ['ash','soot','cinder','glitter','gravel','pebble'])) return 'powder';
     if (hits(name, ['snow','seed','gunpowder','gun-powder','confetti'])) return 'powder';
     if (hits(name, ['tnt','bomb','dynamite','explosive','c4','grenade','blastite','landmine'])) return 'powder';
-    if (hits(name, ['mold','fungus','mycelium','lichen','coral','conway','automaton','slime-mold'])) return 'cellular';
+    if (hits(name, ['mold','fungus','mycelium','lichen','coral','conway','automaton','slime-mold','vine'])) return 'cellular';
     return null;
   }
 
   function namePropertyHints(key) {
     const n = (key || '').toLowerCase();
     const has = (...words) => words.some(w => n.indexOf(w) >= 0);
-    if (has('fire','flame','inferno','ember','plasma','spark','lightning')) return { density: 1, buoyancy: 1, lifeMin: 30, lifeMax: 70 };
+    if (has('fire','flame','inferno','ember','plasma','spark','lightning','arc')) return { density: 1, buoyancy: 1, lifeMin: 30, lifeMax: 70, airflowFactor: 0.5 };
     if (has('lava','magma'))   return { density: 8, viscosity: 0.8, stickiness: 0 };
-    if (has('steam'))          return { density: 2, buoyancy: 0.8, lifeMin: 30, lifeMax: 60 };
-    if (has('smoke'))          return { density: 2, buoyancy: 0.6, lifeMin: 60, lifeMax: 120 };
-    if (has('fog','mist','vapor','cloud','haze')) return { density: 2, buoyancy: 0.5, lifeMin: 60, lifeMax: 120 };
+    if (has('mercury','quicksilver')) return { density: 9, viscosity: 0.1, stickiness: 0, conducts: true };
+    if (has('steam'))          return { density: 2, buoyancy: 0.8, lifeMin: 30, lifeMax: 60, airflowFactor: 0.8 };
+    if (has('smoke'))          return { density: 2, buoyancy: 0.6, lifeMin: 60, lifeMax: 120, airflowFactor: 0.7 };
+    if (has('fog','mist','vapor','cloud','haze')) return { density: 2, buoyancy: 0.5, lifeMin: 60, lifeMax: 120, airflowFactor: 0.7 };
+    if (has('balloon','helium','bubble')) return { density: 1, buoyancy: 0.95, lifeMin: 300, lifeMax: 500, airflowFactor: 0.9, pressureBlast: 180 };
     if (has('honey','syrup','molasses','caramel')) return { density: 6, viscosity: 0.9, stickiness: 0.7 };
     if (has('tar','pitch','glue','resin')) return { density: 6, viscosity: 0.95, stickiness: 0.85 };
     if (has('acid'))           return { density: 4, viscosity: 0.1, stickiness: 0 };
-    if (has('oil','gasoline','petrol','fuel')) return { density: 3, viscosity: 0.3, stickiness: 0 };
+    if (has('oil','gasoline','petrol','fuel')) return { density: 2, viscosity: 0.3, stickiness: 0 };
     if (has('water','juice','milk','wine','soda')) return { density: 5, viscosity: 0, stickiness: 0 };
     if (has('slime','goo','ooze'))   return { density: 5, viscosity: 0.6, stickiness: 0.5 };
     if (has('blood'))          return { density: 6, viscosity: 0.4, stickiness: 0 };
     if (has('ink','paint'))    return { density: 5, viscosity: 0.2, stickiness: 0 };
     if (has('snow'))           return { density: 2, flow: 0.4, stickiness: 0 };
-    if (has('flour','dust','talc','powder')) return { density: 2, flow: 1.0, stickiness: 0 };
-    if (has('ash','soot','cinder')) return { density: 2, flow: 0.9, stickiness: 0 };
+    if (has('flour','dust','talc','powder')) return { density: 1, flow: 0.95, stickiness: 0, airflowFactor: 0.9 };
+    if (has('ash','soot','cinder')) return { density: 2, flow: 0.9, stickiness: 0, airflowFactor: 0.7 };
     if (has('gravel','pebbles','rocks')) return { density: 7, flow: 0.15, stickiness: 0 };
-    if (has('gunpowder')||has('gun-powder')) return { density: 4, flow: 0.6, stickiness: 0 };
+    if (has('gunpowder')||has('gun-powder')) return { density: 4, flow: 0.6, stickiness: 0, ignitesAtCharge: 20 };
     if (has('salt','sugar','seed','rice','glitter','confetti','sand')) return { density: 4, flow: 0.55, stickiness: 0 };
-    if (has('wood','timber','log','bark')) return { density: 4 };
-    if (has('metal','iron','steel','copper','brass','gold','silver')) return { density: 8 };
+    if (has('wood','timber','log','bark','plank')) return { density: 4 };
+    if (has('battery'))        return { density: 8, conducts: true, chargeEmit: 120 };
+    if (has('wire','cable','circuit')) return { density: 7, conducts: true };
+    if (has('copper','brass')) return { density: 8, conducts: true };
+    if (has('metal','iron','steel','aluminum','tin')) return { density: 8, conducts: true };
+    if (has('gold','silver')) return { density: 9, conducts: true };
+    if (has('fan','vent','jet')) return { density: 6, emitsAirflow: { vx: 0, vy: 6 } };
+    if (has('uranium','plutonium','radio')) return { density: 9, raInit: 250, raDelta: -1, raTransformsTo: 'stone' };
     if (has('ice','icicle')) return { density: 5 };
     if (has('plant','leaf','vine','tree','grass','moss')) return { density: 3 };
     return null;
@@ -2594,7 +3112,6 @@
     validKeys.add(key);
     const reactions = [];
     if (Array.isArray(raw && raw.reactions)) {
-      let selfPropagateCount = 0;
       for (const rx of raw.reactions.slice(0, 3)) {
         if (!rx || typeof rx !== 'object') continue;
         const other = (typeof rx.other === 'string') ? rx.other.toLowerCase() : '';
@@ -2614,21 +3131,12 @@
         let chance = Number(rx.chance);
         if (!isFinite(chance)) chance = 0.05;
         chance = Math.max(0.005, Math.min(0.25, chance));
-        if (becomes === key) {
-          selfPropagateCount++;
-          if (selfPropagateCount > 1) continue;
-          chance = Math.min(chance, 0.05);
-        }
         const reaction = { other, becomes, chance };
         const sc = Number(rx.selfConsume);
-        if (isFinite(sc) && sc > 0) {
-          reaction.selfConsume = Math.max(0, Math.min(1, sc));
-          if (typeof rx.selfBecomes === 'string') {
-            const sb = rx.selfBecomes.toLowerCase();
-            if (sb === '' || sb === 'empty') reaction.selfBecomes = null;
-            else if (validKeys.has(sb)) reaction.selfBecomes = sb;
-          }
-        }
+        if (isFinite(sc) && sc > 0) reaction.selfConsume = Math.max(0, Math.min(1, sc));
+        if (typeof rx.minTemp === 'number') reaction.minTemp = Math.max(0, Math.min(255, rx.minTemp|0));
+        if (typeof rx.maxTemp === 'number') reaction.maxTemp = Math.max(0, Math.min(255, rx.maxTemp|0));
+        if (rx.catalyst === true) reaction.catalyst = true;
         reactions.push(reaction);
       }
     }
@@ -2689,17 +3197,16 @@
       if (Array.isArray(raw && raw.birthFrom)) {
         out.birthFrom = raw.birthFrom.filter(k => typeof k === 'string').map(k => k.toLowerCase()).filter(k => keyToId[k]);
       }
+      if (typeof raw.growBias === 'string' && /^(up|down|side|any)$/i.test(raw.growBias)) {
+        out.growBias = raw.growBias.toLowerCase();
+      }
     }
 
-    applyTraits(out, raw, key, userDesc);
+    applyTraits(out, raw, key, userDesc, hint, preferHint);
     return out;
   }
 
-  // Trait normalization. Each trait field is optional in the AI's response;
-  // when absent we fill in a name-based default so the data is always present.
-  // Phase pointers are stored as keys (resolved to ids at uploadTraits time)
-  // so an element can reference a phase target that hasn't been registered yet.
-  function applyTraits(out, raw, key, userDesc) {
+  function applyTraits(out, raw, key, userDesc, hint, preferHint) {
     const defaults = traitDefaultsForName(key, out.kind);
     const raw255 = (v, d) => {
       const n = Number(v);
@@ -2710,6 +3217,11 @@
       const n = Number(v);
       if (!isFinite(n)) return d;
       return Math.max(0, Math.min(1, n));
+    };
+    const rawSigned = (v, d) => {
+      const n = Number(v);
+      if (!isFinite(n)) return d;
+      return Math.max(-127, Math.min(127, Math.round(n)));
     };
     const phaseKey = (v) => {
       if (typeof v !== 'string') return undefined;
@@ -2723,10 +3235,8 @@
     out.conductivity  = raw255(raw && raw.conductivity,  defaults.conductivity);
     out.corrosivity   = raw255(raw && raw.corrosivity,   defaults.corrosivity);
     out.hardness      = raw255(raw && raw.hardness,      defaults.hardness);
-    // Phase transitions. Use 0 as sentinel for "not applicable" so we don't
-    // need a separate null. Pair the threshold with its target key; the
-    // upload step looks the key up. If only one of (point, target) is given
-    // we drop both — a half-defined transition would fire silently.
+
+    // Phase
     const meltAt = raw255(raw && raw.meltingPoint,  0);
     const boilAt = raw255(raw && raw.boilingPoint,  0);
     const freezeAt = raw255(raw && raw.freezingPoint, 0);
@@ -2736,66 +3246,117 @@
     if (meltAt > 0 && meltTo)     { out.meltingPoint = meltAt;     out.meltsTo = meltTo; }
     if (boilAt > 0 && boilTo)     { out.boilingPoint = boilAt;     out.boilsTo = boilTo; }
     if (freezeAt > 0 && freezeTo) { out.freezingPoint = freezeAt;  out.freezesTo = freezeTo; }
+
+    // Charge
+    const conducts = (raw && typeof raw.conducts === 'boolean') ? raw.conducts
+                   : (preferHint && hint && typeof hint.conducts === 'boolean') ? hint.conducts
+                   : (defaults.conducts || false);
+    if (conducts) out.conducts = true;
+    if (raw && typeof raw.chargeEmit === 'number') out.chargeEmit = rawSigned(raw.chargeEmit, 0);
+    else if (preferHint && hint && typeof hint.chargeEmit === 'number') out.chargeEmit = rawSigned(hint.chargeEmit, 0);
+    else if (defaults.chargeEmit) out.chargeEmit = rawSigned(defaults.chargeEmit, 0);
+    if (raw && typeof raw.ignitesAtCharge === 'number') out.ignitesAtCharge = raw255(raw.ignitesAtCharge, 0);
+    else if (preferHint && hint && typeof hint.ignitesAtCharge === 'number') out.ignitesAtCharge = raw255(hint.ignitesAtCharge, 0);
+    else if (defaults.ignitesAtCharge) out.ignitesAtCharge = raw255(defaults.ignitesAtCharge, 0);
+
+    // Airflow
+    if (raw && typeof raw.airflowFactor === 'number') out.airflowFactor = raw01(raw.airflowFactor, 0);
+    else if (preferHint && hint && typeof hint.airflowFactor === 'number') out.airflowFactor = raw01(hint.airflowFactor, 0);
+    else if (defaults.airflowFactor) out.airflowFactor = raw01(defaults.airflowFactor, 0);
+    if (raw && raw.emitsAirflow && typeof raw.emitsAirflow === 'object') {
+      const vx = rawSigned(raw.emitsAirflow.vx, 0);
+      const vy = rawSigned(raw.emitsAirflow.vy, 0);
+      if (vx || vy) out.emitsAirflow = { vx: Math.max(-8, Math.min(8, vx)), vy: Math.max(-8, Math.min(8, vy)) };
+    } else if (preferHint && hint && hint.emitsAirflow) {
+      out.emitsAirflow = hint.emitsAirflow;
+    }
+    if (raw && typeof raw.pressureBlast === 'number') {
+      out.pressureBlast = raw255(raw.pressureBlast, 0);
+      if (typeof raw.pressureBlastTo === 'string') out.pressureBlastTo = raw.pressureBlastTo.toLowerCase();
+    } else if (preferHint && hint && hint.pressureBlast) {
+      out.pressureBlast = hint.pressureBlast;
+    }
+
+    // Registers
+    if (raw && typeof raw.raInit === 'number')          out.raInit = raw255(raw.raInit, 0);
+    else if (preferHint && hint && typeof hint.raInit === 'number') out.raInit = raw255(hint.raInit, 0);
+    if (raw && typeof raw.raDelta === 'number')         out.raDelta = rawSigned(raw.raDelta, 0);
+    else if (preferHint && hint && typeof hint.raDelta === 'number') out.raDelta = rawSigned(hint.raDelta, 0);
+    if (raw && typeof raw.raDiesAt === 'number')        out.raDiesAt = raw255(raw.raDiesAt, 0);
+    if (raw && typeof raw.raTransformsTo === 'string')  out.raTransformsTo = raw.raTransformsTo.toLowerCase();
+    else if (preferHint && hint && typeof hint.raTransformsTo === 'string') out.raTransformsTo = hint.raTransformsTo;
   }
 
-  // Default trait values derived from element name + kind. Picks sensible
-  // physical analogs so users get plausible behavior even when the AI omits
-  // the trait block entirely. Falls through to kind-only defaults at the end.
   function traitDefaultsForName(key, kind) {
     const n = (key || '').toLowerCase();
     const has = (...words) => words.some(w => n.indexOf(w) >= 0);
-    if (has('fire','flame','inferno','ember','plasma','spark','lightning'))
-      return { emitTemp: 240, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 40,  hardness: 0 };
+    if (has('fire','flame','inferno','ember','plasma','spark','lightning','arc'))
+      return { emitTemp: 240, ignitionPoint: 255, flammability: 0, conductivity: 220, corrosivity: 40, hardness: 0, airflowFactor: 0.5, conducts: has('lightning','arc','plasma'), chargeEmit: has('lightning','arc') ? 110 : 0 };
     if (has('lava','magma'))
-      return { emitTemp: 210, ignitionPoint: 255, flammability: 0,    conductivity: 180, corrosivity: 80,  hardness: 30 };
+      return { emitTemp: 210, ignitionPoint: 255, flammability: 0, conductivity: 180, corrosivity: 80, hardness: 30 };
+    if (has('mercury','quicksilver'))
+      return { emitTemp: 30, ignitionPoint: 255, flammability: 0, conductivity: 240, corrosivity: 0, hardness: 0, conducts: true };
     if (has('steam'))
-      return { emitTemp: 130, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 130, ignitionPoint: 255, flammability: 0, conductivity: 200, corrosivity: 0, hardness: 0, airflowFactor: 0.8 };
     if (has('smoke','fog','mist','vapor','cloud','haze'))
-      return { emitTemp: 70,  ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 70, ignitionPoint: 255, flammability: 0, conductivity: 200, corrosivity: 0, hardness: 0, airflowFactor: 0.7 };
+    if (has('balloon','helium','bubble'))
+      return { emitTemp: 30, ignitionPoint: 90, flammability: 0.30, conductivity: 80, corrosivity: 0, hardness: 0, airflowFactor: 0.9, pressureBlast: 180 };
     if (has('ice','icicle','glacier','snow'))
-      return { emitTemp: 10,  ignitionPoint: 255, flammability: 0,    conductivity: 160, corrosivity: 0,   hardness: 60 };
+      return { emitTemp: 10, ignitionPoint: 255, flammability: 0, conductivity: 160, corrosivity: 0, hardness: 60 };
     if (has('water','juice','milk','wine','soda'))
-      return { emitTemp: 25,  ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 25, ignitionPoint: 255, flammability: 0, conductivity: 140, corrosivity: 0, hardness: 0 };
     if (has('oil','gasoline','petrol','fuel'))
-      return { emitTemp: 30,  ignitionPoint: 100, flammability: 0.20, conductivity: 90,  corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 30, ignitionPoint: 100, flammability: 0.20, conductivity: 90, corrosivity: 0, hardness: 0 };
     if (has('acid'))
-      return { emitTemp: 30,  ignitionPoint: 200, flammability: 0,    conductivity: 110, corrosivity: 200, hardness: 0 };
+      return { emitTemp: 30, ignitionPoint: 200, flammability: 0, conductivity: 110, corrosivity: 200, hardness: 0 };
     if (has('honey','syrup','molasses','caramel'))
-      return { emitTemp: 30,  ignitionPoint: 180, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 30, ignitionPoint: 180, flammability: 0.05, conductivity: 70, corrosivity: 0, hardness: 0 };
     if (has('tar','pitch','glue','resin'))
-      return { emitTemp: 30,  ignitionPoint: 130, flammability: 0.10, conductivity: 60,  corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 30, ignitionPoint: 130, flammability: 0.10, conductivity: 60, corrosivity: 0, hardness: 0 };
     if (has('blood'))
-      return { emitTemp: 38,  ignitionPoint: 200, flammability: 0,    conductivity: 130, corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 38, ignitionPoint: 200, flammability: 0, conductivity: 130, corrosivity: 0, hardness: 0 };
     if (has('slime','goo','ooze'))
-      return { emitTemp: 30,  ignitionPoint: 220, flammability: 0,    conductivity: 90,  corrosivity: 0,   hardness: 0 };
+      return { emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 90, corrosivity: 0, hardness: 0 };
     if (has('plant','leaf','vine','tree','grass','moss'))
-      return { emitTemp: 30,  ignitionPoint: 120, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 40 };
-    if (has('wood','timber','log','bark','twig'))
-      return { emitTemp: 30,  ignitionPoint: 140, flammability: 0.04, conductivity: 40,  corrosivity: 0,   hardness: 100 };
+      return { emitTemp: 30, ignitionPoint: 120, flammability: 0.05, conductivity: 70, corrosivity: 0, hardness: 40 };
+    if (has('wood','timber','log','bark','twig','plank'))
+      return { emitTemp: 30, ignitionPoint: 140, flammability: 0.04, conductivity: 40, corrosivity: 0, hardness: 100 };
     if (has('paper','cardboard','parchment'))
-      return { emitTemp: 30,  ignitionPoint: 110, flammability: 0.25, conductivity: 50,  corrosivity: 0,   hardness: 20 };
-    if (has('metal','iron','steel','copper','brass','gold','silver'))
-      return { emitTemp: 30,  ignitionPoint: 220, flammability: 0,    conductivity: 240, corrosivity: 0,   hardness: 240 };
+      return { emitTemp: 30, ignitionPoint: 110, flammability: 0.25, conductivity: 50, corrosivity: 0, hardness: 20 };
+    if (has('battery'))
+      return { emitTemp: 30, ignitionPoint: 200, flammability: 0, conductivity: 180, corrosivity: 0, hardness: 160, conducts: true, chargeEmit: 120 };
+    if (has('wire','cable','circuit'))
+      return { emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 220, corrosivity: 0, hardness: 100, conducts: true };
+    if (has('copper','brass'))
+      return { emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 240, corrosivity: 0, hardness: 140, conducts: true };
+    if (has('metal','iron','steel','aluminum','tin'))
+      return { emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 240, corrosivity: 0, hardness: 240, conducts: true };
+    if (has('gold','silver'))
+      return { emitTemp: 30, ignitionPoint: 250, flammability: 0, conductivity: 250, corrosivity: 0, hardness: 200, conducts: true };
     if (has('diamond','gem'))
-      return { emitTemp: 30,  ignitionPoint: 250, flammability: 0,    conductivity: 220, corrosivity: 0,   hardness: 255 };
+      return { emitTemp: 30, ignitionPoint: 250, flammability: 0, conductivity: 220, corrosivity: 0, hardness: 255 };
     if (has('crystal','glass'))
-      return { emitTemp: 30,  ignitionPoint: 240, flammability: 0,    conductivity: 120, corrosivity: 0,   hardness: 180 };
-    if (has('rock','stone','brick','concrete','bedrock'))
-      return { emitTemp: 30,  ignitionPoint: 240, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 200 };
+      return { emitTemp: 30, ignitionPoint: 240, flammability: 0, conductivity: 120, corrosivity: 0, hardness: 180 };
+    if (has('rock','stone','brick','concrete','bedrock','marble','granite'))
+      return { emitTemp: 30, ignitionPoint: 240, flammability: 0, conductivity: 100, corrosivity: 0, hardness: 200 };
     if (has('tnt','bomb','dynamite','explosive','c4','grenade','blastite','landmine'))
-      return { emitTemp: 30,  ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
+      return { emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90, corrosivity: 0, hardness: 30, ignitesAtCharge: 30 };
     if (has('gunpowder')||has('gun-powder'))
-      return { emitTemp: 30,  ignitionPoint: 90,  flammability: 0.50, conductivity: 80,  corrosivity: 0,   hardness: 20 };
+      return { emitTemp: 30, ignitionPoint: 90, flammability: 0.50, conductivity: 80, corrosivity: 0, hardness: 20, ignitesAtCharge: 20 };
     if (has('ash','soot','cinder'))
-      return { emitTemp: 50,  ignitionPoint: 255, flammability: 0,    conductivity: 60,  corrosivity: 0,   hardness: 30 };
+      return { emitTemp: 50, ignitionPoint: 255, flammability: 0, conductivity: 60, corrosivity: 0, hardness: 30, airflowFactor: 0.7 };
     if (has('mold','fungus','mycelium','lichen','coral','slime-mold'))
-      return { emitTemp: 30,  ignitionPoint: 150, flammability: 0.06, conductivity: 70,  corrosivity: 0,   hardness: 50 };
-    // Kind-based final fallback.
-    if (kind === 'gas')      return { emitTemp: 60,  ignitionPoint: 255, flammability: 0,    conductivity: 180, corrosivity: 0,   hardness: 0 };
-    if (kind === 'liquid')   return { emitTemp: 30,  ignitionPoint: 200, flammability: 0,    conductivity: 130, corrosivity: 0,   hardness: 0 };
-    if (kind === 'powder')   return { emitTemp: 30,  ignitionPoint: 200, flammability: 0,    conductivity: 90,  corrosivity: 0,   hardness: 60 };
-    if (kind === 'cellular') return { emitTemp: 30,  ignitionPoint: 160, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 50 };
-    /* static */              return { emitTemp: 30,  ignitionPoint: 220, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 180 };
+      return { emitTemp: 30, ignitionPoint: 150, flammability: 0.06, conductivity: 70, corrosivity: 0, hardness: 50 };
+    if (has('uranium','plutonium','radio'))
+      return { emitTemp: 110, ignitionPoint: 255, flammability: 0, conductivity: 180, corrosivity: 30, hardness: 180, raInit: 250, raDelta: -1, raTransformsTo: 'stone' };
+    if (has('fan','vent','jet'))
+      return { emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 100, corrosivity: 0, hardness: 120 };
+    if (kind === 'gas')      return { emitTemp: 60, ignitionPoint: 255, flammability: 0, conductivity: 180, corrosivity: 0, hardness: 0, airflowFactor: 0.7 };
+    if (kind === 'liquid')   return { emitTemp: 30, ignitionPoint: 200, flammability: 0, conductivity: 130, corrosivity: 0, hardness: 0 };
+    if (kind === 'powder')   return { emitTemp: 30, ignitionPoint: 200, flammability: 0, conductivity: 90,  corrosivity: 0, hardness: 60 };
+    if (kind === 'cellular') return { emitTemp: 30, ignitionPoint: 160, flammability: 0.05, conductivity: 70, corrosivity: 0, hardness: 50 };
+    return { emitTemp: 30, ignitionPoint: 220, flammability: 0, conductivity: 100, corrosivity: 0, hardness: 180 };
   }
 
   function isHex(s) { return typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s); }
@@ -2816,15 +3377,18 @@
   function canonicalPaletteFromName(key) {
     const n = (key || '').toLowerCase();
     const has = (...words) => words.some(w => n.indexOf(w) >= 0);
-    if (has('fire','flame','inferno','ember','plasma','spark','lightning')) return ['#ff4020','#ff8010','#ffc040','#ffe070'];
+    if (has('fire','flame','inferno','ember','plasma','spark')) return ['#ff4020','#ff8010','#ffc040','#ffe070'];
+    if (has('lightning','arc')) return ['#fff8e0','#a0d0ff','#ffffff','#80b0ff'];
     if (has('lava','magma')) return ['#ff5020','#ff8030','#d03010','#ffc040'];
     if (has('steam')) return ['#d8e8f0','#b0c8d8','#f0f6fa','#c0d8e0'];
     if (has('smoke')) return ['#606060','#808080','#4a4a4a','#a0a0a0'];
     if (has('fog','mist','vapor','cloud','haze')) return ['#a0b8c8','#c0d0dc','#7890a0','#90a8b8'];
+    if (has('balloon','helium','bubble')) return ['#e84060','#d03050','#ff6080','#a02040'];
     if (has('honey','syrup','molasses','caramel')) return ['#e8a030','#d48020','#ffc050','#b86020'];
     if (has('tar','pitch','glue','resin')) return ['#1a1008','#2a1810','#3a2418','#1f1410'];
     if (has('acid')) return ['#60ff30','#80ff40','#30d020','#b0ff60'];
     if (has('oil','gasoline','petrol','fuel')) return ['#2a1010','#4a2810','#1a0808','#603020'];
+    if (has('mercury','quicksilver')) return ['#c0c0d0','#a0a0b8','#d8d8e0','#909098'];
     if (has('slime','goo','ooze')) return ['#60c060','#40a040','#80d080','#509050'];
     if (has('blood')) return ['#a02020','#801010','#c03030','#600808'];
     if (has('snow')) return ['#ffffff','#e8f0ff','#d0e0f0','#fafcff'];
@@ -2833,8 +3397,14 @@
     if (has('tnt','bomb','dynamite','explosive','c4','grenade','blastite','landmine')) return ['#c02020','#e03030','#ff4040','#802020'];
     if (has('ice','icicle')) return ['#c0e0ff','#a0d0f0','#e0f0ff','#80b0e0'];
     if (has('plant','leaf','vine','tree','grass','moss')) return ['#409040','#60a050','#308030','#80b060'];
-    if (has('wood','timber','log','bark','twig')) return ['#7a4820','#8a5828','#5a3010','#a06838'];
-    if (has('metal','iron','steel','copper','brass','gold','silver')) return ['#9a9a9a','#b0b0b0','#707070','#c8c8c8'];
+    if (has('wood','timber','log','bark','twig','plank')) return ['#7a4820','#8a5828','#5a3010','#a06838'];
+    if (has('battery')) return ['#e0c020','#a08018','#fff060','#806010'];
+    if (has('copper','brass')) return ['#c87838','#a85820','#d88848','#985020'];
+    if (has('metal','iron','steel','aluminum','tin')) return ['#9a9a9a','#b0b0b0','#707070','#c8c8c8'];
+    if (has('gold')) return ['#e0c040','#c8a830','#fff060','#b08820'];
+    if (has('silver')) return ['#d0d0e0','#b0b0c0','#e8e8f0','#909098'];
+    if (has('uranium','plutonium','radio')) return ['#80b020','#608018','#a0d040','#506010'];
+    if (has('fan','vent','jet')) return ['#506070','#3a4858','#607888','#404a55'];
     if (has('mold','fungus','mycelium','lichen','coral','slime-mold')) return ['#304820','#405830','#50682a','#2a3818'];
     if (has('conway','automaton','life')) return ['#40e080','#30c060','#60f090','#20a050'];
     return null;
@@ -2852,55 +3422,27 @@
   }
 
   function fallbackSpec(displayName, key, desc) {
-    const n = (key || '').toLowerCase();
-    const has = (...words) => words.some(w => n.indexOf(w) >= 0);
-    let kind = 'powder', density = 5, viscosity = 0, flow = 0.55, stickiness = 0;
-    let buoyancy = 0.9, lifeMin = 60, lifeMax = 110;
-    let colorsOverride = null;
-    let born = [3], survive = [2,3];
-    if (has('fire','flame','inferno','ember','plasma','spark','lightning')) {
-      kind='gas'; density=1; buoyancy=1; lifeMin=30; lifeMax=70;
-    } else if (has('lava','magma')) {
-      kind='liquid'; density=8; viscosity=0.8;
-    } else if (has('smoke','steam','fog','mist','vapor','cloud','haze')) {
-      kind='gas'; density=2; buoyancy=0.6; lifeMin=60; lifeMax=120;
-    } else if (has('ice','icicle')) { kind='static'; density=5; }
-    else if (has('plant','leaf','vine','tree','grass','moss')) { kind='static'; density=3; }
-    else if (has('wood','timber','log','bark','twig')) { kind='static'; density=4; }
-    else if (has('metal','iron','steel','copper','brass','gold','silver')) { kind='static'; density=8; }
-    else if (has('rock','stone','brick','concrete','crystal','glass')) { kind='static'; }
-    else if (has('honey','syrup','molasses','caramel')) { kind='liquid'; density=6; viscosity=0.9; stickiness=0.7; }
-    else if (has('tar','glue','resin','pitch')) { kind='liquid'; density=6; viscosity=0.95; stickiness=0.85; }
-    else if (has('acid')) { kind='liquid'; density=4; viscosity=0.1; }
-    else if (has('oil','gasoline','petrol','fuel')) { kind='liquid'; density=3; viscosity=0.3; }
-    else if (has('water','juice','milk','wine','soda','liquid')) { kind='liquid'; density=5; viscosity=0; }
-    else if (has('slime','goo','ooze')) { kind='liquid'; density=5; viscosity=0.6; stickiness=0.5; }
-    else if (has('blood')) { kind='liquid'; density=6; viscosity=0.4; }
-    else if (has('snow')) { kind='powder'; density=2; flow=0.4; }
-    else if (has('flour','powder','dust','talc')) { kind='powder'; flow=1.0; density=2; }
-    else if (has('ash','soot','cinder')) { kind='powder'; flow=0.9; density=2; }
-    else if (has('gravel','rocks','pebbles')) { kind='powder'; flow=0.15; density=7; }
-    else if (has('gunpowder','gun-powder')) { kind='powder'; flow=0.6; density=4; }
-    else if (has('tnt','bomb','dynamite','explosive','c4','grenade','blastite','landmine')) { kind='powder'; flow=0.45; density=4; }
-    else if (has('mold','fungus','mycelium','lichen','coral','slime-mold')) { kind='cellular'; density=3; born=[2,3]; survive=[1,2,3,4,5]; }
-    else if (has('conway','automaton','life')) { kind='cellular'; density=3; }
-    else if (has('sand','salt','glitter','seed','sugar','rice','confetti')) { kind='powder'; flow=0.55; }
-
-    colorsOverride = canonicalPaletteFromName(key) || fillFallbackColors(key);
+    const kind = kindOverrideFromName(key, desc) || 'powder';
+    const hint = namePropertyHints(key) || {};
     const out = {
       id: nextCustomId(), key,
       displayName: displayName.slice(0, 14).toLowerCase(),
-      kind, density, colors: colorsOverride, reactions: [],
+      kind,
+      density: hint.density || (kind === 'gas' ? 2 : kind === 'liquid' ? 5 : 4),
+      colors: canonicalPaletteFromName(key) || fillFallbackColors(key),
+      reactions: [],
       isBuiltIn: false, userDesc: desc || '',
     };
-    if (kind === 'liquid') { out.viscosity = viscosity; out.stickiness = stickiness; }
-    if (kind === 'powder') { out.flow = flow; out.stickiness = stickiness; }
-    if (kind === 'gas')    { out.buoyancy = buoyancy; out.lifeMin = lifeMin; out.lifeMax = lifeMax; }
-    if (kind === 'cellular') {
-      out.born = born; out.survive = survive;
-      out.cellularTick = 6; out.growChance = 0.4; out.surviveChance = 0.94;
-    }
-    applyTraits(out, null, key, desc);
+    if (kind === 'liquid') { out.viscosity = hint.viscosity || 0; out.stickiness = hint.stickiness || 0; }
+    if (kind === 'powder') { out.flow = hint.flow || 0.55; out.stickiness = hint.stickiness || 0; }
+    if (kind === 'gas')    { out.buoyancy = hint.buoyancy || 0.9; out.lifeMin = hint.lifeMin || 60; out.lifeMax = hint.lifeMax || 100; }
+    if (kind === 'cellular') { out.born = [3]; out.survive = [2,3]; out.cellularTick = 6; out.growChance = 0.4; out.surviveChance = 0.94; }
+    applyTraits(out, null, key, desc, hint, true);
     return out;
   }
+
+
+
+
+
 })();

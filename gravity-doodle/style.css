@@ -56,6 +56,18 @@ html, body {
   --mat-smoke:     #aaaaaa;
   --mat-plant:     #3aa040;
   --mat-erase:     #808080;
+  --mat-wood:      #7a4820;
+  --mat-oil:       #2a1010;
+  --mat-mercury:   #c0c0d0;
+  --mat-dust:      #d0c8b8;
+  --mat-copper:    #c87838;
+  --mat-battery:   #e0c020;
+  --mat-lightning: #fff8e0;
+  --mat-fan:       #506070;
+  --mat-balloon:   #e84060;
+  --mat-uranium:   #80b020;
+  --mat-tar:       #1f1410;
+  --mat-vine:      #3aa050;
 }
 
 html, body {
@@ -247,6 +259,18 @@ header h1 {
 .tool-btn.mat-explosive { --swatch: var(--mat-explosive); }
 .tool-btn.mat-smoke     { --swatch: var(--mat-smoke); }
 .tool-btn.mat-plant     { --swatch: var(--mat-plant); }
+.tool-btn.mat-wood      { --swatch: var(--mat-wood); }
+.tool-btn.mat-oil       { --swatch: var(--mat-oil); }
+.tool-btn.mat-mercury   { --swatch: var(--mat-mercury); }
+.tool-btn.mat-dust      { --swatch: var(--mat-dust); }
+.tool-btn.mat-copper    { --swatch: var(--mat-copper); }
+.tool-btn.mat-battery   { --swatch: var(--mat-battery); }
+.tool-btn.mat-lightning { --swatch: var(--mat-lightning); }
+.tool-btn.mat-fan       { --swatch: var(--mat-fan); }
+.tool-btn.mat-balloon   { --swatch: var(--mat-balloon); }
+.tool-btn.mat-uranium   { --swatch: var(--mat-uranium); }
+.tool-btn.mat-tar       { --swatch: var(--mat-tar); }
+.tool-btn.mat-vine      { --swatch: var(--mat-vine); }
 .tool-btn.mat-erase     { --swatch: var(--mat-erase); }
 
 .tool-btn.active.mat-wall      { background: var(--mat-wall);      color: #1a1714; border-color: var(--mat-wall);      font-weight: 700; }
@@ -661,6 +685,10 @@ header h1 {
   background: var(--amber);
 }
 #probe-tooltip .probe-bar.heat > span { background: linear-gradient(90deg, #4aa8d8, #e8a030, #ff5020); }
+#probe-tooltip .probe-bar.charge.pos > span { background: linear-gradient(90deg, #80b0ff, #d0e0ff); }
+#probe-tooltip .probe-bar.charge.neg > span { background: linear-gradient(90deg, #ff80d0, #ffd0f0); }
+#probe-tooltip .probe-bar.pres.pos > span { background: linear-gradient(90deg, #c0a060, #f0d090); }
+#probe-tooltip .probe-bar.pres.neg > span { background: linear-gradient(90deg, #4080a0, #6090b8); }
 
 /* Discovery toast: bottom of canvas, fades in when something new emerges. */
 #discovery-toast {
