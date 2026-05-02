@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Library of Returned Books</title>
+  <meta property="og:title" content="The Library of Returned Books">
+  <meta property="og:description" content="Pick 4 books off the cart. Read the letter the last patron left inside.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/library-of-returned-books/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div class="paper-grain"></div>
+
+  <main id="cart-screen" class="screen">
+    <header class="masthead">
+      <div class="stamp stamp-tl">RETURNED</div>
+      <div class="stamp stamp-tr">DO NOT&nbsp;RESHELVE</div>
+      <h1>The Library of <span class="ital">Returned</span> Books</h1>
+      <p class="dek">Pick <b>4 books</b> from the cart. The librarian will fetch the return slip of the patron who had them last.</p>
+    </header>
+
+    <section class="cart-stage" aria-label="Library cart">
+      <div class="cart">
+        <div id="book-rack" class="rack" role="listbox" aria-label="Choose four books"></div>
+        <div class="cart-frame">
+          <div class="wheel wheel-l"></div>
+          <div class="wheel wheel-r"></div>
+        </div>
+        <div class="cat" aria-hidden="true" title="do not disturb">
+          <div class="cat-body"></div>
+          <div class="cat-head"></div>
+          <div class="cat-ear cat-ear-l"></div>
+          <div class="cat-ear cat-ear-r"></div>
+          <div class="cat-tail"></div>
+          <div class="zzz">z z z</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="dock">
+      <div class="counter"><span id="picked-count">0</span> / 4 picked</div>
+      <button id="check-btn" class="big-btn" disabled>Check the slips</button>
+    </div>
+  </main>
+
+  <main id="loading-screen" class="screen hidden">
+    <div class="loading-card">
+      <div class="loading-stamp">PROCESSING<br>OVERDUE</div>
+      <p class="loading-line" id="loading-line">the librarian is rummaging in the back office&hellip;</p>
+      <div class="dots"><span></span><span></span><span></span></div>
+    </div>
+  </main>
+
+  <main id="result-screen" class="screen hidden">
+    <div class="overdue-card">
+      <div class="oc-header">
+        <div class="oc-lib">CITY BRANCH&nbsp;&middot;&nbsp;CIRCULATION DESK</div>
+        <div class="oc-title">OVERDUE NOTICE</div>
+        <div class="oc-meta">
+          <span>Patrons last to borrow these volumes:</span>
+          <span class="oc-name" id="oc-name">&mdash;</span>
+        </div>
+      </div>
+      <ul class="oc-list" id="oc-list"></ul>
+      <div class="oc-stamp" id="oc-stamp">DUE&nbsp;&middot;&nbsp;<span id="oc-date">&mdash;</span></div>
+    </div>
+
+    <article class="letter">
+      <div class="letter-corner letter-corner-tl"></div>
+      <div class="letter-corner letter-corner-tr"></div>
+      <div class="letter-corner letter-corner-bl"></div>
+      <div class="letter-corner letter-corner-br"></div>
+      <p class="letter-date" id="letter-date">&mdash;</p>
+      <pre class="letter-body" id="letter-body"></pre>
+      <p class="letter-signoff" id="letter-signoff">&mdash;</p>
+      <p class="letter-name" id="letter-name">&mdash;</p>
+    </article>
+
+    <div id="share" class="share-row">
+      <button onclick="share()" class="big-btn">Share this letter</button>
+      <button id="redo-btn" class="ghost-btn">pick four other books</button>
+    </div>
+  </main>
+
+  <footer class="foot">a quiet branch&nbsp;&middot;&nbsp;est. somewhere&nbsp;&middot;&nbsp;please return when done</footer>
+</body>
+</html>
