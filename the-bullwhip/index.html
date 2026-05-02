@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Bullwhip</title>
+  <meta property="og:title" content="The Bullwhip">
+  <meta property="og:description" content="Two-minute solo Beer Game. Run a tier of the supply chain. Receive your Bullwhip Audit from the Bureau of Logistical Conduct.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/the-bullwhip/">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="root">
+    <!-- Title screen -->
+    <section id="title" class="screen active">
+      <header class="masthead">
+        <div class="stamp">FORM&nbsp;BLC&#8209;20</div>
+        <h1>The Bullwhip</h1>
+        <p class="subhead">Bureau of Logistical Conduct &mdash; Field Exercise No. 03</p>
+      </header>
+
+      <div class="briefing">
+        <p class="briefing-line"><span class="bullet">&#9632;</span> Twenty (20) weeks of operations.</p>
+        <p class="briefing-line"><span class="bullet">&#9632;</span> One (1) tier under your direct command.</p>
+        <p class="briefing-line"><span class="bullet">&#9632;</span> Three (3) automated colleagues. They are not your friends.</p>
+        <p class="briefing-line"><span class="bullet">&#9632;</span> Customer demand is concealed. Filed under: NEED&#8209;TO&#8209;KNOW.</p>
+      </div>
+
+      <div class="tier-pick" id="tierPick">
+        <p class="prompt">Select your post:</p>
+        <div class="tier-grid">
+          <button class="tier-btn" data-tier="0" type="button">
+            <span class="tier-num">01</span>
+            <span class="tier-name">Retailer</span>
+            <span class="tier-blurb">faces the customer</span>
+          </button>
+          <button class="tier-btn" data-tier="1" type="button">
+            <span class="tier-num">02</span>
+            <span class="tier-name">Wholesaler</span>
+            <span class="tier-blurb">middle of the chain</span>
+          </button>
+          <button class="tier-btn" data-tier="2" type="button">
+            <span class="tier-num">03</span>
+            <span class="tier-name">Distributor</span>
+            <span class="tier-blurb">moves the pallets</span>
+          </button>
+          <button class="tier-btn" data-tier="3" type="button">
+            <span class="tier-num">04</span>
+            <span class="tier-name">Factory</span>
+            <span class="tier-blurb">brews the cases</span>
+          </button>
+        </div>
+      </div>
+
+      <p class="footer-stamp">Issued under the seal of the Bureau. All decisions are final and audited.</p>
+    </section>
+
+    <!-- Play screen -->
+    <section id="play" class="screen">
+      <div class="play-header">
+        <div class="hud-row">
+          <div class="hud-cell">
+            <span class="hud-label">Week</span>
+            <span class="hud-value" id="hudWeek">01 / 20</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Inventory</span>
+            <span class="hud-value" id="hudInv">12</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Backlog</span>
+            <span class="hud-value" id="hudBack">0</span>
+          </div>
+        </div>
+        <div class="hud-tier" id="hudTier">Wholesaler</div>
+      </div>
+
+      <canvas id="warehouseCanvas" width="320" height="420" aria-label="four pixel-art warehouses, stacked vertically"></canvas>
+
+      <div class="order-panel">
+        <div class="order-prompt" id="orderPrompt">Order from upstream:</div>
+        <div class="order-chip">
+          <button class="chip-btn" id="minusBtn" type="button" aria-label="decrease order">&minus;</button>
+          <div class="chip-value" id="orderValue">4</div>
+          <button class="chip-btn" id="plusBtn" type="button" aria-label="increase order">+</button>
+        </div>
+        <button class="submit-btn" id="submitBtn" type="button">Submit Order</button>
+        <p class="hint" id="weekHint">Tap +/&minus;. Submit advances one week.</p>
+      </div>
+    </section>
+
+    <!-- Audit (result) screen -->
+    <section id="audit" class="screen">
+      <article class="audit-doc" id="auditDoc">
+        <div class="audit-header">
+          <div class="seal">B<br>L<br>C</div>
+          <div class="audit-title-block">
+            <p class="audit-eyebrow">Bureau of Logistical Conduct</p>
+            <h2>Bullwhip Audit</h2>
+            <p class="audit-meta" id="auditMeta">Operator: Wholesaler &middot; File 0000</p>
+          </div>
+        </div>
+
+        <div class="archetype-block">
+          <p class="archetype-label">Manager Archetype</p>
+          <h3 class="archetype-name" id="archetypeName">The Lighthouse Keeper</h3>
+          <p class="archetype-blurb" id="archetypeBlurb">&mdash;</p>
+        </div>
+
+        <div class="chart-block">
+          <p class="chart-label">Order ripple across the chain &mdash; weeks 1 to 20</p>
+          <canvas id="rippleChart" width="640" height="320"></canvas>
+          <div class="legend">
+            <span class="lg lg0"><span class="sw"></span>Retailer</span>
+            <span class="lg lg1"><span class="sw"></span>Wholesaler</span>
+            <span class="lg lg2"><span class="sw"></span>Distributor</span>
+            <span class="lg lg3"><span class="sw"></span>Factory</span>
+          </div>
+        </div>
+
+        <div class="metrics-block">
+          <div class="metric">
+            <span class="metric-label">Peak inventory</span>
+            <span class="metric-value" id="metricPeak">&mdash;</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Stockout weeks</span>
+            <span class="metric-value" id="metricStockout">&mdash;</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Order variance</span>
+            <span class="metric-value" id="metricVar">&mdash;</span>
+          </div>
+        </div>
+
+        <p class="verdict-line" id="verdictLine">&mdash;</p>
+
+        <p class="footer-stamp audit-footer">This audit is binding. Replays available via supplied URL.</p>
+      </article>
+
+      <div id="share" style="display:block">
+        <button onclick="share()" class="share-btn">Share your audit</button>
+        <button onclick="restart()" class="restart-btn" type="button">Run it again</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
