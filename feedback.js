@@ -8,6 +8,14 @@
     return (seg[0] || 'unknown').toLowerCase();
   }
 
+  // Index page = /apps/ (the directory of all apps). Individual app page =
+  // /apps/{slug}/ or legacy /{slug}/. The index gets only the spawn button;
+  // individual apps get only the feedback button.
+  function isIndex() {
+    var seg = location.pathname.split('/').filter(Boolean);
+    return seg.length <= 1 && seg[0] === 'apps';
+  }
+
   var CSS = ''
     + '.ef-fb-stack{position:fixed;right:12px;bottom:12px;z-index:2147483000;'
     + 'display:flex;flex-direction:column;align-items:flex-end;gap:8px}'
@@ -56,54 +64,53 @@
 
     var stack = document.createElement('div');
     stack.className = 'ef-fb-stack';
-
-    var spawnBtn = document.createElement('button');
-    spawnBtn.className = 'ef-fb-btn spawn';
-    spawnBtn.type = 'button';
-    spawnBtn.setAttribute('aria-label', 'Spawn a new app');
-    spawnBtn.textContent = '+ New App';
-
-    var fbBtn = document.createElement('button');
-    fbBtn.className = 'ef-fb-btn';
-    fbBtn.type = 'button';
-    fbBtn.setAttribute('aria-label', 'Send feedback');
-    fbBtn.textContent = 'Feedback';
-
-    stack.appendChild(spawnBtn);
-    stack.appendChild(fbBtn);
-
-    var fbOverlay = document.createElement('div');
-    fbOverlay.className = 'ef-fb-overlay';
-    fbOverlay.innerHTML = ''
-      + '<div class="ef-fb-modal" role="dialog" aria-labelledby="ef-fb-title">'
-      + '<h3 id="ef-fb-title">Send feedback</h3>'
-      + '<p>What worked, what broke, what would make this better?</p>'
-      + '<textarea maxlength="2000" placeholder="Type anything..."></textarea>'
-      + '<div class="ef-fb-status"></div>'
-      + '<div class="ef-fb-row">'
-      + '<button type="button" class="ef-fb-cancel">Cancel</button>'
-      + '<button type="button" class="primary ef-fb-send">Send</button>'
-      + '</div></div>';
-
-    var spawnOverlay = document.createElement('div');
-    spawnOverlay.className = 'ef-fb-overlay';
-    spawnOverlay.innerHTML = ''
-      + '<div class="ef-fb-modal" role="dialog" aria-labelledby="ef-sp-title">'
-      + '<h3 id="ef-sp-title">Spawn a new app</h3>'
-      + '<p>Kicks off the daily-cycle on the factory. Optional: nudge it toward a theme, mechanic, or vibe. Leave blank for a free pick.</p>'
-      + '<textarea class="short" maxlength="2000" placeholder="Optional steering prompt..."></textarea>'
-      + '<div class="ef-fb-status"></div>'
-      + '<div class="ef-fb-row">'
-      + '<button type="button" class="ef-sp-cancel">Cancel</button>'
-      + '<button type="button" class="primary ef-sp-send">Spawn</button>'
-      + '</div></div>';
-
     document.body.appendChild(stack);
-    document.body.appendChild(fbOverlay);
-    document.body.appendChild(spawnOverlay);
 
-    wireFeedback(fbBtn, fbOverlay);
-    wireSpawn(spawnBtn, spawnOverlay);
+    if (isIndex()) {
+      var spawnBtn = document.createElement('button');
+      spawnBtn.className = 'ef-fb-btn spawn';
+      spawnBtn.type = 'button';
+      spawnBtn.setAttribute('aria-label', 'Spawn a new app');
+      spawnBtn.textContent = '+ New App';
+      stack.appendChild(spawnBtn);
+
+      var spawnOverlay = document.createElement('div');
+      spawnOverlay.className = 'ef-fb-overlay';
+      spawnOverlay.innerHTML = ''
+        + '<div class="ef-fb-modal" role="dialog" aria-labelledby="ef-sp-title">'
+        + '<h3 id="ef-sp-title">Spawn a new app</h3>'
+        + '<p>Kicks off the daily-cycle on the factory. Optional: nudge it toward a theme, mechanic, or vibe. Leave blank for a free pick.</p>'
+        + '<textarea class="short" maxlength="2000" placeholder="Optional steering prompt..."></textarea>'
+        + '<div class="ef-fb-status"></div>'
+        + '<div class="ef-fb-row">'
+        + '<button type="button" class="ef-sp-cancel">Cancel</button>'
+        + '<button type="button" class="primary ef-sp-send">Spawn</button>'
+        + '</div></div>';
+      document.body.appendChild(spawnOverlay);
+      wireSpawn(spawnBtn, spawnOverlay);
+    } else {
+      var fbBtn = document.createElement('button');
+      fbBtn.className = 'ef-fb-btn';
+      fbBtn.type = 'button';
+      fbBtn.setAttribute('aria-label', 'Send feedback');
+      fbBtn.textContent = 'Feedback';
+      stack.appendChild(fbBtn);
+
+      var fbOverlay = document.createElement('div');
+      fbOverlay.className = 'ef-fb-overlay';
+      fbOverlay.innerHTML = ''
+        + '<div class="ef-fb-modal" role="dialog" aria-labelledby="ef-fb-title">'
+        + '<h3 id="ef-fb-title">Send feedback</h3>'
+        + '<p>What worked, what broke, what would make this better?</p>'
+        + '<textarea maxlength="2000" placeholder="Type anything..."></textarea>'
+        + '<div class="ef-fb-status"></div>'
+        + '<div class="ef-fb-row">'
+        + '<button type="button" class="ef-fb-cancel">Cancel</button>'
+        + '<button type="button" class="primary ef-fb-send">Send</button>'
+        + '</div></div>';
+      document.body.appendChild(fbOverlay);
+      wireFeedback(fbBtn, fbOverlay);
+    }
   }
 
   function wireFeedback(btn, overlay) {
