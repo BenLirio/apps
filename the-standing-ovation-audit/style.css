@@ -1,0 +1,551 @@
+/* Aesthetic: Edwardian/Victorian-formal awards letterhead — cream paper, embossed seal, ornate serif headlines, typewriter body, red wax-stamp accent */
+
+:root {
+  --cream: #f4ecd6;
+  --cream-deep: #e9dfc1;
+  --paper-shadow: rgba(60, 38, 18, 0.18);
+  --ink: #1d140a;
+  --ink-soft: #3a2a18;
+  --ink-faint: #6b563a;
+  --gold: #8a6b1f;
+  --gold-deep: #5e4612;
+  --wax: #8a1c1c;
+  --wax-deep: #5d0e0e;
+  --rule: #c9b88a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 244, 214, 0.6), transparent 60%),
+    radial-gradient(circle at 80% 90%, rgba(178, 132, 60, 0.18), transparent 55%),
+    #2c1f10;
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body { overflow-x: hidden; }
+
+main#app {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+  min-height: 100vh;
+}
+
+.screen { animation: fadein 0.45s ease both; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ============== INTRO ============== */
+
+.intro-card {
+  background: var(--cream);
+  background-image:
+    repeating-linear-gradient(180deg, rgba(120, 88, 38, 0.04) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at top, rgba(255, 248, 220, 0.8), transparent 70%);
+  border: 1px solid var(--rule);
+  padding: 44px 28px 32px;
+  text-align: center;
+  position: relative;
+  box-shadow:
+    0 30px 60px var(--paper-shadow),
+    0 6px 14px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 6px var(--cream),
+    inset 0 0 0 7px var(--rule);
+  margin-top: 12px;
+}
+
+.intro-card::before, .intro-card::after {
+  content: '';
+  position: absolute;
+  left: 28px; right: 28px;
+  height: 1px;
+  background: var(--rule);
+}
+.intro-card::before { top: 22px; }
+.intro-card::after { bottom: 22px; }
+
+.seal-mini {
+  width: 64px; height: 64px;
+  margin: 4px auto 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d7c280, #8a6b1f 70%, #4a3508);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 3px #e9dfc1, inset 0 0 0 4px #5e4612, 0 2px 5px rgba(0,0,0,0.3);
+  color: #f4ecd6;
+}
+.seal-mini-inner {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+
+.intro-title {
+  font-family: 'IM Fell English SC', 'Cormorant Garamond', serif;
+  font-size: 34px;
+  line-height: 1.1;
+  margin: 0 0 10px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.intro-by {
+  font-size: 16px;
+  color: var(--ink-soft);
+  margin: 0 0 22px;
+  font-style: italic;
+}
+.intro-by em { font-family: 'IM Fell English SC', serif; font-style: normal; letter-spacing: 0.04em; }
+
+.intro-rules {
+  font-size: 17px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin: 0 0 26px;
+  padding: 0 6px;
+}
+.rules-detail {
+  display: block;
+  margin-top: 10px;
+  font-family: 'Special Elite', monospace;
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.01em;
+}
+
+.formal-btn {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 17px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--cream);
+  border: none;
+  padding: 14px 24px;
+  cursor: pointer;
+  min-height: 48px;
+  box-shadow: 0 3px 0 var(--gold-deep), 0 6px 14px rgba(0,0,0,0.25);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.formal-btn:hover { background: var(--ink-soft); }
+.formal-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--gold-deep); }
+
+.fine-print {
+  margin-top: 20px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-faint);
+}
+
+/* ============== AUDIT ============== */
+
+.audit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: 'Special Elite', monospace;
+  font-size: 13px;
+  color: var(--cream-deep);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  padding: 0 4px;
+}
+.cat-timer {
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+  color: var(--cream);
+  background: rgba(0,0,0,0.35);
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  min-width: 56px;
+  text-align: center;
+}
+
+.cat-card {
+  background: var(--cream);
+  border: 1px solid var(--rule);
+  padding: 28px 22px 32px;
+  text-align: center;
+  position: relative;
+  box-shadow:
+    0 18px 40px var(--paper-shadow),
+    inset 0 0 0 5px var(--cream),
+    inset 0 0 0 6px var(--rule);
+  margin-bottom: 22px;
+}
+.cat-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 14px;
+}
+.cat-name {
+  font-family: 'IM Fell English SC', 'Cormorant Garamond', serif;
+  font-size: 26px;
+  line-height: 1.18;
+  margin: 0;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+/* Meter */
+.meter-wrap { margin-bottom: 22px; }
+.meter-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--cream-deep);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.meter-track {
+  height: 14px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+  position: relative;
+}
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #c9a24a, #e6c870 40%, #f8e9a9 70%, #fff7d0);
+  transition: width 0.05s linear;
+  box-shadow: inset 0 0 8px rgba(255,230,140,0.5);
+}
+.audience-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 18px;
+  color: var(--cream-deep);
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.3));
+}
+.audience-row span {
+  transition: transform 0.12s ease, color 0.12s;
+  display: inline-block;
+}
+.audience-row.active span {
+  animation: applaud 0.32s ease-in-out infinite alternate;
+  color: #f4d77a;
+}
+@keyframes applaud {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-3px) scale(1.18); }
+}
+
+/* Clap pad */
+.clap-pad {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  margin: 0 0 18px;
+  border: 2px solid var(--rule);
+  background:
+    radial-gradient(circle at 50% 40%, #5a3c1a, #2d1d0a 80%),
+    #2d1d0a;
+  color: var(--cream);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  font-family: 'IM Fell English SC', serif;
+  letter-spacing: 0.08em;
+  transition: transform 0.04s, box-shadow 0.04s, background 0.06s;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.35), inset 0 0 0 4px #2d1d0a, inset 0 0 0 5px var(--rule);
+}
+.clap-pad:active, .clap-pad.pressed {
+  background: radial-gradient(circle at 50% 40%, #b5882f, #5e4612 80%);
+  color: #fff8d6;
+  transform: scale(0.985);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 0 0 4px #2d1d0a, inset 0 0 0 5px #f4d77a;
+}
+.clap-pad-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 16px;
+  align-items: center;
+}
+.clap-icon { font-size: 44px; line-height: 1; }
+.clap-instruction { font-size: 18px; letter-spacing: 0.1em; text-transform: uppercase; }
+.clap-sub {
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  color: var(--cream-deep);
+}
+
+.next-affordance {
+  display: block;
+  margin: 0 auto;
+  background: transparent;
+  color: var(--cream-deep);
+  border: 1px solid var(--rule);
+  padding: 8px 16px;
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 36px;
+}
+.next-affordance:hover { color: var(--cream); border-color: var(--cream-deep); }
+
+/* ============== VERDICT / LETTER ============== */
+
+.loader-line {
+  text-align: center;
+  color: var(--cream-deep);
+  font-family: 'Special Elite', monospace;
+  font-size: 14px;
+  padding: 80px 16px;
+  letter-spacing: 0.04em;
+}
+.loader-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: var(--cream);
+  animation: bounce 1s infinite;
+}
+.loader-dot:nth-child(2) { animation-delay: 0.15s; }
+.loader-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { 0%,80%,100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-6px); opacity: 1; } }
+.loader-line em { display: block; margin-top: 14px; font-style: italic; }
+
+.letter {
+  background: var(--cream);
+  background-image:
+    repeating-linear-gradient(180deg, rgba(120, 88, 38, 0.05) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at top, rgba(255, 248, 220, 0.7), transparent 70%);
+  border: 1px solid var(--rule);
+  padding: 32px 26px 80px;
+  position: relative;
+  box-shadow:
+    0 30px 70px var(--paper-shadow),
+    0 8px 20px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 6px var(--cream),
+    inset 0 0 0 7px var(--rule);
+  animation: letterIn 0.6s ease both;
+  overflow: hidden;
+}
+@keyframes letterIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+.letter-head {
+  text-align: center;
+  border-bottom: 1px double var(--rule);
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  position: relative;
+}
+
+.seal {
+  width: 86px; height: 86px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #f0d989, #a78127 60%, #5e4612 100%);
+  position: relative;
+  box-shadow:
+    inset 0 0 0 3px #f4ecd6,
+    inset 0 0 0 4px #5e4612,
+    inset 0 0 14px rgba(0,0,0,0.35),
+    0 2px 6px rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+}
+.seal-ring {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 1px dashed rgba(94, 70, 18, 0.6);
+  animation: spin 80s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.seal-text-top {
+  position: absolute;
+  inset: 0;
+  display: none; /* simpler: just show core text — top text is ornamental aria-hidden */
+}
+.seal-core {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: #f4ecd6;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.45);
+}
+
+.letter-h1 {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 22px;
+  line-height: 1.05;
+  margin: 0;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+.letter-sub {
+  margin: 6px 0 0;
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.letter-body {
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink);
+  position: relative;
+  z-index: 1;
+}
+.letter-date {
+  text-align: right;
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.letter-re {
+  margin: 0 0 18px;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+.letter-re span { font-style: italic; }
+.letter-greeting { margin: 0 0 12px; }
+.letter-para { margin: 0 0 12px; }
+.letter-para.flourish {
+  font-style: italic;
+  color: var(--ink-soft);
+  border-left: 2px solid var(--gold);
+  padding-left: 10px;
+  margin-left: 4px;
+}
+
+.archetype-line {
+  text-align: center;
+  font-family: 'IM Fell English SC', 'Cormorant Garamond', serif;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  margin: 16px 0 18px;
+  color: var(--ink);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 12px 6px;
+  background: rgba(255, 244, 214, 0.5);
+}
+
+.letter-close { margin: 22px 0 4px; }
+.signature {
+  margin: 0;
+  font-family: 'Cormorant Garamond', cursive;
+  font-style: italic;
+  font-size: 26px;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  transform: rotate(-2deg);
+  display: inline-block;
+}
+.sig-title {
+  margin: 4px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+/* The wax stamp */
+.stamp {
+  position: absolute;
+  right: 18px;
+  bottom: 22px;
+  width: 130px;
+  height: 130px;
+  display: flex; align-items: center; justify-content: center;
+  transform: rotate(-14deg);
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+}
+.stamp-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px double var(--wax);
+  color: var(--wax);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IM Fell English SC', serif;
+  letter-spacing: 0.16em;
+  text-align: center;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), transparent 60%),
+    rgba(138, 28, 28, 0.06);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  /* slight rough edge */
+  box-shadow: inset 0 0 0 1px rgba(138, 28, 28, 0.4);
+}
+.stamp-line1 {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: bold;
+}
+.stamp-line2 {
+  font-family: 'Special Elite', monospace;
+  font-size: 10px;
+  margin-top: 4px;
+  letter-spacing: 0.18em;
+}
+
+.share-row {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.share-btn { width: 100%; max-width: 300px; }
+.ghost-btn {
+  background: transparent;
+  color: var(--cream-deep);
+  border: 1px solid var(--rule);
+  padding: 10px 16px;
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  min-height: 40px;
+  width: 100%;
+  max-width: 300px;
+}
+.ghost-btn:hover { color: var(--cream); }
+
+/* Mobile tweaks */
+@media (max-width: 380px) {
+  .intro-title { font-size: 28px; }
+  .cat-name { font-size: 22px; }
+  .letter-h1 { font-size: 18px; }
+  .archetype-line { font-size: 22px; }
+  .stamp { width: 105px; height: 105px; right: 10px; bottom: 14px; }
+  .stamp-line1 { font-size: 20px; }
+}
