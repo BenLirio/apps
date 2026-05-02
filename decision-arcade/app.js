@@ -1,179 +1,81 @@
-// Decision Arcade — 10 emoji rounds. No question text, no labels. Pick the
-// emoji that hits. The clock learns your pace. Picks aggregate into 5 axes.
-
-// Each round: 6 emojis, no text. Each emoji has axis (0..4) + value [0,1]
-// where 0 = left pole of the axis, 1 = right pole. 2 rounds per axis × 5 = 10.
+// Decision Arcade — 3 picture rounds. Pick the picture that hits.
+// The clock learns your pace. Picks aggregate into 3 axes.
+//
+// Each round: 2 image options, no text. Each option has axis (0..2) + value [0,1]
+// where 0 = left pole of the axis, 1 = right pole. Each axis appears once.
 //
 // Axes:
-//   0  Practical  ←→  Adventurous
-//   1  Selfish    ←→  Altruist
-//   2  Logic      ←→  Feeling
-//   3  Bold       ←→  Cautious
-//   4  Present    ←→  Future
+//   0  Practical  ←→  Adventurous   (R1: morning vibe — bed vs plane)
+//   1  Logic      ←→  Feeling       (R2: how you decide — spreadsheet vs heart)
+//   2  Selfish    ←→  Altruist      (R3: found cash — wallet vs give it away)
 
 const ROUNDS = [
-  // R1 — axis 0: morning vibe
-  { axis: 0, emojis: [
-    { e: "🛏️", v: 0.05 },
-    { e: "☕",  v: 0.20 },
-    { e: "📋", v: 0.35 },
-    { e: "🚶", v: 0.55 },
-    { e: "🚲", v: 0.80 },
-    { e: "✈️", v: 0.98 },
+  { axis: 0, options: [
+    { img: 'images/bed.png',         alt: 'cozy bed in morning light',   shareEmoji: '🛏️', v: 0.05 },
+    { img: 'images/plane.png',       alt: 'passport and plane ticket',   shareEmoji: '✈️', v: 0.95 },
   ]},
-  // R2 — axis 1: found money
-  { axis: 1, emojis: [
-    { e: "💰", v: 0.05 },
-    { e: "🛍️", v: 0.20 },
-    { e: "🍰", v: 0.40 },
-    { e: "🎁", v: 0.65 },
-    { e: "💝", v: 0.85 },
-    { e: "🤝", v: 0.98 },
+  { axis: 1, options: [
+    { img: 'images/spreadsheet.png', alt: 'organized spreadsheet',       shareEmoji: '📊', v: 0.05 },
+    { img: 'images/heart.png',       alt: 'glowing heart on a pillow',   shareEmoji: '🫀', v: 0.95 },
   ]},
-  // R3 — axis 2: how you decide
-  { axis: 2, emojis: [
-    { e: "📊", v: 0.05 },
-    { e: "🧮", v: 0.18 },
-    { e: "🤔", v: 0.40 },
-    { e: "💭", v: 0.60 },
-    { e: "🫀", v: 0.82 },
-    { e: "🌈", v: 0.98 },
-  ]},
-  // R4 — axis 3: the leap (0 = bold, 1 = cautious)
-  { axis: 3, emojis: [
-    { e: "🚀", v: 0.05 },
-    { e: "🔥", v: 0.18 },
-    { e: "🎲", v: 0.35 },
-    { e: "⚖️", v: 0.55 },
-    { e: "🪖", v: 0.80 },
-    { e: "🛡️", v: 0.98 },
-  ]},
-  // R5 — axis 4: bonus cash arrives
-  { axis: 4, emojis: [
-    { e: "🍾", v: 0.05 },
-    { e: "🍕", v: 0.20 },
-    { e: "🎉", v: 0.38 },
-    { e: "🪴", v: 0.60 },
-    { e: "💸", v: 0.80 },
-    { e: "📈", v: 0.98 },
-  ]},
-  // R6 — axis 0: the weekend
-  { axis: 0, emojis: [
-    { e: "🧹", v: 0.05 },
-    { e: "📚", v: 0.20 },
-    { e: "🥗", v: 0.38 },
-    { e: "🎨", v: 0.58 },
-    { e: "🏔️", v: 0.82 },
-    { e: "🪂", v: 0.98 },
-  ]},
-  // R7 — axis 1: the last seat (0 = keep, 1 = give it up)
-  { axis: 1, emojis: [
-    { e: "💺", v: 0.05 },
-    { e: "🙄", v: 0.20 },
-    { e: "🤷", v: 0.38 },
-    { e: "👋", v: 0.58 },
-    { e: "🙋", v: 0.82 },
-    { e: "💗", v: 0.98 },
-  ]},
-  // R8 — axis 2: the crying stranger
-  { axis: 2, emojis: [
-    { e: "🕐", v: 0.05 },
-    { e: "🚪", v: 0.18 },
-    { e: "🤨", v: 0.40 },
-    { e: "❓", v: 0.58 },
-    { e: "💬", v: 0.82 },
-    { e: "🤗", v: 0.98 },
-  ]},
-  // R9 — axis 3: the meeting (0 = bold/speak, 1 = cautious/quiet)
-  { axis: 3, emojis: [
-    { e: "📢", v: 0.05 },
-    { e: "🗣️", v: 0.20 },
-    { e: "😐", v: 0.42 },
-    { e: "🙊", v: 0.62 },
-    { e: "🤐", v: 0.85 },
-    { e: "👂", v: 0.98 },
-  ]},
-  // R10 — axis 4: tonight (0 = present, 1 = future)
-  { axis: 4, emojis: [
-    { e: "🛌", v: 0.05 },
-    { e: "🍿", v: 0.20 },
-    { e: "🎮", v: 0.38 },
-    { e: "📖", v: 0.58 },
-    { e: "📝", v: 0.80 },
-    { e: "💪", v: 0.98 },
+  { axis: 2, options: [
+    { img: 'images/wallet.png',      alt: 'wallet stuffed with cash',    shareEmoji: '💰', v: 0.05 },
+    { img: 'images/give.png',        alt: 'hands giving cash away',      shareEmoji: '🤝', v: 0.95 },
   ]},
 ];
 
 const AXIS_LABELS = [
   ["Practical", "Adventurous"],
-  ["Selfish",   "Altruist"],
   ["Logic",     "Feeling"],
-  ["Bold",      "Cautious"],
-  ["Present",   "Future"]
+  ["Selfish",   "Altruist"]
 ];
 
-// Archetype matching: scores `s` are per-axis averages in [0,1].
+// 8 archetypes — one per (axis0, axis1, axis2) low/high combination.
+// Picks are binary in this version, so we deterministically map every player
+// to exactly one archetype rather than searching for a fuzzy match.
+function archetypeFor(scores) {
+  const a0 = scores[0] >= 0.5 ? 1 : 0;
+  const a1 = scores[1] >= 0.5 ? 1 : 0;
+  const a2 = scores[2] >= 0.5 ? 1 : 0;
+  const key = (a0 << 2) | (a1 << 1) | a2;
+  return ARCHETYPES[key];
+}
+
+// Indexed by (axis0 << 2) | (axis1 << 1) | axis2 — practical/adventurous,
+// logic/feeling, selfish/altruist.
 const ARCHETYPES = [
-  {
-    name: "THE CALCULATED HEDONIST",
-    desc: "You chase pleasure but always read the fine print first.",
-    flavor: "You'd order the most expensive thing on the menu — after checking reviews.",
-    match: s => s[0] < 0.5 && s[1] < 0.5 && s[2] < 0.5
-  },
-  {
-    name: "THE CHAOTIC EMPATH",
-    desc: "You feel everything and act before thinking. Somehow it works out.",
-    flavor: "You've definitely cried at a commercial and then impulsively booked a flight.",
-    match: s => s[0] > 0.5 && s[2] > 0.5 && s[3] < 0.5
-  },
-  {
-    name: "THE RATIONAL ALTRUIST",
-    desc: "You want to help people — and you have a 5-step plan to do it efficiently.",
-    flavor: "Your donations are optimized. Your empathy is scheduled.",
-    match: s => s[1] > 0.5 && s[2] < 0.5 && s[4] > 0.5
-  },
-  {
-    name: "THE PRAGMATIC DRIFTER",
-    desc: "You move through life efficiently but somehow end up in the most interesting places.",
-    flavor: "You planned a spreadsheet trip and turned it into a spiritual experience.",
-    match: s => s[0] < 0.5 && s[0] > 0.3 && s[4] < 0.5
-  },
-  {
-    name: "THE BOLD IDEALIST",
-    desc: "You take big swings for big principles. Caution is a foreign language.",
-    flavor: "You've quit a job on principle and felt great about it. Twice.",
-    match: s => s[3] < 0.5 && s[1] > 0.5 && s[4] > 0.5
-  },
-  {
-    name: "THE CAUTIOUS DREAMER",
-    desc: "You have grand visions but a detailed contingency plan for every one of them.",
-    flavor: "You've planned adventures you'll take someday — when the time is right.",
-    match: s => s[3] > 0.5 && s[0] > 0.5 && s[4] > 0.5
-  },
-  {
-    name: "THE PRESENT-MOMENT OPPORTUNIST",
-    desc: "The future is for suckers. Today has a 100% arrival rate.",
-    flavor: "You'd spend your last €20 on dinner rather than the subway fare home.",
-    match: s => s[4] < 0.5 && s[1] < 0.5 && s[3] < 0.5
-  },
-  {
-    name: "THE FUTURE-FIRST ARCHITECT",
-    desc: "You're living in the version of your life that's three moves ahead.",
-    flavor: "You already have a retirement account and a vague plan for the planet.",
-    match: s => s[4] > 0.5 && s[2] < 0.5 && s[3] > 0.5
-  },
-  {
-    name: "THE FREELANCE MORALIST",
-    desc: "You make your own rules — and they're surprisingly consistent.",
-    flavor: "You've talked a stranger through a crisis and then jaywalked immediately after.",
-    match: s => s[1] > 0.5 && s[3] < 0.5 && s[2] > 0.5
-  },
-  {
-    name: "THE INTUITIVE PRAGMATIST",
-    desc: "You trust your gut, but your gut has done its homework.",
-    flavor: "You call it instinct. It's actually 10,000 hours of pattern recognition.",
-    match: () => true // fallback
-  }
+  // 000 — practical, logic, selfish
+  { name: "THE QUIET HOARDER",
+    desc: "You move through life efficiently, decide with data, and your name is on every lease.",
+    flavor: "You have a colour-coded spreadsheet for what you'd do with a windfall." },
+  // 001 — practical, logic, altruist
+  { name: "THE RATIONAL ALTRUIST",
+    desc: "You want to help — and you have a 5-step plan to do it efficiently.",
+    flavor: "Your donations are optimized. Your empathy is scheduled." },
+  // 010 — practical, feeling, selfish
+  { name: "THE SOFT INDOORSMAN",
+    desc: "You feel deeply, mostly about your own home and the warm bowl in front of you.",
+    flavor: "You've cried at a candle commercial and then tucked yourself in." },
+  // 011 — practical, feeling, altruist
+  { name: "THE WARM HEARTH",
+    desc: "Your home is the safe place where everyone ends up — and you keep it that way on purpose.",
+    flavor: "You've talked three friends through a crisis without leaving your couch." },
+  // 100 — adventurous, logic, selfish
+  { name: "THE STRATEGIST",
+    desc: "You take big swings — but only after you've run the numbers and the numbers are for you.",
+    flavor: "You called it a calculated risk. You'd seen the spreadsheet weeks ago." },
+  // 101 — adventurous, logic, altruist
+  { name: "THE OPTIMIZED EXPLORER",
+    desc: "You go far on purpose, and somehow the trip ends up helping someone other than you.",
+    flavor: "You've turned a vacation into a fundraiser and a flight delay into a useful contact." },
+  // 110 — adventurous, feeling, selfish
+  { name: "THE WANDERING ROMANTIC",
+    desc: "You chase the next intense moment, and the moment is almost always about you in it.",
+    flavor: "You've impulse-booked a flight to recover from a feeling. It worked." },
+  // 111 — adventurous, feeling, altruist
+  { name: "THE PASSIONATE PILGRIM",
+    desc: "Big heart, big map — you go far for the people you love and a few you've never met.",
+    flavor: "You've given your seat away and then kept walking another six miles." },
 ];
 
 const COMPUTING_MSGS = [
@@ -185,22 +87,17 @@ const COMPUTING_MSGS = [
 ];
 
 // ── Adaptive timer config ──────────────────────────────────────────────
-// Picks are emoji-only and instant — much shorter than the previous
-// scenario-reading flow. Floor lives near "tap reflex" instead of "read time".
-const TIMER_BASE_MS    = 2500;   // first round
-const TIMER_FLOOR_MS   = 1100;   // minimum
-const TIMER_CEILING_MS = 4500;   // maximum
-const TIMER_BLEND      = 0.6;    // recalibration weighting
-const TIMER_HEADROOM   = 1.55;   // ~55% margin above measured median
+// Picture rounds are slightly slower than emoji rounds — give the eye time
+// to scan two big pictures. Fixed pace per round (3 rounds is too few for
+// meaningful recalibration).
+const TIMER_BASE_MS    = 3500;
 
 let currentQ = 0;
-let picks = []; // {axis, value, hesitated, emoji, responseMs}
-let axisSums = [0, 0, 0, 0, 0];   // accumulated value per axis
-let axisCounts = [0, 0, 0, 0, 0];
+let picks = []; // {axis, value, hesitated, shareEmoji, responseMs}
+let axisSums = [0, 0, 0];
+let axisCounts = [0, 0, 0];
 let timerInterval = null;
 let timerStart = null;
-let currentTimerMs = TIMER_BASE_MS;
-let recalibrated = false;
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -211,10 +108,8 @@ function showScreen(id) {
 function startGame() {
   currentQ = 0;
   picks = [];
-  axisSums = [0, 0, 0, 0, 0];
-  axisCounts = [0, 0, 0, 0, 0];
-  currentTimerMs = TIMER_BASE_MS;
-  recalibrated = false;
+  axisSums = [0, 0, 0];
+  axisCounts = [0, 0, 0];
   showScreen('screen-game');
   loadRound(0);
 }
@@ -225,13 +120,13 @@ function loadRound(idx) {
 
   const grid = document.getElementById('emoji-grid');
   grid.innerHTML = '';
-  r.emojis.forEach((item, i) => {
+  r.options.forEach((opt, i) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'emoji-btn';
+    btn.className = 'pic-btn';
     btn.dataset.idx = String(i);
-    btn.setAttribute('aria-label', 'option ' + (i + 1));
-    btn.innerHTML = '<span class="emoji-glyph">' + item.e + '</span>';
+    btn.setAttribute('aria-label', opt.alt);
+    btn.innerHTML = '<img class="pic-img" src="' + opt.img + '" alt="' + opt.alt + '" draggable="false">';
     btn.addEventListener('click', () => choose(i));
     grid.appendChild(btn);
   });
@@ -242,7 +137,7 @@ function loadRound(idx) {
 
 function startTimer() {
   const bar = document.getElementById('timer-bar');
-  const seconds = (currentTimerMs / 1000).toFixed(1);
+  const seconds = (TIMER_BASE_MS / 1000).toFixed(1);
   document.getElementById('timer-seconds').textContent = seconds + 's';
 
   bar.classList.remove('danger');
@@ -251,50 +146,18 @@ function startTimer() {
   bar.getBoundingClientRect();
 
   timerStart = Date.now();
-  bar.style.transition = `width ${currentTimerMs}ms linear`;
+  bar.style.transition = `width ${TIMER_BASE_MS}ms linear`;
   bar.style.width = '0%';
 
-  const dangerOffset = Math.max(currentTimerMs - 600, currentTimerMs * 0.7);
+  const dangerOffset = Math.max(TIMER_BASE_MS - 700, TIMER_BASE_MS * 0.7);
   setTimeout(() => bar.classList.add('danger'), dangerOffset);
 
-  timerInterval = setTimeout(hesitate, currentTimerMs);
+  timerInterval = setTimeout(hesitate, TIMER_BASE_MS);
 }
 
 function clearTimer() {
   clearTimeout(timerInterval);
   timerInterval = null;
-}
-
-function recalibrateTimer() {
-  const actuals = picks
-    .filter(p => !p.hesitated && typeof p.responseMs === 'number')
-    .map(p => p.responseMs)
-    .sort((a, b) => a - b);
-
-  if (actuals.length === 0) return;
-
-  const median = actuals.length % 2 === 1
-    ? actuals[(actuals.length - 1) / 2]
-    : (actuals[actuals.length / 2 - 1] + actuals[actuals.length / 2]) / 2;
-
-  const target = median * TIMER_HEADROOM;
-  let next = currentTimerMs * (1 - TIMER_BLEND) + target * TIMER_BLEND;
-  next = Math.max(TIMER_FLOOR_MS, Math.min(TIMER_CEILING_MS, next));
-
-  const meaningful = Math.abs(next - currentTimerMs) >= 250;
-  currentTimerMs = next;
-  if (meaningful) {
-    recalibrated = true;
-    flashRecalibration();
-  }
-}
-
-function flashRecalibration() {
-  const el = document.getElementById('timer-seconds');
-  if (!el) return;
-  el.classList.remove('flash');
-  void el.offsetWidth;
-  el.classList.add('flash');
 }
 
 function choose(idx) {
@@ -303,30 +166,24 @@ function choose(idx) {
 
   const responseMs = Date.now() - timerStart;
   const r = ROUNDS[currentQ];
-  const item = r.emojis[idx];
+  const item = r.options[idx];
 
   picks.push({
     axis: r.axis,
     value: item.v,
     hesitated: false,
-    emoji: item.e,
+    shareEmoji: item.shareEmoji,
     responseMs
   });
   axisSums[r.axis] += item.v;
   axisCounts[r.axis]++;
 
-  // mark all unselected; mark selected
-  Array.from(document.querySelectorAll('.emoji-btn')).forEach((b, i) => {
+  Array.from(document.querySelectorAll('.pic-btn')).forEach((b, i) => {
     b.disabled = true;
     if (i === idx) b.classList.add('selected'); else b.classList.add('faded');
   });
 
-  // Recalibrate after rounds 2, 4, 6 — early enough to help, real sample.
-  if (currentQ === 1 || currentQ === 3 || currentQ === 5) {
-    recalibrateTimer();
-  }
-
-  setTimeout(advance, 320);
+  setTimeout(advance, 360);
 }
 
 function hesitate() {
@@ -335,25 +192,19 @@ function hesitate() {
   const r = ROUNDS[currentQ];
   picks.push({
     axis: r.axis,
-    value: 0.5, // neutral when hesitating
+    value: 0.5,
     hesitated: true,
-    emoji: '⏳',
-    responseMs: currentTimerMs
+    shareEmoji: '⏳',
+    responseMs: TIMER_BASE_MS
   });
   axisSums[r.axis] += 0.5;
   axisCounts[r.axis]++;
 
   document.getElementById('hesitate-flash').classList.add('show');
-  Array.from(document.querySelectorAll('.emoji-btn')).forEach(b => {
+  Array.from(document.querySelectorAll('.pic-btn')).forEach(b => {
     b.disabled = true;
     b.classList.add('faded');
   });
-
-  if (currentQ === 1 || currentQ === 3 || currentQ === 5) {
-    currentTimerMs = Math.min(TIMER_CEILING_MS, currentTimerMs * 1.25);
-    recalibrated = true;
-    flashRecalibration();
-  }
 
   setTimeout(advance, 700);
 }
@@ -368,28 +219,27 @@ function advance() {
 }
 
 function showResult() {
+  // Hesitations land at 0.5 (mid-axis); decisive picks pin to ~0.05 or ~0.95.
   const normalized = axisSums.map((sum, i) =>
     axisCounts[i] > 0 ? sum / axisCounts[i] : 0.5
   );
 
-  const archetype = ARCHETYPES.find(a => a.match(normalized)) || ARCHETYPES[ARCHETYPES.length - 1];
+  const archetype = archetypeFor(normalized);
 
-  // Picked emoji strip — one row of the 10 emojis you tapped (or ⏳ for hesitations)
+  // Picked strip — 3 emoji-fallbacks below the archetype line
   const stripEl = document.getElementById('picked-strip');
   stripEl.innerHTML = '';
   picks.forEach(p => {
     const span = document.createElement('span');
     span.className = 'picked-cell' + (p.hesitated ? ' hesitated' : '');
-    span.textContent = p.emoji;
+    span.textContent = p.shareEmoji;
     stripEl.appendChild(span);
   });
 
-  // Build emoji-only share text (no labels — matches the app's identity)
-  const stripStr = picks.map(p => p.emoji).join(' ');
+  const stripStr = picks.map(p => p.shareEmoji).join(' ');
   window._shareEmoji =
     `🎮 Decision Arcade — ${archetype.name}\n\n${stripStr}\n\nfind yours → ${location.href}`;
 
-  // Render axis bars
   const chartEl = document.getElementById('axis-chart');
   chartEl.innerHTML = '';
   normalized.forEach((val, i) => {
@@ -417,7 +267,7 @@ function showResult() {
 
   let flavor = archetype.flavor;
   const tail = [];
-  if (hesitations >= 3) {
+  if (hesitations >= 2) {
     tail.push(`hesitated ${hesitations}× — your gut has opinions it won't commit to`);
   }
   if (avgMs > 0) {

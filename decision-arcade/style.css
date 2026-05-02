@@ -281,20 +281,20 @@ h1 {
   box-shadow: 0 0 10px var(--red);
 }
 
-/* ── EMOJI GRID (game) ───────────────────────────────────────────────── */
+/* ── PICTURE GRID (game) ─────────────────────────────────────────────── */
 .emoji-grid {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   grid-auto-rows: 1fr;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 18px;
-  /* Reserve a square-ish area so layout doesn't jump round-to-round */
-  aspect-ratio: 3 / 2;
-  max-height: 60vh;
+  /* Two square-ish picture cards side by side */
+  aspect-ratio: 2 / 1.05;
+  max-height: 62vh;
 }
 
-.emoji-btn {
+.pic-btn {
   background: var(--panel);
   border: 1px solid var(--amber-dim);
   color: var(--text);
@@ -302,46 +302,54 @@ h1 {
   cursor: pointer;
   padding: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.1s, border-color 0.1s, transform 0.08s, opacity 0.18s;
+  align-items: stretch;
+  justify-content: stretch;
+  transition: border-color 0.1s, transform 0.08s, opacity 0.18s, box-shadow 0.15s;
   position: relative;
   box-shadow: inset 0 0 14px rgba(255, 178, 74, 0.04);
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
 }
 
-.emoji-btn:hover:not(:disabled) {
-  background: var(--panel-2);
-  border-color: var(--amber-deep);
+.pic-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  transition: transform 0.12s ease, filter 0.18s ease;
 }
 
-.emoji-btn:active:not(:disabled) {
+.pic-btn:hover:not(:disabled) {
+  border-color: var(--amber);
+}
+
+.pic-btn:hover:not(:disabled) .pic-img {
+  transform: scale(1.03);
+  filter: brightness(1.07);
+}
+
+.pic-btn:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-.emoji-btn.selected {
-  background: var(--amber);
+.pic-btn.selected {
   border-color: var(--amber);
-  box-shadow: 0 0 22px rgba(255, 178, 74, 0.45);
+  box-shadow: 0 0 22px rgba(255, 178, 74, 0.55);
 }
 
-.emoji-btn.faded {
+.pic-btn.selected .pic-img {
+  filter: brightness(1.18) saturate(1.15);
+}
+
+.pic-btn.faded {
   opacity: 0.28;
 }
 
-.emoji-btn:disabled {
+.pic-btn:disabled {
   cursor: default;
-}
-
-.emoji-glyph {
-  font-size: 44px;
-  line-height: 1;
-  filter: drop-shadow(0 0 8px rgba(255, 178, 74, 0.18));
-}
-
-.emoji-btn.selected .emoji-glyph {
-  filter: drop-shadow(0 0 14px rgba(255, 226, 176, 0.6));
-  transform: scale(1.08);
 }
 
 /* ── Game foot (hesitation icon) ─────────────────────────────────────── */

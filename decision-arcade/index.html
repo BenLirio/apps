@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Decision Arcade</title>
   <meta property="og:title" content="Decision Arcade">
-  <meta property="og:description" content="10 rounds. 6 emojis. Pick the one that hits. Find your archetype.">
+  <meta property="og:description" content="3 rounds. 2 pictures. Pick the one that hits. Find your archetype.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/decision-arcade/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,12 +23,12 @@
       <div class="arcade-header">
         <div class="coin-slot">INSERT COIN</div>
         <h1>DECISION<br>ARCADE</h1>
-        <p class="tagline">10 rounds. 6 emojis. Tap the one that hits.<br>The clock learns your pace.</p>
+        <p class="tagline">3 rounds. 2 pictures. Tap the one that hits.<br>The clock keeps you honest.</p>
       </div>
       <div class="intro-rules">
-        <div class="rule"><span class="rule-key">👆</span> tap an emoji</div>
+        <div class="rule"><span class="rule-key">👆</span> tap a picture</div>
         <div class="rule"><span class="rule-key">⚡</span> no overthinking</div>
-        <div class="rule"><span class="rule-key">↻</span> clock adapts to you</div>
+        <div class="rule"><span class="rule-key">⏱</span> 3.5s on the clock</div>
       </div>
       <button id="start-btn" class="arcade-btn" onclick="startGame()">START GAME</button>
       <div class="credit-count">CREDITS: 1</div>
@@ -39,7 +39,7 @@
       <div class="hud">
         <div class="hud-row">
           <div class="question-counter">
-            <span id="q-current">1</span><span class="q-sep">of</span><span>10</span>
+            <span id="q-current">1</span><span class="q-sep">of</span><span>3</span>
           </div>
           <div class="timer-seconds" id="timer-seconds">2.5s</div>
         </div>
@@ -47,8 +47,8 @@
           <div class="timer-bar" id="timer-bar"></div>
         </div>
       </div>
-      <div class="emoji-grid" id="emoji-grid" aria-label="Pick one emoji">
-        <!-- 6 emoji buttons injected at runtime -->
+      <div class="emoji-grid" id="emoji-grid" aria-label="Pick one picture">
+        <!-- 2 picture buttons injected at runtime -->
       </div>
       <div class="game-foot">
         <div id="hesitate-flash" class="hesitate-flash" aria-hidden="true">⏳</div>
