@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <script type="module" src="src/main.js"></script>
   <script src="feedback.js" defer></script>
 </head>
 <body>
@@ -24,9 +24,9 @@
 
     <div id="controls">
       <div id="action-row">
-        <button id="btn-drop" onclick="startDrop()">pour sand</button>
-        <button id="btn-probe" onclick="toggleProbe()" aria-pressed="false">probe</button>
-        <button id="btn-reset" onclick="clearAll()">reset</button>
+        <button id="btn-drop" type="button">pour sand</button>
+        <button id="btn-probe" type="button" aria-pressed="false">probe</button>
+        <button id="btn-reset" type="button">reset</button>
       </div>
 
       <div id="tool-row" role="group" aria-label="material palette">
@@ -34,7 +34,7 @@
         <div id="palette-buttons">
           <!-- material buttons rendered by JS — three seed materials + invented ones -->
         </div>
-        <button id="btn-invent" class="invent-btn" onclick="openInvent()" aria-label="invent new element">
+        <button id="btn-invent" type="button" class="invent-btn" aria-label="invent new element">
           <span class="invent-plus">+</span>
           <span class="invent-label">invent element</span>
         </button>
@@ -96,8 +96,8 @@
       </div>
       <p id="invent-status" class="invent-status"></p>
       <div class="invent-row">
-        <button type="button" id="invent-cancel" onclick="closeInvent()">cancel</button>
-        <button type="button" id="invent-submit" class="primary" onclick="submitInvent()">invent</button>
+        <button type="button" id="invent-cancel">cancel</button>
+        <button type="button" id="invent-submit" class="primary">invent</button>
       </div>
     </div>
   </div>
