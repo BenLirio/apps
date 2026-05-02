@@ -15,24 +15,24 @@
 
 const ROUNDS = [
   { axis: 0, options: [
-    { img: 'images/steaming-mug.png',     alt: 'a steaming ceramic mug on a wooden table by a rainy window', v: 0.05 },
-    { img: 'images/open-road.png',        alt: 'an empty winding road vanishing into misty mountains at dawn', v: 0.95 },
+    { img: 'images/steaming-mug.webp',     alt: 'a steaming ceramic mug on a wooden table by a rainy window', v: 0.05 },
+    { img: 'images/open-road.webp',        alt: 'an empty winding road vanishing into misty mountains at dawn', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/blueprint.png',        alt: 'an architectural blueprint with a brass drafting compass', v: 0.05 },
-    { img: 'images/watercolor-bleed.png', alt: 'warm watercolor pigments bleeding across white paper', v: 0.95 },
+    { img: 'images/blueprint.webp',        alt: 'an architectural blueprint with a brass drafting compass', v: 0.05 },
+    { img: 'images/watercolor-bleed.webp', alt: 'warm watercolor pigments bleeding across white paper', v: 0.95 },
   ]},
   { axis: 2, options: [
-    { img: 'images/empty-chair.png',      alt: 'a single empty armchair facing a sunlit window', v: 0.05 },
-    { img: 'images/string-lights.png',    alt: 'an outdoor dinner table lit by crisscrossing string lights', v: 0.95 },
+    { img: 'images/empty-chair.webp',      alt: 'a single empty armchair facing a sunlit window', v: 0.05 },
+    { img: 'images/string-lights.webp',    alt: 'an outdoor dinner table lit by crisscrossing string lights', v: 0.95 },
   ]},
   { axis: 0, options: [
-    { img: 'images/papermap.png',         alt: 'a folded paper map on a wooden table', v: 0.05 },
-    { img: 'images/paperplane.png',       alt: 'a paper airplane mid-flight at dusk', v: 0.95 },
+    { img: 'images/papermap.webp',         alt: 'a folded paper map on a wooden table', v: 0.05 },
+    { img: 'images/paperplane.webp',       alt: 'a paper airplane mid-flight at dusk', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/cairn.png',            alt: 'a balanced stack of river stones', v: 0.05 },
-    { img: 'images/redthread.png',        alt: 'a tangled knot of red thread', v: 0.95 },
+    { img: 'images/cairn.webp',            alt: 'a balanced stack of river stones', v: 0.05 },
+    { img: 'images/redthread.webp',        alt: 'a tangled knot of red thread', v: 0.95 },
   ]},
 ];
 
@@ -119,14 +119,19 @@ function startGame() {
   loadRound(0);
 }
 
-// Pictures are ~1MB each; without this the browser only fetches when a round
-// renders and the 3.5s timer can fire before the image paints on slow mobile.
+// Belt-and-suspenders preload. <link rel="preload"> in the HTML kicks the
+// fetches off as soon as the page parses; this JS call covers any image the
+// preload hints didn't already start (and is a no-op once cached). Kept
+// because the 3.5s round timer must never race the image fetch on slow mobile.
 let _preloaded = false;
 function preloadAllImages() {
   if (_preloaded) return;
   ROUNDS.forEach(r => r.options.forEach(o => { (new Image()).src = o.img; }));
   _preloaded = true;
 }
+
+// Fire the JS preload as soon as we can — long before the user taps START.
+document.addEventListener('DOMContentLoaded', preloadAllImages);
 
 function loadRound(idx) {
   const r = ROUNDS[idx];

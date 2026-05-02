@@ -12,6 +12,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+
+  <!-- Preload all 10 round images during the intro screen so they're cached
+       before the user taps START. Total is ~380KB at q80 WebP, smaller than
+       most single fonts — fine to preload eagerly. -->
+  <link rel="preload" as="image" href="images/steaming-mug.webp">
+  <link rel="preload" as="image" href="images/open-road.webp">
+  <link rel="preload" as="image" href="images/blueprint.webp">
+  <link rel="preload" as="image" href="images/watercolor-bleed.webp">
+  <link rel="preload" as="image" href="images/empty-chair.webp">
+  <link rel="preload" as="image" href="images/string-lights.webp">
+  <link rel="preload" as="image" href="images/papermap.webp">
+  <link rel="preload" as="image" href="images/paperplane.webp">
+  <link rel="preload" as="image" href="images/cairn.webp">
+  <link rel="preload" as="image" href="images/redthread.webp">
+
   <script src="app.js" defer></script>
   <script src="feedback.js" defer></script>
 </head>
