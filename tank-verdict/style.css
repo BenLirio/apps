@@ -1,0 +1,336 @@
+/* Aesthetic: minimalist black-water biotope — off-register risograph greens, single warm overhead light, deep dark glass */
+
+:root {
+  --bg: #0b0d0c;
+  --bg-deeper: #060807;
+  --ink: #d8d2c0;
+  --ink-soft: #8a8676;
+  --ink-faint: #4d4a40;
+  --riso-green-1: #4a7a3a;   /* moss */
+  --riso-green-2: #6fa84d;   /* sap */
+  --riso-green-3: #c8d97a;   /* lichen highlight */
+  --warm-light: #f0c878;
+  --plaque: #b08850;
+  --plaque-deep: #6e5128;
+  --glass-edge: #1c1f1c;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-deeper);
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(240,200,120,0.08), transparent 60%),
+    radial-gradient(ellipse 100% 80% at 50% 120%, rgba(74,122,58,0.06), transparent 70%),
+    var(--bg-deeper);
+}
+
+.atrium {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 28px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.masthead {
+  text-align: center;
+  padding: 6px 0 4px;
+}
+
+.kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 6px;
+}
+
+.masthead h1 {
+  font-weight: 500;
+  font-style: italic;
+  font-size: 44px;
+  letter-spacing: 0.01em;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+
+.lede {
+  font-size: 17px;
+  color: var(--ink-soft);
+  max-width: 36ch;
+  margin: 0 auto;
+  font-style: italic;
+}
+
+/* ---- The tank ---- */
+
+.vitrine {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.canvas-frame {
+  position: relative;
+  background: var(--bg);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 30px 80px -30px rgba(0,0,0,0.9),
+    0 0 0 1px rgba(240,200,120,0.04);
+  overflow: hidden;
+}
+
+#tank {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #050706;
+}
+
+.overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  pointer-events: none;
+  font-family: 'JetBrains Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meter {
+  position: relative;
+  height: 2px;
+  background: rgba(216, 210, 192, 0.12);
+  width: 100%;
+}
+
+.meter-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--warm-light);
+  box-shadow: 0 0 8px rgba(240,200,120,0.4);
+  transition: width 0.2s linear;
+}
+
+.meter-label {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.status {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin: 0;
+  letter-spacing: 0.02em;
+  transition: opacity 0.6s ease;
+}
+
+.status.fading { opacity: 0; }
+
+/* The brass plaque */
+
+.plaque {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  max-width: 72%;
+  padding: 12px 16px 10px;
+  background: linear-gradient(180deg, #b89058 0%, #9a7236 60%, #6f4e1d 100%);
+  color: #f8e9c8;
+  border: 1px solid #4a3414;
+  box-shadow:
+    inset 0 1px 0 rgba(255,235,180,0.4),
+    inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 4px 14px rgba(0,0,0,0.55);
+  font-family: 'Cormorant Garamond', serif;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+  text-align: left;
+}
+
+.plaque.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.plaque-rule {
+  height: 1px;
+  background: rgba(74,52,20,0.6);
+  margin: 0 0 6px;
+  display: none;
+}
+
+.plaque-title {
+  font-style: italic;
+  font-weight: 500;
+  font-size: 19px;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  margin: 0 0 4px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+.plaque-fine {
+  font-family: 'JetBrains Mono', monospace;
+  font-style: normal;
+  font-size: 8px;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0;
+  color: rgba(248,233,200,0.78);
+}
+
+/* Caption block */
+
+.caption {
+  text-align: center;
+  min-height: 48px;
+  padding: 0 6px;
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+.caption.show { opacity: 1; }
+
+.apex {
+  font-style: italic;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.apex em {
+  font-style: italic;
+  color: var(--riso-green-3);
+}
+
+.microcopy {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Controls */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 0;
+}
+
+.btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding: 14px 22px;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 200px;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink-faint);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.btn:hover {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.btn-ghost {
+  /* no-op — base style */
+}
+
+.btn-primary {
+  background: var(--warm-light);
+  color: #2a1d08;
+  border-color: var(--warm-light);
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background: #f6d488;
+  border-color: #f6d488;
+  color: #2a1d08;
+}
+
+#share button {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding: 14px 22px;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 200px;
+  background: var(--warm-light);
+  color: #2a1d08;
+  border: 1px solid var(--warm-light);
+  font-weight: 500;
+}
+
+.colophon {
+  margin-top: 4px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.colophon p { margin: 0; }
+
+@media (max-width: 420px) {
+  .masthead h1 { font-size: 36px; }
+  .lede { font-size: 15px; }
+  .plaque { right: 10px; bottom: 12px; padding: 10px 12px 8px; max-width: 78%; }
+  .plaque-title { font-size: 16px; }
+  .plaque-fine { font-size: 7px; letter-spacing: 0.1em; }
+  .apex { font-size: 19px; }
+}
+
+/* Reduced motion: hold the simulation but skip overlay transitions */
+@media (prefers-reduced-motion: reduce) {
+  .plaque, .caption, .meter-fill, .status { transition: none; }
+}

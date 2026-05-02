@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tank Verdict</title>
+  <meta property="og:title" content="Tank Verdict">
+  <meta property="og:description" content="A nano-aquarium personality oracle. Six pixel fish are observed for 60 seconds. The tank is named.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/tank-verdict/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main class="atrium">
+    <header class="masthead">
+      <p class="kicker">Specimen Atrium</p>
+      <h1>Tank Verdict</h1>
+      <p class="lede">Glass cleaned. Filter humming. The tank does not know it is being graded.</p>
+    </header>
+
+    <section class="vitrine">
+      <div class="canvas-frame">
+        <canvas id="tank" width="540" height="660" aria-label="A small dark aquarium with six fish"></canvas>
+        <div class="overlay">
+          <div class="meter">
+            <div class="meter-fill" id="meter-fill"></div>
+            <span class="meter-label" id="meter-label">60-second observation underway</span>
+          </div>
+          <p class="status" id="status"><em>the ethologist is taking notes&hellip;</em></p>
+        </div>
+        <div class="plaque" id="plaque" aria-hidden="true">
+          <div class="plaque-rule"></div>
+          <p class="plaque-title" id="plaque-title"></p>
+          <p class="plaque-fine" id="plaque-fine"></p>
+        </div>
+      </div>
+
+      <div class="caption" id="caption" aria-live="polite">
+        <p class="apex" id="apex"></p>
+        <p class="microcopy" id="microcopy"></p>
+      </div>
+
+      <div class="controls">
+        <button id="shake" type="button" class="btn btn-ghost">Shake the tank</button>
+        <div id="share" style="display:none">
+          <button onclick="share()" class="btn btn-primary">Share the verdict</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="colophon">
+      <p>Brackish Atrium &middot; Light: Warm 2700K &middot; Observation: 60s</p>
+    </footer>
+  </main>
+</body>
+</html>
