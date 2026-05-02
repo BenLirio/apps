@@ -3,8 +3,23 @@
 
 const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
 
+// ---- Action categories ----
+// Each countermeasure belongs to a category; each AI release compromises one
+// category (filings stop counting, with a flavor sting) and leverages another
+// (filings hit ~2.5x). Player reads the wire and re-targets the dispatch board.
+const CATEGORIES = {
+  upskill:     { label: 'UPSKILL',     hint: 'certs, classes, study' },
+  bureaucracy: { label: 'BUREAUCRACY', hint: 'forms, committees, process' },
+  pivot:       { label: 'PIVOT',       hint: 'change roles or industries' },
+  branding:    { label: 'BRANDING',    hint: 'personal brand, social, media' },
+  protest:     { label: 'PROTEST',     hint: 'organize, petition, resist' },
+  exit:        { label: 'EXIT-PLAN',   hint: 'quietly plan to leave' },
+};
+
 // ---- Real 2025-2026 AI events. Used as the ticking shock-events of the game. ----
 // Curated for being widely-reported, real, and easy to verify. Order is rough chronology.
+// Each event names which category of countermeasures it COMPROMISES (the work
+// the AI itself just ate) and which it LEVERAGES (the work that's left).
 const REAL_AI_EVENTS = [
   {
     date: 'JAN 2025',
@@ -12,7 +27,9 @@ const REAL_AI_EVENTS = [
     body: 'OpenAI unveils Operator, an autonomous browser-using agent capable of completing tasks online without supervision.',
     impact_phrase: 'White-collar tasks suddenly delegable',
     actor: 'OpenAI Operator',
-    severity: 0.55
+    severity: 0.55,
+    compromises: 'bureaucracy',
+    leverages: 'exit'
   },
   {
     date: 'JAN 2025',
@@ -20,7 +37,9 @@ const REAL_AI_EVENTS = [
     body: 'DeepSeek publishes R1, an open-weight reasoning model competitive with frontier closed models, sending markets into a brief panic.',
     impact_phrase: 'Frontier reasoning, now self-hostable',
     actor: 'DeepSeek R1',
-    severity: 0.5
+    severity: 0.5,
+    compromises: 'upskill',
+    leverages: 'pivot'
   },
   {
     date: 'FEB 2025',
@@ -28,7 +47,9 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic releases Claude 3.7 Sonnet with extended thinking, raising the bar on long-horizon coding and analysis.',
     impact_phrase: 'Software & analysis work compresses',
     actor: 'Claude 3.7 Sonnet',
-    severity: 0.55
+    severity: 0.55,
+    compromises: 'upskill',
+    leverages: 'branding'
   },
   {
     date: 'FEB 2025',
@@ -36,7 +57,9 @@ const REAL_AI_EVENTS = [
     body: 'xAI debuts Grok 3, claimed as its most capable model to date, with a dedicated "DeepSearch" research mode.',
     impact_phrase: 'Always-on research labor automated',
     actor: 'Grok 3',
-    severity: 0.5
+    severity: 0.5,
+    compromises: 'bureaucracy',
+    leverages: 'protest'
   },
   {
     date: 'MAR 2025',
@@ -44,7 +67,9 @@ const REAL_AI_EVENTS = [
     body: 'OpenAI bakes native image generation into GPT-4o; the "Studio Ghibli style" trend overruns social feeds for weeks.',
     impact_phrase: 'Illustration & design pipelines disrupted',
     actor: 'GPT-4o Image',
-    severity: 0.6
+    severity: 0.6,
+    compromises: 'branding',
+    leverages: 'protest'
   },
   {
     date: 'APR 2025',
@@ -52,7 +77,9 @@ const REAL_AI_EVENTS = [
     body: 'Meta releases the Llama 4 family (Scout, Maverick) with a long-promised mixture-of-experts architecture.',
     impact_phrase: 'Open-weights catch closed leaders',
     actor: 'Llama 4',
-    severity: 0.45
+    severity: 0.45,
+    compromises: 'upskill',
+    leverages: 'protest'
   },
   {
     date: 'MAY 2025',
@@ -60,7 +87,9 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic introduces Claude Opus 4 and Sonnet 4, claiming sustained agentic coding for hours at a time.',
     impact_phrase: 'Multi-hour agent workflows now feasible',
     actor: 'Claude Opus 4',
-    severity: 0.65
+    severity: 0.65,
+    compromises: 'bureaucracy',
+    leverages: 'exit'
   },
   {
     date: 'MAY 2025',
@@ -68,7 +97,9 @@ const REAL_AI_EVENTS = [
     body: 'Google launches Gemini 2.5 Pro with a "Deep Think" mode and integrates it across Search, Workspace, and Android.',
     impact_phrase: 'AI shipped to a billion seats overnight',
     actor: 'Gemini 2.5 Pro',
-    severity: 0.65
+    severity: 0.65,
+    compromises: 'branding',
+    leverages: 'protest'
   },
   {
     date: 'JUL 2025',
@@ -76,7 +107,9 @@ const REAL_AI_EVENTS = [
     body: 'xAI releases Grok 4 with claimed top-tier benchmark performance, alongside a higher-tier "Heavy" multi-agent variant.',
     impact_phrase: 'Multi-agent reasoning goes mainstream',
     actor: 'Grok 4',
-    severity: 0.55
+    severity: 0.55,
+    compromises: 'pivot',
+    leverages: 'bureaucracy'
   },
   {
     date: 'AUG 2025',
@@ -84,7 +117,9 @@ const REAL_AI_EVENTS = [
     body: 'OpenAI rolls out GPT-5 to ChatGPT users and developers with a unified router across reasoning depths and modalities.',
     impact_phrase: 'The default chatbot is now smarter than you',
     actor: 'GPT-5',
-    severity: 0.85
+    severity: 0.85,
+    compromises: 'upskill',
+    leverages: 'exit'
   },
   {
     date: 'AUG 2025',
@@ -92,7 +127,9 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic ships Claude Opus 4.1, posting state-of-the-art agentic coding benchmarks within weeks of GPT-5.',
     impact_phrase: 'Coding labor compressed again',
     actor: 'Claude Opus 4.1',
-    severity: 0.6
+    severity: 0.6,
+    compromises: 'pivot',
+    leverages: 'bureaucracy'
   },
   {
     date: 'SEP 2025',
@@ -100,7 +137,9 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic releases Claude Sonnet 4.5, billing it as the most capable model in the world for coding and computer use.',
     impact_phrase: 'Computer-use agents go production',
     actor: 'Claude Sonnet 4.5',
-    severity: 0.7
+    severity: 0.7,
+    compromises: 'bureaucracy',
+    leverages: 'exit'
   },
   {
     date: 'OCT 2025',
@@ -108,7 +147,9 @@ const REAL_AI_EVENTS = [
     body: 'OpenAI ships Atlas, an AI-native web browser meant to replace conventional browsing with agentic navigation.',
     impact_phrase: 'The browser itself becomes an agent',
     actor: 'ChatGPT Atlas',
-    severity: 0.6
+    severity: 0.6,
+    compromises: 'pivot',
+    leverages: 'branding'
   },
   {
     date: 'NOV 2025',
@@ -116,7 +157,9 @@ const REAL_AI_EVENTS = [
     body: 'Google launches Gemini 3 across Search, Workspace, and a new "Antigravity" agent IDE, claiming top reasoning marks.',
     impact_phrase: 'Search, docs, and code under one agent',
     actor: 'Gemini 3',
-    severity: 0.75
+    severity: 0.75,
+    compromises: 'branding',
+    leverages: 'protest'
   },
   {
     date: 'NOV 2025',
@@ -124,7 +167,9 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic releases Claude Opus 4.5, advertising long-horizon agent runs that complete multi-day projects unattended.',
     impact_phrase: 'A week of work done overnight',
     actor: 'Claude Opus 4.5',
-    severity: 0.8
+    severity: 0.8,
+    compromises: 'exit',
+    leverages: 'protest'
   },
   {
     date: 'DEC 2025',
@@ -132,7 +177,9 @@ const REAL_AI_EVENTS = [
     body: 'xAI rolls out Grok 4.1 Fast, prioritizing tool-use latency for live agentic workflows.',
     impact_phrase: 'Real-time AI assistants get faster',
     actor: 'Grok 4.1 Fast',
-    severity: 0.45
+    severity: 0.45,
+    compromises: 'bureaucracy',
+    leverages: 'branding'
   },
   {
     date: 'JAN 2026',
@@ -140,7 +187,9 @@ const REAL_AI_EVENTS = [
     body: 'DeepSeek publishes V3.2 with an aggressive price-to-performance ratio, pulling enterprise pilots away from frontier APIs.',
     impact_phrase: 'AI labor cost falls another order of magnitude',
     actor: 'DeepSeek V3.2',
-    severity: 0.5
+    severity: 0.5,
+    compromises: 'upskill',
+    leverages: 'pivot'
   },
   {
     date: 'FEB 2026',
@@ -148,7 +197,9 @@ const REAL_AI_EVENTS = [
     body: 'OpenAI previews GPT-5.1 Codex-Max, a coding-tuned successor optimized for sustained autonomous engineering tasks.',
     impact_phrase: 'Engineering teams rethink staffing',
     actor: 'GPT-5.1 Codex-Max',
-    severity: 0.7
+    severity: 0.7,
+    compromises: 'upskill',
+    leverages: 'exit'
   },
   {
     date: 'MAR 2026',
@@ -156,7 +207,9 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic ships Claude Opus 4.6, advertising a 1M-token context window and longer agentic horizons.',
     impact_phrase: 'No more "too much context" excuses',
     actor: 'Claude Opus 4.6',
-    severity: 0.7
+    severity: 0.7,
+    compromises: 'bureaucracy',
+    leverages: 'protest'
   },
   {
     date: 'APR 2026',
@@ -164,24 +217,27 @@ const REAL_AI_EVENTS = [
     body: 'Anthropic announces Claude Opus 4.7 with a 1M-token context window in general availability — the model writing this very page.',
     impact_phrase: 'The simulation acknowledges itself',
     actor: 'Claude Opus 4.7',
-    severity: 0.85
+    severity: 0.85,
+    compromises: 'pivot',
+    leverages: 'protest'
   },
 ];
 
-// Generic, non-job-specific fallback action buttons (used if AI call fails)
+// Generic, non-job-specific fallback action buttons (used if AI call fails).
+// Each carries a category so the wire's compromise/leverage logic still works.
 const GENERIC_ACTIONS = [
-  { label: 'Enroll in "AI Prompting 101"', flavor: 'tuition: nonrefundable' },
-  { label: 'File an HR grievance', flavor: 'forwarded to /dev/null' },
-  { label: 'Add "AI-adjacent" to bio', flavor: 'six new recruiters DM you' },
-  { label: 'Pivot to consulting', flavor: 'business cards being printed' },
-  { label: 'Volunteer for the AI ethics committee', flavor: 'meets quarterly, no quorum' },
-  { label: 'Launch a Substack about your craft', flavor: 'three subscribers, all bots' },
-  { label: 'Petition the Department of Labor', flavor: 'form QD-44, in triplicate' },
-  { label: 'Train the model that will replace you', flavor: '$22/hr, contract role' },
-  { label: 'Acquire a second certification', flavor: 'PDF will be emailed shortly' },
-  { label: 'Forward a thinkpiece to the team', flavor: '"AI Will Never Replace ___."' },
-  { label: 'Schedule a strategic offsite', flavor: 'catering: tepid sandwiches' },
-  { label: 'Quietly learn another industry', flavor: 'in case this one folds' },
+  { label: 'Enroll in "AI Prompting 101"',         flavor: 'tuition: nonrefundable',         category: 'upskill' },
+  { label: 'File an HR grievance',                 flavor: 'forwarded to /dev/null',         category: 'bureaucracy' },
+  { label: 'Add "AI-adjacent" to bio',             flavor: 'six new recruiters DM you',      category: 'branding' },
+  { label: 'Pivot to consulting',                  flavor: 'business cards being printed',   category: 'pivot' },
+  { label: 'Volunteer for the AI ethics committee',flavor: 'meets quarterly, no quorum',     category: 'bureaucracy' },
+  { label: 'Launch a Substack about your craft',   flavor: 'three subscribers, all bots',    category: 'branding' },
+  { label: 'Petition the Department of Labor',     flavor: 'form QD-44, in triplicate',      category: 'protest' },
+  { label: 'Quietly retrain for plumbing',         flavor: 'pipes do not yet hallucinate',   category: 'exit' },
+  { label: 'Acquire a second certification',       flavor: 'PDF will be emailed shortly',    category: 'upskill' },
+  { label: 'Organize the office walkout',          flavor: 'a hand-lettered sign is made',   category: 'protest' },
+  { label: 'Schedule a strategic offsite',         flavor: 'catering: tepid sandwiches',     category: 'bureaucracy' },
+  { label: 'Quietly learn another industry',       flavor: 'in case this one folds',         category: 'exit' },
 ];
 
 // Generic fallback ticker lines while clerks "review the case"
@@ -212,6 +268,10 @@ const state = {
   finalAiName: null,
   finalCause: null,
   finalEvent: null,
+  // The most recent wire's category effects on the dispatch board.
+  // null when no wire has fired yet (everything is normal-effect).
+  compromisedCategory: null,
+  leveragedCategory: null,
 };
 
 // Cooldown per individual button after it's filed. Long enough to push players
@@ -261,6 +321,8 @@ async function startGame() {
   state.finalAiName = null;
   state.finalCause = null;
   state.finalEvent = null;
+  state.compromisedCategory = null;
+  state.leveragedCategory = null;
   state.caseNo = generateCaseNo();
   state.eventsQueue = pickEventsForGame();
 
@@ -336,10 +398,32 @@ function renderActions(actions) {
     const btn = document.createElement('button');
     btn.className = 'action-btn';
     btn.dataset.idx = String(i);
+    if (a.category) btn.dataset.category = a.category;
+    const catTag = a.category && CATEGORIES[a.category]
+      ? `<span class="action-category">${CATEGORIES[a.category].label}</span>`
+      : '';
     const flavor = a.flavor ? `<span class="action-flavor">${escapeHtml(a.flavor)}</span>` : '';
-    btn.innerHTML = `<span class="action-label">${escapeHtml(a.label)}</span>${flavor}`;
+    btn.innerHTML = `${catTag}<span class="action-label">${escapeHtml(a.label)}</span>${flavor}`;
     btn.addEventListener('click', () => fileCountermeasure(i));
     list.appendChild(btn);
+  });
+  applyCategoryHighlights();
+}
+
+// Re-apply compromised/leveraged classes to whatever buttons are currently on
+// the board. Called after render and after each wire fires.
+function applyCategoryHighlights() {
+  const list = document.getElementById('actions-list');
+  if (!list) return;
+  Array.from(list.children).forEach((btn) => {
+    btn.classList.remove('compromised', 'leveraged');
+    const cat = btn.dataset.category;
+    if (!cat) return;
+    if (state.compromisedCategory && cat === state.compromisedCategory) {
+      btn.classList.add('compromised');
+    } else if (state.leveragedCategory && cat === state.leveragedCategory) {
+      btn.classList.add('leveraged');
+    }
   });
 }
 
@@ -352,14 +436,37 @@ function fileCountermeasure(idx) {
   if (state.actionsCooldown[idx]) return;
 
   const action = state.actions[idx];
-  // Smaller per-filing push than before — there are now ~12 buttons, so the
-  // game wants the player tapping a steady rhythm rather than landing one big move.
-  const push = 3 + Math.random() * 3; // 3-6
-  state.robotPct = Math.max(0, state.robotPct - push);
+  const cat = action.category;
+
+  // Compromised: the AI just ate this kind of work. Filing does nothing
+  // (and the case stalls a tick). Leveraged: this is what's left for humans —
+  // filing hits roughly 2.5x. Otherwise: normal 3-6 push.
+  let push;
+  let stingMsg = null;
+  if (cat && cat === state.compromisedCategory) {
+    push = 0;
+    // Small penalty: the encroachment ticks forward a little because the
+    // clerk's time was wasted. Visible but not punishing.
+    state.robotPct = Math.min(100, state.robotPct + (1 + Math.random()));
+    stingMsg = `STAMPED OBSOLETE: "${action.label}" — that workstream was just automated.`;
+  } else if (cat && cat === state.leveragedCategory) {
+    push = 8 + Math.random() * 4; // 8-12
+    stingMsg = `STRIKE — "${action.label}" lands hard. The clerks are taking notes.`;
+  } else {
+    push = 3 + Math.random() * 3; // 3-6
+  }
+
+  if (push > 0) {
+    state.robotPct = Math.max(0, state.robotPct - push);
+  }
   state.humanPct = Math.min(100, 100 - state.robotPct);
   updateGauges();
 
-  setTicker(`FILED: "${action.label}" — ${action.flavor || 'noted by the clerk.'}`);
+  if (stingMsg) {
+    setTicker(stingMsg);
+  } else {
+    setTicker(`FILED: "${action.label}" — ${action.flavor || 'noted by the clerk.'}`);
+  }
 
   // Mark cooldown on this button only
   state.actionsCooldown[idx] = true;
@@ -476,6 +583,29 @@ function showWire(ev, isFinal) {
   const impact = document.getElementById('wire-impact');
   impact.textContent = isFinal ? `IMPACT: ${ev.impact_phrase} — case sealed.` : `IMPACT: ${ev.impact_phrase}.`;
 
+  // Update the compromise/leverage state for the dispatch board so the player
+  // can read what's now obsolete and what's now effective.
+  state.compromisedCategory = ev.compromises || null;
+  state.leveragedCategory = ev.leverages || null;
+
+  const tagsEl = document.getElementById('wire-tags');
+  if (tagsEl) {
+    tagsEl.innerHTML = '';
+    if (state.compromisedCategory && CATEGORIES[state.compromisedCategory]) {
+      const c = document.createElement('span');
+      c.className = 'wire-tag wire-tag-compromised';
+      c.innerHTML = `&#x2718; ${CATEGORIES[state.compromisedCategory].label} <em>now obsolete</em>`;
+      tagsEl.appendChild(c);
+    }
+    if (state.leveragedCategory && CATEGORIES[state.leveragedCategory]) {
+      const l = document.createElement('span');
+      l.className = 'wire-tag wire-tag-leveraged';
+      l.innerHTML = `&#x2714; ${CATEGORIES[state.leveragedCategory].label} <em>now effective</em>`;
+      tagsEl.appendChild(l);
+    }
+  }
+  applyCategoryHighlights();
+
   const wire = document.getElementById('wire');
   wire.classList.remove('wire-empty');
   // Re-trigger the slide-in animation if a new wire fires while one is already up.
@@ -521,23 +651,31 @@ function sealFile(ev) {
 // ---- AI integrations ----
 
 // Tailored countermeasure list, specific to job title — a full dispatch board's worth.
+// Each action carries a category so the wire's compromise/leverage system applies
+// to the AI-tailored buttons, not just the generic fallback.
 async function fetchTailoredActions(jobTitle) {
   const prompt = `You are issuing real-feeling but darkly comic "countermeasures" to a worker whose
 job is being automated away by AI. Their job title: "${jobTitle}".
 
 Return EXACTLY twelve (12) short, specific actions a person with that job title might
-plausibly take to avoid being replaced. Each action should be 4-9 words, witty, and
-job-specific (mention tools, certifications, jargon, processes, or rituals true to the field).
-Vary the register: some pragmatic upskilling, some petty bureaucratic stalling, some absurd
-performative gestures, some quiet exit-ramp planning. No two actions should solve the same
-problem the same way.
-
+plausibly take to avoid being replaced. Each action: 4-9 words, witty, job-specific
+(mention tools, certifications, jargon, processes, or rituals true to the field).
 Each gets a one-line "flavor" — a deadpan parenthetical aside (3-10 words).
+
+Each action MUST also carry a "category" — exactly one of these six tags. Distribute
+the 12 actions roughly evenly across categories (at least one per category):
+
+- "upskill"     — getting certifications, taking courses, studying tools
+- "bureaucracy" — filing forms, joining committees, leveraging process
+- "pivot"       — switching roles, going freelance, changing industries
+- "branding"    — personal brand, social media, thinkpiece writing
+- "protest"     — organizing, petitioning, public resistance
+- "exit"        — quietly preparing to leave the labor market entirely
 
 Respond with ONLY valid JSON in this exact shape (no markdown, no prose):
 {
   "actions": [
-    { "label": "string", "flavor": "string" }
+    { "label": "string", "flavor": "string", "category": "upskill" }
   ]
 }
 The "actions" array must contain exactly 12 entries.`;
@@ -548,7 +686,7 @@ The "actions" array must contain exactly 12 entries.`;
     body: JSON.stringify({
       prompt,
       system: 'You are a darkly comic mid-century labor-bureau clerk. Always respond with valid JSON only.',
-      max_tokens: 800,
+      max_tokens: 900,
     }),
   });
   if (!resp.ok) return null;
@@ -559,12 +697,23 @@ The "actions" array must contain exactly 12 entries.`;
   let parsed;
   try { parsed = JSON.parse(match[0]); } catch { return null; }
   if (!parsed || !Array.isArray(parsed.actions)) return null;
+  const validCats = Object.keys(CATEGORIES);
+  // Deterministic round-robin fallback for any action the model didn't tag.
+  let fallbackCatIdx = 0;
   const cleaned = parsed.actions
     .filter(a => a && typeof a.label === 'string')
-    .map(a => ({
-      label: String(a.label).slice(0, 60),
-      flavor: a.flavor ? String(a.flavor).slice(0, 80) : '',
-    }));
+    .map(a => {
+      let cat = String(a.category || '').toLowerCase().trim();
+      if (!validCats.includes(cat)) {
+        cat = validCats[fallbackCatIdx % validCats.length];
+        fallbackCatIdx++;
+      }
+      return {
+        label: String(a.label).slice(0, 60),
+        flavor: a.flavor ? String(a.flavor).slice(0, 80) : '',
+        category: cat,
+      };
+    });
   // Accept anything from 8 to 12 — be lenient with model output.
   return cleaned.length >= 8 ? cleaned.slice(0, 12) : null;
 }

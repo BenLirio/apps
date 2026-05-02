@@ -519,6 +519,75 @@ body {
   line-height: 1.25;
 }
 
+.action-btn .action-category {
+  display: inline-block;
+  font-family: 'Courier Prime', monospace;
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  color: var(--ink-faded);
+  border: 1px solid var(--ink-faded);
+  padding: 1px 5px;
+  margin: 0 0 4px 22px;
+  background: rgba(255, 250, 230, 0.4);
+  text-transform: uppercase;
+  align-self: flex-start;
+  width: max-content;
+  max-width: calc(100% - 22px);
+}
+
+/* Compromised: this category was just automated. Strikethrough the label,
+   red-tint the chip, dim the button. Filings still go through (the clerks
+   accept the form) but they don't help — the click handler enforces 0 push. */
+.action-btn.compromised {
+  border-color: var(--red-stamp);
+  box-shadow: 2px 2px 0 var(--red-stamp);
+  background: rgba(179, 50, 43, 0.08);
+}
+.action-btn.compromised .action-label {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.4px;
+  color: var(--red-stamp);
+}
+.action-btn.compromised .action-category {
+  color: var(--red-stamp);
+  border-color: var(--red-stamp);
+  background: rgba(179, 50, 43, 0.12);
+}
+.action-btn.compromised .action-flavor {
+  color: var(--red-stamp);
+  opacity: 0.7;
+}
+
+/* Leveraged: this category is what's left for humans. Gold/green border,
+   slight glow, the chip turns green. Click handler pushes ~2.5x. */
+.action-btn.leveraged {
+  border-color: var(--green-stamp);
+  box-shadow: 2px 2px 0 var(--green-stamp), 0 0 0 1px var(--green-stamp) inset;
+  background: rgba(45, 107, 62, 0.08);
+}
+.action-btn.leveraged .action-category {
+  color: var(--green-stamp);
+  border-color: var(--green-stamp);
+  background: rgba(45, 107, 62, 0.12);
+}
+.action-btn.leveraged .action-label {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* The little tokens in the actions-hint legend that mirror the wire chips. */
+.hint-token {
+  display: inline-block;
+  font-family: 'Courier Prime', monospace;
+  letter-spacing: 1px;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  font-style: normal;
+  background: rgba(255, 250, 230, 0.5);
+}
+.hint-token.hint-compromised { color: var(--red-stamp); }
+.hint-token.hint-leveraged   { color: var(--green-stamp); }
+
 .action-btn:hover:not(:disabled) {
   background: #f6eed8;
 }
@@ -671,6 +740,42 @@ body {
   border-top: 1px solid var(--rule);
   padding-top: 6px;
   text-transform: uppercase;
+}
+
+.wire-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.wire-tag {
+  font-family: 'Special Elite', monospace;
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  padding: 4px 8px;
+  border: 1.5px solid currentColor;
+  text-transform: uppercase;
+  background: rgba(255, 250, 230, 0.5);
+}
+
+.wire-tag em {
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  margin-left: 4px;
+  opacity: 0.85;
+}
+
+.wire-tag-compromised {
+  color: var(--red-stamp);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.wire-tag-leveraged {
+  color: var(--green-stamp);
 }
 
 /* === Certificate screen === */
@@ -914,7 +1019,11 @@ body {
   .action-btn .action-label { padding-left: 18px; }
   .action-btn .action-label::before { font-size: 11px; }
   .action-btn .action-flavor { padding-left: 18px; font-size: 9.5px; line-height: 1.2; }
+  .action-btn .action-category { font-size: 8px; padding: 0 4px; margin: 0 0 2px 18px; letter-spacing: 1px; }
   .actions-hint { display: none; }
+  .wire-tags { gap: 4px; margin-top: 6px; }
+  .wire-tag { font-size: 9.5px; padding: 3px 6px; letter-spacing: 1px; }
+  .wire-tag em { display: none; }
 }
 
 /* shake utility */
