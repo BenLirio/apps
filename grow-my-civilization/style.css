@@ -477,17 +477,30 @@ html, body {
   padding: 0 6px;
 }
 
-/* ── THINKING (waiting for AI) ──────────────────────────────────────── */
-#thinking-panel {
-  background: var(--parchment-1);
-  background-image: linear-gradient(170deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
-  border: 1px solid var(--rule);
-  padding: 26px 14px;
+/* ── DECISION BODY (thinking ↔ ready) ───────────────────────────────── */
+/* Reserve enough height so the panel doesn't visibly shrink when the body
+   swaps from a full chapter to the loading state and back. Chosen to fit a
+   typical 2-up choice grid + one-sentence event + flavor line. */
+#decision-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 240px;
+}
+
+#decision-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#decision-thinking {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 90px;
-  box-shadow: 0 4px 14px var(--shadow);
+  flex: 1;
+  min-height: 200px;
+  padding: 12px 6px;
 }
 
 #thinking-dots {

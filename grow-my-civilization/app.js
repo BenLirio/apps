@@ -375,6 +375,11 @@ function startGame() {
   triumphs = [];
   lastTs = null;
 
+  // Mount the decision panel for the whole game. nextTurn/presentDecision
+  // toggle inner state instead of swapping panels, so the page height stays
+  // stable across the thinking ↔ ready transitions.
+  document.getElementById('decision-panel').style.display = 'flex';
+
   phase = 'running';
   updateHUD();
   animId = requestAnimationFrame(gameLoop);
@@ -382,36 +387,7 @@ function startGame() {
 }
 
 // ── Turn Loop ─────────────────────────────────────────────────────────────────
-async function nextTurn() {
-  if (gameOver) return;
-
-  // Check collapse before posing next dilemma.
-  if (checkCollapse()) {
-    triggerCollapse();
-    return;
-  }
-
-  // Show "thinking" while we fetch.
-  phase = 'thinking';
-  document.getElementById('decision-panel').style.display = 'none';
-  document.getElementById('thinking-panel').style.display = 'flex';
-
-  let q;
-  try {
-    q = await fetchQuestion(pathKey, { ...stats }, chronicle.slice());
-  } catch (e) {
-    q = fallbackQuestion();
-  }
-  pendingDecision = q;
-  presentDecision(q);
-}
-
-function presentDecision(q) {
-  phase = 'decision';
-  document.getElementById('thinking-panel').style.display = 'none';
-  document.getElementById('decision-panel').style.display = 'flex';
-
-  // Chapter tag + "story so far" recap from the last beat (if any).
+function setChapterHeader() {
   const chapterTag = document.getElementById('decision-era-tag');
   if (chapterTag) chapterTag.textContent = `Chapter ${turnNumber + 1}`;
 
@@ -426,6 +402,41 @@ function presentDecision(q) {
       recapEl.style.display = 'none';
     }
   }
+}
+
+async function nextTurn() {
+  if (gameOver) return;
+
+  // Check collapse before posing next dilemma.
+  if (checkCollapse()) {
+    triggerCollapse();
+    return;
+  }
+
+  // Update header now so the chapter tag is correct while the user waits.
+  setChapterHeader();
+
+  // Show "thinking" inside the persistent decision panel — no panel swap.
+  phase = 'thinking';
+  document.getElementById('decision-ready').style.display = 'none';
+  document.getElementById('decision-thinking').style.display = 'flex';
+
+  let q;
+  try {
+    q = await fetchQuestion(pathKey, { ...stats }, chronicle.slice());
+  } catch (e) {
+    q = fallbackQuestion();
+  }
+  pendingDecision = q;
+  presentDecision(q);
+}
+
+function presentDecision(q) {
+  phase = 'decision';
+  document.getElementById('decision-thinking').style.display = 'none';
+  document.getElementById('decision-ready').style.display = 'flex';
+
+  setChapterHeader();
 
   document.getElementById('decision-event').textContent = q.event;
   document.getElementById('decision-flavor').textContent = '';
@@ -478,9 +489,9 @@ function resolveDecision(idx) {
   updateHUD();
 
   // Brief pause to read flavor + see the highlighted button, then advance.
+  // Panel stays mounted; nextTurn just toggles its inner state.
   setTimeout(() => {
     if (gameOver) return;
-    document.getElementById('decision-panel').style.display = 'none';
     nextTurn();
   }, 1400);
 }
@@ -795,7 +806,6 @@ function triggerCollapse() {
 
 function showVerdict(triumph) {
   document.getElementById('decision-panel').style.display = 'none';
-  document.getElementById('thinking-panel').style.display = 'none';
   document.getElementById('verdict-panel').style.display = 'flex';
   document.getElementById('share').style.display = 'block';
 

@@ -56,18 +56,21 @@
         <div class="stat"><span class="stat-label">Chapter</span><span id="stat-turns">0</span></div>
       </div>
 
-      <!-- Decision panel (shown at each turn) -->
+      <!-- Persistent chapter shell. Stays mounted through every turn so the
+           page doesn't resize between thinking and ready states. -->
       <div id="decision-panel" style="display:none">
         <div id="decision-era-tag">Chapter</div>
         <div id="story-so-far"></div>
-        <div id="decision-event"></div>
-        <div id="decision-choices"></div>
-        <div id="decision-flavor"></div>
-      </div>
-
-      <!-- Loading overlay while AI fetches next question -->
-      <div id="thinking-panel" style="display:none">
-        <div id="thinking-dots">consulting the oracles<span class="dots"></span></div>
+        <div id="decision-body">
+          <div id="decision-thinking">
+            <div id="thinking-dots">consulting the oracles<span class="dots"></span></div>
+          </div>
+          <div id="decision-ready" style="display:none">
+            <div id="decision-event"></div>
+            <div id="decision-choices"></div>
+            <div id="decision-flavor"></div>
+          </div>
+        </div>
       </div>
     </div>
 
