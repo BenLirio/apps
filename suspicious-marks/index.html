@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Department of Suspicious Marks</title>
+  <meta name="description" content="Doodle one mark. The Department issues a sworn affidavit identifying your drawing as evidence in a fictional case.">
+  <meta property="og:title" content="Department of Suspicious Marks">
+  <meta property="og:description" content="Doodle one mark. The Department issues a sworn affidavit identifying your drawing as evidence in a fictional case.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/suspicious-marks/">
+  <meta property="og:image" content="https://benlirio.com/apps/suspicious-marks/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Department of Suspicious Marks">
+  <meta name="twitter:description" content="Doodle one mark. The Department issues a sworn affidavit identifying your drawing as evidence in a fictional case.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/suspicious-marks/og.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <header class="dept-header">
+      <div class="dept-mast">
+        <div class="dept-eyebrow">FORM M-7 · INTAKE OF SUSPICIOUS MARKS · REV. 2026</div>
+        <h1 class="dept-title">Department of Suspicious Marks</h1>
+        <div class="dept-sub">Office of the Mark Examiner — Branch 14b</div>
+      </div>
+    </header>
+
+    <!-- INTAKE PANE -->
+    <section id="intake" class="pane">
+
+      <div class="form-block">
+        <div class="block-label">§ A &nbsp; PRECEDENT EXHIBITS</div>
+        <p class="block-prose">Two prior intake samples on file, for examiner reference. Approximate yours accordingly &mdash; or do not.</p>
+
+        <div class="precedent-row">
+          <figure class="precedent">
+            <svg class="precedent-svg" viewBox="0 0 100 100" aria-hidden="true">
+              <path d="M 12 80 L 22 28 L 32 80 L 26 60 L 18 60 Z M 40 80 L 50 26 L 60 80 M 44 60 L 56 60 M 68 80 L 78 28 L 88 80" stroke="#1a1812" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <figcaption>
+              <div class="prec-name">Form L-12</div>
+              <div class="prec-desc">spike-class · low closure · 0.84 jagged</div>
+            </figcaption>
+          </figure>
+          <figure class="precedent">
+            <svg class="precedent-svg" viewBox="0 0 100 100" aria-hidden="true">
+              <path d="M 50 20 C 80 20 86 50 80 70 C 72 88 30 88 22 70 C 12 48 20 20 50 20 Z M 50 38 C 64 38 68 52 62 60 C 56 68 38 64 38 54 C 38 44 42 38 50 38 Z" stroke="#1a1812" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <figcaption>
+              <div class="prec-name">Form B-3</div>
+              <div class="prec-desc">looping-class · 0.92 closure · low jagged</div>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <div class="block-label">§ B &nbsp; DEPOSIT YOUR MARK</div>
+        <p class="block-prose">Affirm one (1) suspicious mark in the box below. The mark may take any form. The examiner will measure it.</p>
+
+        <div class="canvas-bar">
+          <button id="edit-toggle" class="chip-btn" type="button" aria-pressed="false">
+            <span class="chip-led"></span>
+            <span class="chip-label">EDIT MODE: OFF &middot; tap to enable</span>
+          </button>
+          <button id="clear-btn" class="ghost-btn" type="button">clear</button>
+        </div>
+
+        <div class="canvas-frame">
+          <canvas id="pad" width="600" height="600"></canvas>
+          <div id="canvas-empty" class="canvas-empty">no mark on file</div>
+        </div>
+
+        <div id="live-readout" class="readout">
+          <div class="readout-row">
+            <span class="readout-key">closure idx</span>
+            <span class="readout-bar"><span class="readout-fill" data-fill="closure"></span></span>
+            <span class="readout-val" data-val="closure">0.00</span>
+          </div>
+          <div class="readout-row">
+            <span class="readout-key">jaggedness</span>
+            <span class="readout-bar"><span class="readout-fill" data-fill="jagged"></span></span>
+            <span class="readout-val" data-val="jagged">0.00</span>
+          </div>
+          <div class="readout-row">
+            <span class="readout-key">density</span>
+            <span class="readout-bar"><span class="readout-fill" data-fill="density"></span></span>
+            <span class="readout-val" data-val="density">0.00</span>
+          </div>
+          <div class="readout-row">
+            <span class="readout-key">asymmetry</span>
+            <span class="readout-bar"><span class="readout-fill" data-fill="asym"></span></span>
+            <span class="readout-val" data-val="asym">0.00</span>
+          </div>
+          <div class="readout-row readout-class">
+            <span class="readout-key">tentative class</span>
+            <span class="readout-class-val" data-val="cls">&mdash;</span>
+          </div>
+        </div>
+
+        <button id="submit-btn" class="primary-btn" type="button" disabled>FILE THIS MARK &rarr;</button>
+      </div>
+    </section>
+
+    <!-- AFFIDAVIT PANE -->
+    <section id="affidavit" class="pane affidavit-pane" hidden>
+      <article id="affidavit-doc" class="affidavit">
+        <div class="aff-corner aff-corner-tl">FORM M-7</div>
+        <div class="aff-corner aff-corner-tr"><span data-aff="caseno">M-7-00000</span></div>
+
+        <header class="aff-head">
+          <div class="aff-eyebrow">SWORN AFFIDAVIT &middot; CASE FILE</div>
+          <h2 class="aff-title">Department of Suspicious Marks</h2>
+          <div class="aff-sub">Branch 14b &middot; Office of the Mark Examiner</div>
+        </header>
+
+        <div class="aff-meta">
+          <div class="aff-meta-row"><span>Filed:</span> <span data-aff="filed">&mdash;</span></div>
+          <div class="aff-meta-row"><span>Examiner:</span> <span data-aff="examiner">&mdash;</span></div>
+          <div class="aff-meta-row"><span>Classification:</span> <span data-aff="cls">&mdash;</span></div>
+        </div>
+
+        <div class="aff-body">
+          <p class="aff-para">The undersigned, being a sworn officer of the Branch 14b Office, having personally inspected one (1) intake mark this day deposited under oath, finds and holds the following:</p>
+
+          <p class="aff-para"><strong>I. Geometric findings.</strong> The mark exhibits a closure index of <span data-aff="closure">0.00</span>, a jaggedness coefficient of <span data-aff="jagged">0.00</span>, an asymmetry score of <span data-aff="asym">0.00</span>, and a coverage density of <span data-aff="density">0.00</span>. Stroke count: <span data-aff="strokes">0</span>. Dominant axis: <span data-aff="axis">&mdash;</span>.</p>
+
+          <p class="aff-para" data-aff-find>&mdash;</p>
+
+          <p class="aff-para"><strong>II. Cross-reference.</strong> The above readings are <em>materially consistent</em> with the witness markings recorded in <span data-aff="prior">&mdash;</span>. The Examiner's earlier note in that file (<em>&ldquo;<span data-aff="prior-note">&mdash;</span>&rdquo;</em>) is hereby incorporated by reference.</p>
+
+          <p class="aff-para"><strong>III. Determination.</strong> The mark is therefore classified as <strong data-aff="cls2">&mdash;</strong>. It shall be retained on file under the case number printed at the upper right of this instrument. The intake party is released without further obligation.</p>
+
+          <div class="aff-exhibit">
+            <div class="aff-exhibit-label">EXHIBIT A &mdash; the mark, as deposited</div>
+            <div class="aff-exhibit-frame">
+              <img id="exhibit-img" alt="the deposited mark" />
+            </div>
+          </div>
+        </div>
+
+        <footer class="aff-foot">
+          <div class="aff-sig">
+            <div class="aff-sig-line"></div>
+            <div class="aff-sig-name" data-aff="examiner-sig">&mdash;</div>
+            <div class="aff-sig-title">Mark Examiner, Branch 14b</div>
+          </div>
+          <div class="aff-stamp" aria-hidden="true">
+            <div class="aff-stamp-ring">
+              <div class="aff-stamp-inner">
+                <div class="aff-stamp-top">FILED &middot; ON RECORD</div>
+                <div class="aff-stamp-mid" data-aff="stamp-date">&mdash;</div>
+                <div class="aff-stamp-bot">BRANCH 14b</div>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </article>
+
+      <div id="share" class="share-row">
+        <button class="primary-btn" type="button" onclick="share()">Share this affidavit &rarr;</button>
+        <button id="redraw-btn" class="ghost-btn" type="button">deposit another mark</button>
+      </div>
+    </section>
+
+    <footer class="page-foot">
+      <span>filed under the office of the entertainment factory</span>
+    </footer>
+  </div>
+</body>
+</html>
