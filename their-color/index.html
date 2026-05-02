@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Their Color</title>
+  <meta name="description" content="Type a name, get a bespoke color hand-named after them. Pantone-style paint chips for your friend group.">
+  <meta property="og:title" content="Their Color">
+  <meta property="og:description" content="Type a name, get a bespoke color hand-named after them. Pantone-style paint chips for your friend group.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/their-color/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div class="logo">TC<span class="logo-dot">.</span></div>
+      <div class="masthead-meta">
+        <div class="masthead-row">SPECIMEN BOOK</div>
+        <div class="masthead-row">VOL. I &mdash; ONE NAME, ONE COLOR</div>
+      </div>
+    </header>
+
+    <section class="intro">
+      <h1>Their&nbsp;Color</h1>
+      <p class="lede">Type a name &mdash; anyone you want a color for &mdash; and we&rsquo;ll hand-mix one bespoke chip, named after them.</p>
+    </section>
+
+    <form id="form" class="composer" autocomplete="off">
+      <div class="field">
+        <label for="name1">A person</label>
+        <input id="name1" name="name1" type="text" placeholder="e.g. Emma" maxlength="60" autocapitalize="words" spellcheck="false">
+      </div>
+
+      <div id="secondWrap" class="field field-second" hidden>
+        <label for="name2">A second person <span class="optional">(makes a couple color)</span></label>
+        <input id="name2" name="name2" type="text" placeholder="e.g. Marcus" maxlength="60" autocapitalize="words" spellcheck="false">
+      </div>
+
+      <div class="composer-actions">
+        <button type="submit" id="mixBtn" class="btn-primary">Mix the chip</button>
+        <button type="button" id="addSecond" class="btn-ghost">+ Add a second person</button>
+        <button type="button" id="removeSecond" class="btn-ghost" hidden>&minus; Remove second</button>
+      </div>
+
+      <div class="samples">
+        <span class="samples-label">try:</span>
+        <button type="button" class="sample-pill" data-name="Dolly Parton">Dolly Parton</button>
+        <button type="button" class="sample-pill" data-name="Frida Kahlo">Frida Kahlo</button>
+        <button type="button" class="sample-pill" data-name="your dog">your dog</button>
+      </div>
+
+      <p id="errorMsg" class="error" hidden></p>
+    </form>
+
+    <section id="palette" class="palette" aria-live="polite"></section>
+
+    <div id="share" class="share-row" style="display:none">
+      <button onclick="share()" class="btn-primary">Share Their Color</button>
+    </div>
+
+    <footer class="colophon">
+      <p>A specimen book for the friend group. One chip at a time.</p>
+    </footer>
+  </main>
+
+  <!-- Hidden offscreen render area for export -->
+  <div id="exportStage" aria-hidden="true"></div>
+</body>
+</html>
