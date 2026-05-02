@@ -74,6 +74,7 @@
   const EXPLOSIVE_ID = 4;
   const SMOKE_ID     = 5;
   const PLANT_ID     = 6;
+  const SPARK_ID     = 7;
 
   const SAND_PALETTE = ['#e8a030', '#d89028', '#f0b848', '#e8a838'];
 
@@ -100,15 +101,21 @@
       emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
     registry[SMOKE_ID]     = { id: SMOKE_ID,     key: 'smoke',     displayName: 'smoke',     kind: 'gas',    density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb'], isBuiltIn: true, reactions: [],
       emitTemp: 70, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
-    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'cellular', density: 3, born: [2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.10, surviveChance: 1, birthFrom: ['wall'], colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [],
+    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'cellular', density: 3, born: [2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.10, surviveChance: 1, colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [],
       emitTemp: 30, ignitionPoint: 120, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 40 };
+    // Sparks are spawned by explosions, not painted. Hidden from the palette UI
+    // but registered like any other element so the GPU data textures pick them
+    // up. Short-lived, hot, buoyant — a visceral byproduct of detonation.
+    registry[SPARK_ID]     = { id: SPARK_ID,     key: 'spark',     displayName: 'spark',     kind: 'gas',      density: 1, buoyancy: 1, lifeMin: 14, lifeMax: 34, colors: ['#ffe070', '#ffb030', '#fff0a0', '#ff6020'], isBuiltIn: true, isHidden: true, reactions: [],
+      emitTemp: 150, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 0,   hardness: 0 };
     keyToId.wall = WALL_ID;
     keyToId.sand = SAND_ID;
     keyToId.water = WATER_ID;
     keyToId.explosive = EXPLOSIVE_ID;
     keyToId.smoke = SMOKE_ID;
     keyToId.plant = PLANT_ID;
-    nextId = PLANT_ID + 1;
+    keyToId.spark = SPARK_ID;
+    nextId = SPARK_ID + 1;
   }
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -648,7 +655,9 @@
 
   // Blast shader: any cell within BLAST_R of a primed explosive is cleared.
   // Primed explosives clear themselves. Other explosives within radius become
-  // primed too — chain reaction propagates one cell-radius per frame.
+  // primed too — chain reaction propagates one cell-radius per frame. Cleared
+  // and detonating cells stochastically leave behind sparks (gas, short life)
+  // for visual flair.
   const FS_BLAST = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -656,6 +665,8 @@
     uniform highp usampler2D uState;
     uniform highp usampler2D uElemData;
     uniform ivec2 uSize;
+    uniform uint uSparkId;
+    uniform int uFrame;
     const int BLAST_R = 5;
 
     bool isExplosiveId(uint id) {
@@ -664,15 +675,32 @@
       return (e.a & 0x80u) != 0u;
     }
 
+    uint hash3(uvec3 v) {
+      v = v * 1664525u + 1013904223u;
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      v ^= (v >> 16u);
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      return v.x;
+    }
+
+    // Build a spark cell with a hashed variant and life. life is 8-bit; we
+    // pick something in [16, 48) so individual sparks fade at different rates.
+    uvec4 makeSpark(uint h) {
+      uint variant = h & 3u;
+      uint life = 16u + ((h >> 8u) & 31u);
+      return uvec4(uSparkId, variant, 0u, life);
+    }
+
     void main() {
       ivec2 px = ivec2(gl_FragCoord.xy);
       uvec4 self = texelFetch(uState, px, 0);
       bool selfExp = isExplosiveId(self.r);
       bool selfPrimed = (selfExp && self.a == 255u);
+      uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
 
       if (selfPrimed) {
-        // Detonate: vanish.
-        outColor = uvec4(0u);
+        // Detonate: vanish, but leave a bright spark at the core.
+        outColor = (uSparkId != 0u) ? makeSpark(h) : uvec4(0u);
         return;
       }
       // Scan blast neighborhood for primed explosives.
@@ -688,13 +716,19 @@
         }
       }
       if (!inBlast) { outColor = self; return; }
-      if (self.r == 0u) { outColor = self; return; }
       if (selfExp) {
         // Chain detonation: also become primed for next frame's blast.
         outColor = uvec4(self.r, self.g, self.b, 255u);
         return;
       }
-      // Non-explosive: cleared by blast.
+      if (self.r == 0u) {
+        // Empty cell in the blast cloud — sparkle ~25% of the time.
+        if (uSparkId != 0u && (h & 3u) == 0u) { outColor = makeSpark(h); return; }
+        outColor = self;
+        return;
+      }
+      // Non-explosive: cleared by blast, leave a spark roughly half the time.
+      if (uSparkId != 0u && (h & 1u) == 0u) { outColor = makeSpark(h); return; }
       outColor = uvec4(0u);
     }
   `;
@@ -1661,6 +1695,8 @@
     gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
     gl.uniform1i(gl.getUniformLocation(progBlast, 'uElemData'), 1);
     gl.uniform2i(gl.getUniformLocation(progBlast, 'uSize'), COLS, ROWS);
+    gl.uniform1ui(gl.getUniformLocation(progBlast, 'uSparkId'), (keyToId.spark || 0) >>> 0);
+    gl.uniform1i(gl.getUniformLocation(progBlast, 'uFrame'), frameCounter);
     gl.bindVertexArray(quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     [stateTexA, stateTexB] = [stateTexB, stateTexA];
