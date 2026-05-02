@@ -4,97 +4,162 @@
 // All "creatures" are user-picked entries from CATALOG. Plants are universal.
 
 // ─── CATALOG OF FANTASY CRITTERS ──────────────────────────────────────────────
-// Each critter is fully specified — diet, behavior, looks. Pick any combo.
+// Each critter has a *specific* diet — instead of generic tiers, every
+// predator names exactly which species it eats. That makes the food web
+// asymmetric: removing one prey species quietly starves a particular
+// hunter rather than the whole tier.
+//
+//   diet entries:
+//     'plant'        — graze on universal plant entities
+//     '<species-id>' — hunt that specific species
+//
+// The builder reads `diet` to render the food-web preview; the simulation
+// reads it to choose prey and to know who is hunting it.
 const CATALOG = [
-  // PLANT-EATERS
+  // SMALL GRAZERS
+  {
+    id: 'pebblet', name: 'Pebblet', emoji: '🐌',
+    diet: ['plant'],
+    size: 4, maxSpeed: 0.4, hungerTick: 0.0009, repro: 0.0005,
+    senseRadius: 50, eatRadius: 9, maxPop: 80, color: '#fcd34d', shape: 'shell',
+    aggression: 0, flockRadius: 0, lifespan: 1500,
+    blurb: 'Slow, salty, snack of many.',
+  },
+  {
+    id: 'sproutbug', name: 'Sproutbug', emoji: '🐛',
+    diet: ['plant'],
+    size: 4, maxSpeed: 1.0, hungerTick: 0.0017, repro: 0.0006,
+    senseRadius: 60, eatRadius: 8, maxPop: 90, color: '#a3e635', shape: 'wiggler',
+    aggression: 0, flockRadius: 25, lifespan: 700,
+    blurb: 'Tiny green grazers, breed fast.',
+  },
+  {
+    id: 'mistmoth', name: 'Mistmoth', emoji: '🦋',
+    diet: ['plant'],
+    size: 5, maxSpeed: 1.3, hungerTick: 0.0012, repro: 0.0004,
+    senseRadius: 75, eatRadius: 9, maxPop: 60, color: '#c084fc', shape: 'wing',
+    aggression: 0, flockRadius: 40, lifespan: 850,
+    blurb: 'Dreamy purple flutter.',
+  },
   {
     id: 'fluffin', name: 'Fluffin', emoji: '🐰',
-    eats: 'plants', size: 6, maxSpeed: 1.4, hungerTick: 0.0014, repro: 0.00045,
+    diet: ['plant'],
+    size: 6, maxSpeed: 1.4, hungerTick: 0.0014, repro: 0.00045,
     senseRadius: 95, eatRadius: 11, maxPop: 70, color: '#ffd5e8', shape: 'puff',
     aggression: 0.05, flockRadius: 35, lifespan: 1100,
     blurb: 'Hopping pink puffs.',
   },
   {
     id: 'mossling', name: 'Mossling', emoji: '🐢',
-    eats: 'plants', size: 8, maxSpeed: 0.55, hungerTick: 0.0009, repro: 0.0002,
+    diet: ['plant'],
+    size: 8, maxSpeed: 0.55, hungerTick: 0.0009, repro: 0.0002,
     senseRadius: 70, eatRadius: 14, maxPop: 35, color: '#7be39f', shape: 'shell',
     aggression: 0, flockRadius: 0, lifespan: 1800,
     blurb: 'Slow, leafy, near-immortal.',
   },
   {
-    id: 'sproutbug', name: 'Sproutbug', emoji: '🐛',
-    eats: 'plants', size: 4, maxSpeed: 1.0, hungerTick: 0.0017, repro: 0.0006,
-    senseRadius: 60, eatRadius: 8, maxPop: 90, color: '#a3e635', shape: 'wiggler',
-    aggression: 0, flockRadius: 25, lifespan: 700,
-    blurb: 'Tiny green grazers, breed fast.',
-  },
-  {
     id: 'glowdeer', name: 'Glowdeer', emoji: '🦌',
-    eats: 'plants', size: 9, maxSpeed: 1.7, hungerTick: 0.0013, repro: 0.00022,
+    diet: ['plant'],
+    size: 9, maxSpeed: 1.7, hungerTick: 0.0013, repro: 0.00022,
     senseRadius: 130, eatRadius: 14, maxPop: 30, color: '#fbbf24', shape: 'antlered',
     aggression: 0.1, flockRadius: 60, lifespan: 1400,
     blurb: 'Graceful glowing herd.',
   },
-  // HUNTERS (eat herbivores)
-  {
-    id: 'velvox', name: 'Velvox', emoji: '🐺',
-    eats: 'herbivores', size: 9, maxSpeed: 1.7, hungerTick: 0.0011, repro: 0.00014,
-    senseRadius: 140, eatRadius: 14, maxPop: 18, color: '#a78bfa', shape: 'sleek',
-    aggression: 0.7, flockRadius: 50, lifespan: 1500,
-    blurb: 'Pack hunters, violet pelt.',
-  },
-  {
-    id: 'sparrowhawk', name: 'Skyhawk', emoji: '🦅',
-    eats: 'herbivores', size: 7, maxSpeed: 2.2, hungerTick: 0.0013, repro: 0.00012,
-    senseRadius: 170, eatRadius: 12, maxPop: 14, color: '#f97316', shape: 'arrow',
-    aggression: 0.8, flockRadius: 0, lifespan: 1300,
-    blurb: 'Fast, far-seeing, solitary.',
-  },
-  {
-    id: 'shadowmaw', name: 'Shadowmaw', emoji: '🦇',
-    eats: 'herbivores', size: 8, maxSpeed: 1.4, hungerTick: 0.0009, repro: 0.0001,
-    senseRadius: 110, eatRadius: 13, maxPop: 12, color: '#475569', shape: 'spike',
-    aggression: 0.65, flockRadius: 0, lifespan: 1700, nocturnal: true,
-    blurb: 'Stalks at night, sleeps by day.',
-  },
-  // APEX (eat predators)
-  {
-    id: 'behemoth', name: 'Behemoth', emoji: '🐉',
-    eats: 'predators', size: 13, maxSpeed: 0.9, hungerTick: 0.0006, repro: 0.00005,
-    senseRadius: 180, eatRadius: 18, maxPop: 5, color: '#dc2626', shape: 'tank',
-    aggression: 0.9, flockRadius: 0, lifespan: 2400,
-    blurb: 'Apex of apex. Picks off hunters.',
-  },
-  // OMNIVORES
+
+  // OMNIVORES — mix of plants and a few specific tiny prey
   {
     id: 'oozekin', name: 'Oozekin', emoji: '🟢',
-    eats: 'omnivore', size: 7, maxSpeed: 0.8, hungerTick: 0.0011, repro: 0.0002,
+    diet: ['plant', 'sproutbug', 'pebblet'],
+    size: 7, maxSpeed: 0.8, hungerTick: 0.0011, repro: 0.0002,
     senseRadius: 80, eatRadius: 12, maxPop: 25, color: '#22d3ee', shape: 'blob',
     aggression: 0.4, flockRadius: 0, lifespan: 1300,
-    blurb: 'Bouncy blob, eats anything.',
+    blurb: 'Bouncy blob; nibbles plants and softer bugs.',
   },
   {
     id: 'crackle', name: 'Crackle', emoji: '⚡',
-    eats: 'omnivore', size: 5, maxSpeed: 2.0, hungerTick: 0.0017, repro: 0.0003,
+    diet: ['plant', 'mistmoth', 'sproutbug'],
+    size: 5, maxSpeed: 2.0, hungerTick: 0.0017, repro: 0.0003,
     senseRadius: 100, eatRadius: 10, maxPop: 35, color: '#fde047', shape: 'star',
     aggression: 0.5, flockRadius: 0, lifespan: 900,
-    blurb: 'Zippy electric scavenger.',
+    blurb: 'Zippy scavenger; chases moths and shoots.',
+  },
+
+  // HUNTERS — each has a specific prey list, not a generic tier
+  {
+    id: 'velvox', name: 'Velvox', emoji: '🐺',
+    diet: ['fluffin', 'glowdeer', 'mossling'],
+    size: 9, maxSpeed: 1.7, hungerTick: 0.0011, repro: 0.00014,
+    senseRadius: 140, eatRadius: 14, maxPop: 18, color: '#a78bfa', shape: 'sleek',
+    aggression: 0.7, flockRadius: 50, lifespan: 1500,
+    blurb: 'Pack hunter; courses big-prey grazers.',
   },
   {
-    id: 'mistmoth', name: 'Mistmoth', emoji: '🦋',
-    eats: 'plants', size: 5, maxSpeed: 1.3, hungerTick: 0.0012, repro: 0.0004,
-    senseRadius: 75, eatRadius: 9, maxPop: 60, color: '#c084fc', shape: 'wing',
-    aggression: 0, flockRadius: 40, lifespan: 850,
-    blurb: 'Dreamy purple flutter.',
+    id: 'skyhawk', name: 'Skyhawk', emoji: '🦅',
+    diet: ['fluffin', 'sproutbug', 'mistmoth'],
+    size: 7, maxSpeed: 2.2, hungerTick: 0.0013, repro: 0.00012,
+    senseRadius: 170, eatRadius: 12, maxPop: 14, color: '#f97316', shape: 'arrow',
+    aggression: 0.8, flockRadius: 0, lifespan: 1300,
+    blurb: 'Aerial; takes fluffins, bugs, moths in stoops.',
+  },
+  {
+    id: 'shadowmaw', name: 'Shadowmaw', emoji: '🦇',
+    diet: ['mossling', 'pebblet', 'oozekin'],
+    size: 8, maxSpeed: 1.4, hungerTick: 0.0009, repro: 0.0001,
+    senseRadius: 110, eatRadius: 13, maxPop: 12, color: '#475569', shape: 'spike',
+    aggression: 0.65, flockRadius: 0, lifespan: 1700, nocturnal: true,
+    blurb: 'Nocturnal; preys on slow shells and slimes.',
   },
   {
     id: 'ironcrab', name: 'Ironcrab', emoji: '🦀',
-    eats: 'herbivores', size: 7, maxSpeed: 0.7, hungerTick: 0.0007, repro: 0.00009,
+    diet: ['mossling', 'oozekin', 'crackle'],
+    size: 7, maxSpeed: 0.7, hungerTick: 0.0007, repro: 0.00009,
     senseRadius: 90, eatRadius: 12, maxPop: 12, color: '#f87171', shape: 'shell',
     aggression: 0.5, flockRadius: 0, lifespan: 2000,
-    blurb: 'Slow tank, never starves.',
+    blurb: 'Patient ambusher; cracks shells and sparks.',
+  },
+
+  // APEX — eats hunters
+  {
+    id: 'behemoth', name: 'Behemoth', emoji: '🐉',
+    diet: ['velvox', 'skyhawk', 'shadowmaw', 'ironcrab'],
+    size: 13, maxSpeed: 0.9, hungerTick: 0.0006, repro: 0.00005,
+    senseRadius: 180, eatRadius: 18, maxPop: 5, color: '#dc2626', shape: 'tank',
+    aggression: 0.9, flockRadius: 0, lifespan: 2400,
+    blurb: 'Picks the picks; only hunters are big enough meals.',
   },
 ];
+
+// ─── DIET LOOKUP HELPERS ──────────────────────────────────────────────────────
+function speciesById(id) {
+  return CATALOG.find(c => c.id === id) || null;
+}
+
+// True if this species eats plants directly.
+function eatsPlants(spec) { return spec.diet.includes('plant'); }
+
+// Return [species-ids] this species hunts (i.e. diet entries that are not 'plant').
+function preySpeciesIds(spec) { return spec.diet.filter(d => d !== 'plant'); }
+
+// Return [species-ids] from CATALOG that hunt the given species (anywhere
+// in the catalog — used for builder preview). For sim-time predator-of-me
+// lookups during a run we narrow this to currently-active species.
+function huntersOf(speciesId) {
+  return CATALOG.filter(c => c.diet.includes(speciesId)).map(c => c.id);
+}
+
+// Coarse role label used for catalog cards + initial-count tuning.
+//   GRAZER   — diet is only 'plant'
+//   OMNIVORE — eats 'plant' AND at least one species
+//   HUNTER   — only eats species, AND something in the catalog hunts it
+//   APEX     — only eats species, AND nothing in the catalog hunts it
+function roleOf(spec) {
+  const hasPlant = eatsPlants(spec);
+  const hasSpecies = preySpeciesIds(spec).length > 0;
+  if (hasPlant && hasSpecies) return 'OMNIVORE';
+  if (hasPlant) return 'GRAZER';
+  // species-only diet
+  return huntersOf(spec.id).length === 0 ? 'APEX' : 'HUNTER';
+}
 
 // ─── WORLD VIBES (palette presets) ────────────────────────────────────────────
 const VIBES = {
@@ -153,18 +218,17 @@ const CFG = {
 
 // Initial population per species — scaled to maxPop and trophic role so
 // hunters and apex don't outnumber the prey they need to survive on.
-// Previously every species started at 9, which let predators wipe out prey
-// before the simulation had a chance to find equilibrium.
 function initialCountFor(spec) {
+  const role = roleOf(spec);
   let frac;
-  switch (spec.eats) {
-    case 'plants':     frac = 0.25; break;  // most prey
-    case 'omnivore':   frac = 0.18; break;
-    case 'herbivores': frac = 0.18; break;  // hunters — clearly fewer than prey
-    case 'predators':  frac = 0.40; break;  // apex (already capped tiny)
-    default:           frac = 0.20;
+  switch (role) {
+    case 'GRAZER':   frac = 0.25; break;  // most prey
+    case 'OMNIVORE': frac = 0.18; break;
+    case 'HUNTER':   frac = 0.18; break;  // hunters — clearly fewer than prey
+    case 'APEX':     frac = 0.40; break;  // already capped tiny
+    default:         frac = 0.20;
   }
-  const minByRole = (spec.eats === 'predators' || spec.eats === 'herbivores') ? 2 : 6;
+  const minByRole = (role === 'APEX' || role === 'HUNTER') ? 2 : 6;
   return Math.max(minByRole, Math.round(spec.maxPop * frac));
 }
 
@@ -223,6 +287,22 @@ function getActiveSpecs() {
   return world.selected.map(id => CATALOG.find(c => c.id === id)).filter(Boolean);
 }
 
+// Per-run lookups computed once at sim init. Indexed by species id; values
+// are species-id sets restricted to whatever the player put in this world.
+let huntersInWorld = {};   // hunters[id] = [predator-id, ...]
+let preyInWorld    = {};   // prey[id]    = [prey-id, ...]   (excluding 'plant')
+
+function recomputeWorldLookups() {
+  const active = getActiveSpecs();
+  const activeIds = new Set(active.map(s => s.id));
+  huntersInWorld = {};
+  preyInWorld = {};
+  for (const sp of active) {
+    huntersInWorld[sp.id] = huntersOf(sp.id).filter(id => activeIds.has(id));
+    preyInWorld[sp.id]    = preySpeciesIds(sp).filter(id => activeIds.has(id));
+  }
+}
+
 function initSim(seed) {
   rng = mkRng(seed >>> 0);
   plants = [];
@@ -230,6 +310,8 @@ function initSim(seed) {
   simTime = 0; realTime = 0; lastMilestone = -1;
   weatherTimer = 0; weatherDuration = 30 + rng() * 60;
   weather = 'sun'; skyBrightness = 1; dayTimer = 0;
+
+  recomputeWorldLookups();
 
   const pm = plantMax();
   // Start full of plants so herbivores have plenty
@@ -336,12 +418,18 @@ function tick(dt) {
     const hungerMod = (weather === 'storm' ? 1.15 : 1) * world.knobs.metabolism;
     c.hunger += c.spec.hungerTick * dt * 60 * (isActiveNow ? 1.0 : 0.45) * hungerMod;
 
-    // Choose prey list
+    // Choose prey list — diet is a specific list of entries the species
+    // eats (plants and/or named species ids). We assemble candidates from
+    // both sources rather than from a coarse trophic tier.
+    const preyIdsForMe = preyInWorld[c.spec.id] || [];
     let preyList = [];
-    if (c.spec.eats === 'plants') preyList = plants;
-    else if (c.spec.eats === 'herbivores') preyList = critters.filter(o => o.spec.eats === 'plants');
-    else if (c.spec.eats === 'predators') preyList = critters.filter(o => o.spec.eats === 'herbivores');
-    else if (c.spec.eats === 'omnivore') preyList = [...plants, ...critters.filter(o => o.spec.eats === 'plants')];
+    if (eatsPlants(c.spec)) preyList.push(...plants);
+    if (preyIdsForMe.length) {
+      const want = new Set(preyIdsForMe);
+      for (const o of critters) {
+        if (o !== c && want.has(o.spec.id)) preyList.push(o);
+      }
+    }
 
     let prey = null, preyDist = c.spec.senseRadius;
     for (const p of preyList) {
@@ -360,14 +448,14 @@ function tick(dt) {
       preyDist = bestD;
     }
 
-    // Flee if something eats us
+    // Flee if something specific eats us — derived from the live food web,
+    // so a fluffin in a world-without-skyhawks isn't paranoid about the sky.
     let flee = false;
-    let preyOfWhom = null;
-    if (c.spec.eats === 'plants') preyOfWhom = ['herbivores', 'omnivore'];
-    else if (c.spec.eats === 'herbivores') preyOfWhom = ['predators'];
-    if (preyOfWhom) {
+    const myHunters = huntersInWorld[c.spec.id] || [];
+    if (myHunters.length) {
+      const huntersSet = new Set(myHunters);
       for (const o of critters) {
-        if (preyOfWhom.includes(o.spec.eats) && dist(c, o) < c.spec.senseRadius) {
+        if (huntersSet.has(o.spec.id) && dist(c, o) < c.spec.senseRadius) {
           steer(c, c.x - (o.x - c.x), c.y - (o.y - c.y), c.spec.maxSpeed * 1.6 * speedMult);
           flee = true; break;
         }
@@ -399,21 +487,24 @@ function tick(dt) {
     c.x += c.vx; c.y += c.vy;
     wrap(c);
 
-    // Eat
+    // Eat — distinguish plants (have a `variant` field) from critters by
+    // shape rather than the eater's role, since omnivores can target both.
     if (prey && preyDist < c.spec.eatRadius) {
-      if (c.spec.eats === 'plants') {
+      const isPlantPrey = !prey.spec; // plants have no `spec`
+      if (isPlantPrey) {
         const i = plants.indexOf(prey);
-        if (i !== -1) { plants.splice(i, 1); c.hunger = Math.max(0, c.hunger - 0.55); }
-      } else if (c.spec.eats === 'omnivore') {
-        const ip = plants.indexOf(prey);
-        if (ip !== -1) { plants.splice(ip, 1); c.hunger = Math.max(0, c.hunger - 0.4); }
-        else {
-          prey._dead = true;
-          c.hunger = Math.max(0, c.hunger - 0.65);
+        if (i !== -1) {
+          plants.splice(i, 1);
+          // Plants are a smaller meal for omnivores than for true grazers,
+          // so a hard plant-only eater gets more out of one bite.
+          const sated = eatsPlants(c.spec) && preyIdsForMe.length === 0 ? 0.55 : 0.40;
+          c.hunger = Math.max(0, c.hunger - sated);
         }
       } else {
         prey._dead = true;
-        c.hunger = Math.max(0, c.hunger - 0.72);
+        // A meaty meal — bigger nourishment than a plant nibble.
+        const sated = preyIdsForMe.length && eatsPlants(c.spec) ? 0.65 : 0.72;
+        c.hunger = Math.max(0, c.hunger - sated);
       }
     }
 
@@ -450,86 +541,94 @@ function updatePopCounts() {
     txt += ` ${spec.emoji}${n}`;
   }
   document.getElementById('pop-counts').textContent = txt;
-  renderFoodWeb(counts);
 }
 
-// ─── FOOD WEB PANEL ───────────────────────────────────────────────────────────
-// Compact view of the trophic structure: who eats whom, with current
-// populations. Throttled to a few refreshes per second so we're not
-// rebuilding DOM on every animation frame.
-let _fwLastRender = 0;
-function renderFoodWeb(counts) {
-  const body = document.getElementById('foodweb-body');
-  if (!body) return;
-  const panel = document.getElementById('foodweb-panel');
-  if (!panel || !panel.classList.contains('open')) return;
-  const now = performance.now();
-  if (now - _fwLastRender < 250) return; // throttle
-  _fwLastRender = now;
+// ─── BUILDER FOOD-WEB PREVIEW ─────────────────────────────────────────────────
+// Shown only inside the world-builder dialog so the player can see how
+// their picks connect — who eats whom — before launching. Hidden during
+// gameplay. The view orients itself by trophic depth (plants at the bottom
+// of the diagram, apex at the top) and draws the diet edges as text arrows.
+function renderBuilderFoodWeb() {
+  const wrap = document.getElementById('builder-foodweb-body');
+  if (!wrap) return;
+  const w = pendingWorld || world;
+  const sel = w.selected.map(id => speciesById(id)).filter(Boolean);
 
-  const active = getActiveSpecs();
-  const byTier = {
-    plants:     [],
-    omnivore:   [],
-    herbivores: [],
-    predators:  [],
-  };
-  for (const sp of active) {
-    if (byTier[sp.eats]) byTier[sp.eats].push(sp);
+  if (sel.length === 0) {
+    wrap.innerHTML = `<div class="bfw-empty">Pick at least one critter to see the food web.</div>`;
+    return;
   }
 
-  const renderRow = (tierLabel, entries, plantCount) => {
-    if (entries.length === 0 && plantCount === undefined) return '';
-    const items = plantCount !== undefined
-      ? `<span class="fw-cell plant"><span class="fw-emoji">🌿</span><span class="fw-count">${plantCount}</span></span>`
-      : entries.map(sp => {
-          const n = counts[sp.id] || 0;
-          const dim = n === 0 ? ' empty' : '';
-          return `<span class="fw-cell${dim}" title="${sp.name}: ${n}"><span class="fw-emoji">${sp.emoji}</span><span class="fw-count">${n}</span></span>`;
-        }).join('');
-    return `<div class="fw-tier"><span class="fw-tier-label">${tierLabel}</span><span class="fw-row">${items}</span></div>`;
-  };
+  // Coarse trophic depth: 0 plants, 1 grazers/omnivores, 2 hunters, 3 apex.
+  function depth(sp) {
+    const r = roleOf(sp);
+    if (r === 'GRAZER' || r === 'OMNIVORE') return 1;
+    if (r === 'HUNTER') return 2;
+    return 3; // APEX
+  }
+  const tiers = { 0: ['plant'], 1: [], 2: [], 3: [] };
+  for (const sp of sel) tiers[depth(sp)].push(sp);
 
-  const eatsArrow = '<div class="fw-arrow">↑ eaten by</div>';
-  const parts = [];
-  parts.push(renderRow('Plants', [], plants.length));
-  // Plant-eaters tier (always show even if empty so the structure is visible)
-  if (byTier.plants.length || byTier.omnivore.length) {
-    parts.push(eatsArrow);
-    const grazers = [...byTier.plants];
-    parts.push(renderRow('Grazers', grazers));
-  }
-  if (byTier.omnivore.length) {
-    // Omnivores eat plants AND herbivores — slot them between tiers
-    parts.push(`<div class="fw-tier"><span class="fw-tier-label">Omnivores</span><span class="fw-row">${
-      byTier.omnivore.map(sp => {
-        const n = counts[sp.id] || 0;
-        const dim = n === 0 ? ' empty' : '';
-        return `<span class="fw-cell${dim}" title="${sp.name}: ${n}"><span class="fw-emoji">${sp.emoji}</span><span class="fw-count">${n}</span></span>`;
-      }).join('')
-    }</span></div>`);
-  }
-  if (byTier.herbivores.length) {
-    parts.push(eatsArrow);
-    parts.push(renderRow('Hunters', byTier.herbivores));
-  }
-  if (byTier.predators.length) {
-    parts.push(eatsArrow);
-    parts.push(renderRow('Apex', byTier.predators));
+  // Build edges: prey-id → predator-id, restricted to the selected world.
+  const selSet = new Set(sel.map(s => s.id));
+  const edges = [];
+  for (const sp of sel) {
+    for (const d of sp.diet) {
+      if (d === 'plant') {
+        edges.push({ from: 'plant', to: sp.id });
+      } else if (selSet.has(d)) {
+        edges.push({ from: d, to: sp.id });
+      }
+    }
   }
 
-  body.innerHTML = parts.join('');
-}
+  // Render tiers stacked top→bottom (apex first), edges as a list below.
+  const tierLabels = { 3: 'Apex', 2: 'Hunters', 1: 'Grazers & omnivores', 0: 'Plants' };
+  const tierHtml = [3, 2, 1, 0]
+    .filter(d => tiers[d].length > 0 || (d === 0))
+    .map(d => {
+      const items = d === 0
+        ? `<span class="bfw-node plant" title="Plants — universal food">🌿 plants</span>`
+        : tiers[d].map(sp => {
+            const role = roleOf(sp);
+            return `<span class="bfw-node role-${role.toLowerCase()}" title="${sp.name}: ${sp.blurb}"><span class="bfw-emoji">${sp.emoji}</span><span class="bfw-name">${sp.name}</span></span>`;
+          }).join('');
+      return `<div class="bfw-tier"><span class="bfw-tier-label">${tierLabels[d]}</span><div class="bfw-row">${items}</div></div>`;
+    }).join('');
 
-function toggleFoodWeb() {
-  const panel = document.getElementById('foodweb-panel');
-  const btn = document.getElementById('fw-toggle');
-  panel.classList.toggle('open');
-  if (btn) btn.textContent = panel.classList.contains('open') ? '−' : '+';
-  if (panel.classList.contains('open')) {
-    _fwLastRender = 0; // force refresh on reopen
-    updatePopCounts();
+  // Edge list — group "X is eaten by [a, b, c]" so the user sees prey loss
+  // implications at a glance.
+  const eatenBy = {};
+  for (const e of edges) {
+    (eatenBy[e.from] = eatenBy[e.from] || []).push(e.to);
   }
+  const edgeRows = Object.entries(eatenBy).map(([from, tos]) => {
+    const fromEmoji = from === 'plant' ? '🌿' : (speciesById(from) || {}).emoji || '?';
+    const fromName  = from === 'plant' ? 'plants' : (speciesById(from) || {}).name || from;
+    const toBits = tos.map(id => {
+      const s = speciesById(id);
+      return s ? `<span class="bfw-edge-pred">${s.emoji} ${s.name}</span>` : id;
+    }).join(', ');
+    return `<div class="bfw-edge"><span class="bfw-edge-prey">${fromEmoji} ${fromName}</span> <span class="bfw-arrow">→ eaten by →</span> ${toBits}</div>`;
+  }).join('');
+
+  // Loose-ends: hunters with no prey present in this world starve fast.
+  const orphanHunters = sel.filter(sp => {
+    const prey = sp.diet.filter(d => d === 'plant' || selSet.has(d));
+    return prey.length === 0;
+  });
+
+  let warnHtml = '';
+  if (orphanHunters.length) {
+    warnHtml = `<div class="bfw-warn">⚠ ${orphanHunters.map(s => s.emoji + ' ' + s.name).join(', ')} ${orphanHunters.length === 1 ? 'has' : 'have'} no prey in this world and will starve quickly. Add some prey or expect a quick death.</div>`;
+  }
+
+  wrap.innerHTML = `
+    <div class="bfw-tiers">${tierHtml}</div>
+    <div class="bfw-edges-label">Who eats whom:</div>
+    <div class="bfw-edges">${edgeRows || '<div class="bfw-empty">No edges yet — only plants and grazers selected.</div>'}</div>
+    ${warnHtml}
+  `;
 }
 
 // ─── STATE LABELS ─────────────────────────────────────────────────────────────
@@ -950,22 +1049,28 @@ function buildCatalog() {
     const card = document.createElement('div');
     card.className = 'critter-card';
     card.dataset.id = spec.id;
-    const dietClass = `diet-${spec.eats}`;
-    const dietLabel = spec.eats === 'plants' ? 'GRAZER'
-      : spec.eats === 'herbivores' ? 'HUNTER'
-      : spec.eats === 'predators' ? 'APEX'
-      : 'OMNIVORE';
+    const role = roleOf(spec);
+    const dietClass = `diet-${role.toLowerCase()}`;
     card.innerHTML = `
       <div class="crit-check">✓</div>
       <span class="crit-emoji">${spec.emoji}</span>
       <span class="crit-name">${spec.name}</span>
-      <span class="crit-role ${dietClass}">${dietLabel}</span>
+      <span class="crit-role ${dietClass}">${role}</span>
     `;
-    card.title = spec.blurb;
+    card.title = `${spec.blurb}\n\nEats: ${dietBlurb(spec)}`;
     card.addEventListener('click', () => toggleSelected(spec.id));
     wrap.appendChild(card);
   }
   refreshCatalogSelection();
+}
+
+function dietBlurb(spec) {
+  const parts = spec.diet.map(d => {
+    if (d === 'plant') return 'plants';
+    const s = speciesById(d);
+    return s ? `${s.emoji} ${s.name}` : d;
+  });
+  return parts.join(', ');
 }
 
 function refreshCatalogSelection() {
@@ -977,6 +1082,7 @@ function refreshCatalogSelection() {
       card.classList.remove('selected');
     }
   }
+  renderBuilderFoodWeb();
 }
 
 function toggleSelected(id) {
@@ -1032,9 +1138,10 @@ function launchWorld() {
 
 function randomizeWorld() {
   // Pick 2-5 species, with at least one grazer and ideally one hunter
-  const grazers = CATALOG.filter(c => c.eats === 'plants' || c.eats === 'omnivore');
-  const hunters = CATALOG.filter(c => c.eats === 'herbivores');
-  const apex = CATALOG.filter(c => c.eats === 'predators');
+  const byRole = role => CATALOG.filter(c => roleOf(c) === role);
+  const grazers   = [...byRole('GRAZER'), ...byRole('OMNIVORE')];
+  const hunters   = byRole('HUNTER');
+  const apex      = byRole('APEX');
 
   const pick = (arr, n) => {
     const out = [];
@@ -1142,9 +1249,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('report-overlay').style.display = 'none';
     paused = false;
   });
-
-  const fwToggleBtn = document.getElementById('fw-toggle');
-  if (fwToggleBtn) fwToggleBtn.addEventListener('click', toggleFoodWeb);
 
   // Initial sim
   initSim(Date.now());
