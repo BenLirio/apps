@@ -11,16 +11,16 @@
 
 const ROUNDS = [
   { axis: 0, options: [
-    { img: 'images/bed.png',         alt: 'cozy bed in morning light',   shareEmoji: '🛏️', v: 0.05 },
-    { img: 'images/plane.png',       alt: 'passport and plane ticket',   shareEmoji: '✈️', v: 0.95 },
+    { img: 'images/bed.jpg',         alt: 'cozy bed in morning light',   shareEmoji: '🛏️', v: 0.05 },
+    { img: 'images/plane.jpg',       alt: 'passport and plane ticket',   shareEmoji: '✈️', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/spreadsheet.png', alt: 'organized spreadsheet',       shareEmoji: '📊', v: 0.05 },
-    { img: 'images/heart.png',       alt: 'glowing heart on a pillow',   shareEmoji: '🫀', v: 0.95 },
+    { img: 'images/spreadsheet.jpg', alt: 'organized spreadsheet',       shareEmoji: '📊', v: 0.05 },
+    { img: 'images/heart.jpg',       alt: 'glowing heart on a pillow',   shareEmoji: '🫀', v: 0.95 },
   ]},
   { axis: 2, options: [
-    { img: 'images/wallet.png',      alt: 'wallet stuffed with cash',    shareEmoji: '💰', v: 0.05 },
-    { img: 'images/give.png',        alt: 'hands giving cash away',      shareEmoji: '🤝', v: 0.95 },
+    { img: 'images/wallet.jpg',      alt: 'wallet stuffed with cash',    shareEmoji: '💰', v: 0.05 },
+    { img: 'images/give.jpg',        alt: 'hands giving cash away',      shareEmoji: '🤝', v: 0.95 },
   ]},
 ];
 
