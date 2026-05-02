@@ -1,0 +1,404 @@
+/* Aesthetic: 19th-century entomologist's display case + riso natural-history print — sepia paper, ink-bleed plates, brass corner stamps, hand-engraved illustration feel */
+
+:root {
+  --paper: #f1e3c4;
+  --paper-deep: #e3cf9f;
+  --paper-shadow: #a98c5a;
+  --ink: #2b1d10;
+  --ink-soft: #5a3f24;
+  --riso-red: #b3402a;
+  --riso-teal: #2c5d63;
+  --brass: #b89149;
+  --brass-dark: #6f5223;
+  --board-felt: #1f2a23;
+  --board-felt-light: #2c3a30;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #2b2118;
+  color: var(--ink);
+  font-family: "IM Fell English", Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.hidden { display: none !important; }
+
+/* Sepia paper — used for title + plate */
+.paper {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,240,.35), transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(120,80,30,.22), transparent 65%),
+    var(--paper);
+  border: 1px solid rgba(80,50,20,.35);
+  padding: 36px 28px 30px;
+  box-shadow:
+    0 0 0 6px rgba(0,0,0,.05),
+    0 18px 50px rgba(0,0,0,.55),
+    inset 0 0 80px rgba(120,80,30,.18);
+  text-align: center;
+}
+
+/* Paper grain via inline blend */
+.paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(80,50,20,.04) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(80,50,20,.03) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+.paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 88%, rgba(70,40,15,.25), transparent 18%),
+    radial-gradient(circle at 88% 14%, rgba(70,40,15,.2), transparent 16%),
+    radial-gradient(circle at 50% 50%, transparent 60%, rgba(40,25,10,.25));
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.brass {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background:
+    radial-gradient(circle at 35% 35%, #f0d68b 0 18%, var(--brass) 35%, var(--brass-dark) 80%);
+  border: 1px solid #3a2a10;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+.brass.tl { top: 6px; left: 6px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.brass.tr { top: 6px; right: 6px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.brass.bl { bottom: 6px; left: 6px; clip-path: polygon(0 0, 0 100%, 100% 100%); }
+.brass.br { bottom: 6px; right: 6px; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+
+.overline {
+  font-family: "Special Elite", "Courier New", monospace;
+  letter-spacing: .18em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 10px;
+}
+
+.title {
+  font-family: "IM Fell English SC", Georgia, serif;
+  font-size: 44px;
+  line-height: 1;
+  margin: 6px 0 8px;
+  color: var(--ink);
+  letter-spacing: .02em;
+}
+
+.subtitle {
+  font-style: italic;
+  margin: 4px 0 18px;
+  color: var(--ink-soft);
+  font-size: 16px;
+}
+
+.flavor {
+  font-size: 15px;
+  margin: 14px auto 24px;
+  max-width: 360px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--ink);
+  font-family: "IM Fell English SC", Georgia, serif;
+  font-size: 18px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 14px 28px;
+  cursor: pointer;
+  min-height: 48px;
+  border-radius: 0;
+  box-shadow: 3px 3px 0 var(--brass-dark);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn-primary:hover { background: #3d2a16; }
+.btn-primary:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--brass-dark); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px dashed var(--ink-soft);
+  font-family: "IM Fell English", Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+  min-height: 44px;
+  border-radius: 0;
+}
+.btn-ghost:hover { color: var(--ink); border-color: var(--ink); }
+
+.micro {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-family: "Special Elite", monospace;
+  letter-spacing: .04em;
+}
+
+/* ===== Hunt screen ===== */
+#screen-hunt {
+  padding: 0;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.hunt-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
+  background: linear-gradient(180deg, #1a140d, #2b2118);
+  border-bottom: 2px solid var(--brass-dark);
+  z-index: 30;
+  font-family: "Special Elite", monospace;
+  color: #d8c290;
+  letter-spacing: .12em;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+.hunt-bar-side { display: flex; gap: 8px; align-items: baseline; }
+.hunt-bar-side.right { justify-content: flex-end; }
+.hunt-bar .lbl { color: #8b7547; font-size: 11px; }
+.hunt-bar .val { color: #f3dca3; font-size: 18px; }
+
+.board {
+  position: absolute;
+  top: 44px; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,240,210,.07), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(0,0,0,.45), transparent 55%),
+    repeating-linear-gradient(45deg, var(--board-felt) 0 4px, var(--board-felt-light) 4px 8px);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+/* corner pins */
+.board::before, .board::after {
+  content: "";
+  position: absolute;
+  width: 14px; height: 14px;
+  background: radial-gradient(circle at 35% 35%, #f0d68b, var(--brass-dark));
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,.5);
+  z-index: 5;
+}
+.board::before { top: 10px; left: 10px; }
+.board::after  { top: 10px; right: 10px; }
+
+.bug-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.bug {
+  position: absolute;
+  transform-origin: center;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.45));
+  will-change: transform;
+}
+
+.bug.pinned {
+  animation: pin-thump .35s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes pin-thump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); filter: brightness(1.3); }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+.slot-strip {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.55) 60%);
+  z-index: 20;
+}
+.slot {
+  flex: 1;
+  max-width: 56px;
+  aspect-ratio: 1;
+  background: rgba(0,0,0,.35);
+  border: 1px dashed rgba(255,220,160,.25);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.slot.filled {
+  background: rgba(241,227,196,.92);
+  border: 1px solid var(--brass-dark);
+}
+.slot svg { width: 78%; height: 78%; }
+
+/* ===== Plate (result) ===== */
+#screen-plate {
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 24px 12px 36px;
+}
+.plate {
+  max-width: 600px;
+  padding: 32px 24px 26px;
+}
+.plate-title {
+  font-family: "IM Fell English SC", Georgia, serif;
+  font-size: 26px;
+  margin: 4px 0 6px;
+}
+.plate-curator {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 22px;
+  font-size: 14px;
+}
+
+.plate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 12px 0 18px;
+}
+@media (max-width: 420px) {
+  .plate-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+.specimen {
+  border: 1px solid rgba(80,50,20,.4);
+  background:
+    radial-gradient(ellipse at 25% 15%, rgba(255,240,210,.5), transparent 60%),
+    rgba(255,245,215,.4);
+  padding: 10px 10px 8px;
+  position: relative;
+  text-align: left;
+}
+.specimen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(70,40,15,.18), transparent 18%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.specimen-art {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 78px;
+  position: relative;
+}
+.specimen-art svg { width: 70px; height: 70px; }
+.specimen-pin {
+  position: absolute;
+  top: 6px; left: 50%;
+  width: 8px; height: 8px;
+  background: radial-gradient(circle at 35% 35%, #f0d68b, var(--brass-dark));
+  border-radius: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.4);
+  z-index: 2;
+}
+.specimen-num {
+  font-family: "Special Elite", monospace;
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin: 4px 0 2px;
+}
+.specimen-latin {
+  font-style: italic;
+  font-size: 14px;
+  margin: 0 0 4px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.specimen-note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.plate-stamp {
+  font-family: "Special Elite", monospace;
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  margin: 18px 0 4px;
+  border-top: 1px dashed rgba(80,50,20,.45);
+  padding-top: 12px;
+}
+
+.share-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  margin-top: 18px;
+  width: 100%;
+  max-width: 600px;
+}
+
+/* Empty plate (no catches) */
+.plate-empty {
+  font-style: italic;
+  color: var(--ink-soft);
+  padding: 30px 10px;
+  border: 1px dashed rgba(80,50,20,.4);
+  text-align: center;
+  margin: 12px 0;
+}
