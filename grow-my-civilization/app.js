@@ -1,7 +1,8 @@
-// Grow My Civilization — survival roguelike with AI-generated decision tree
-// Goal: how long can your civilization last? Each choice helps or hurts now or later.
-// Questions are AI-generated and cached by choice-path so every player walking the
-// same path sees the same prompts (deterministic tree).
+// Grow My Civilization — saga roguelike with AI-generated story beats
+// Goal: how long can your civilization last? Each chapter is a short, simple
+// dilemma that continues directly from the previous one — read it as a story.
+// Questions are AI-generated and cached by choice-path so every player walking
+// the same path sees the same chapters (deterministic tree).
 
 const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
 const SLUG = 'grow-my-civilization';
@@ -82,27 +83,25 @@ function generateCivName() {
 let civName = '';
 let phase = 'setup'; // setup | running | thinking | decision | verdict
 
-// Stats. All bounded 0..100 unless noted; pop and tech unbounded; treasury -50..100 (debt allowed).
-// Death conditions: pop<=0, food<=0, order<=0, health<=0, treasury<=-50, or military<=0 once pop>100.
+// Single visible axis: `fortune` ranges -100..+100 and drives whether the
+// civilization grows, holds, or crumbles. `population` and `tech` are tracked
+// for visuals + era progression but never asked of the player as a number.
+//
+// Death conditions: pop<=0 OR fortune<=-95.
 let stats = {
   population: 1,
-  food: 55,        // feeds the people; drains with pop
-  order: 55,       // internal cohesion; erodes with crowding, debt, low health
-  health: 65,      // disease/sanitation; drops in plague, drains with low food/order
-  military: 25,    // defends against raids; small upkeep drains treasury
-  treasury: 15,    // wealth/debt; military upkeep drains it, prosperity refills it
-  tech: 0,         // unbounded; gates eras
-  culture: 50      // soft stat; affects verdict tone, no hard fail
+  tech: 0,
+  fortune: 20    // start cautiously hopeful
 };
 let peakPopulation = 1;
 let peakTech = 0;
+let peakFortune = 20;
 
 let turnNumber = 0; // how many decisions resolved
 let pathKey = '';   // string of choice indices joined, e.g. "0,1,2,0"
 let chronicle = []; // [{ event, choice, flavor, era, turn }]
-let pendingEffects = []; // [{ triggerTurn, effect, label }]
 
-let pendingDecision = null; // { event, choices: [{ label, effect, longTermEffect, longTermDelay, flavor }] }
+let pendingDecision = null; // { event, choices: [{ label, effect, flavor }] }
 let gameOver = false;
 let collapsed = false;
 let collapseReason = '';
@@ -185,7 +184,10 @@ function rollName() {
 // the same next question — for any browser that's already walked there. We
 // also persist across reloads via localStorage so one player's exploration
 // helps the next.
-const CACHE_KEY = 'gmc_question_cache_v2';
+// v3 — saga rewrite: simpler chapter/continuation prompt, single-axis effects.
+// v2 cache entries used the old multi-stat schema and would break the new
+// rendering, so bump the key to start fresh.
+const CACHE_KEY = 'gmc_question_cache_v3';
 let questionCache = {};
 try {
   questionCache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
@@ -210,27 +212,39 @@ async function fetchQuestion(path, statsSnapshot, chronicleSnapshot) {
   if (questionCache[cacheKey]) return questionCache[cacheKey];
 
   const era = ERAS[eraIndexFromTech(statsSnapshot.tech)].name;
-  const recent = chronicleSnapshot.slice(-3).map(c => `[${c.era}] ${c.choice}`).join(' | ') || 'none yet';
+  const lastChapter = chronicleSnapshot.length
+    ? chronicleSnapshot[chronicleSnapshot.length - 1]
+    : null;
+  const lastEvent  = lastChapter ? lastChapter.event   : '';
+  const lastChoice = lastChapter ? lastChapter.choice  : '';
+  const lastFlavor = lastChapter ? lastChapter.flavor  : '';
 
-  const sys = `You generate dilemmas for a HARSH civilization-survival game. The player leads "${civName}". Output ONLY valid JSON. Survival is hard — most civilizations die. Each dilemma is era-appropriate, dramatic, and forces a real cross-system tradeoff: gaining one stat almost always costs others. Choices have IMMEDIATE effects and a LONG-TERM effect that fires later (3-6 turns). Effects are integers on these stats: food, order, health, military, treasury, tech, culture, population (treasury can go negative — debt). Each immediate effect MUST touch at least 2 stats (typically one positive, one negative). "Safe" / "do nothing" choices should still bleed something — there is no costless option. Hidden long-term costs are encouraged: a tempting boost now should often have a brutal echo later.`;
+  // Brief 1-line state string the model uses to color the next chapter without
+  // exposing numbers to the player.
+  const state = stateLabelForFortune(statsSnapshot.fortune);
 
-  const user = `Current era: ${era}. Stats: pop=${statsSnapshot.population}, food=${Math.round(statsSnapshot.food)}, order=${Math.round(statsSnapshot.order)}, health=${Math.round(statsSnapshot.health)}, military=${Math.round(statsSnapshot.military)}, treasury=${Math.round(statsSnapshot.treasury)}, tech=${Math.round(statsSnapshot.tech)}, culture=${Math.round(statsSnapshot.culture)}. Turn ${turnNumber + 1}. Recent decisions: ${recent}. Path key: ${cacheKey}.
+  const sys = `You write short, simple chapters of a continuing story about the civilization "${civName}". Output ONLY valid JSON. Each chapter is ONE sentence (max 18 words) describing a single, concrete event the people now face — never abstract dilemmas. Each chapter MUST continue directly from the previous chapter's chosen action and outcome (don't repeat them; build on them). Choices are 2 OR 3 short imperative options (2-4 words each, Title Case, no all-caps). Each choice has a fortune effect in [-25, +25] and ONE evocative short-sentence flavor (max 14 words) describing what unfolds. Stay era-appropriate. Vary the kinds of events: people, weather, neighbors, faith, illness, harvest, strangers — not just battles. The story should feel like a folk-tale or saga, not a strategy game.`;
+
+  const continuation = lastChapter
+    ? `Previous chapter: "${lastEvent}" → They chose: "${lastChoice}" → What followed: "${lastFlavor}". Write the next chapter that flows directly from "what followed".`
+    : `This is Chapter 1. The civilization is just beginning. Open with a small, grounded first event (a found resource, a stranger, a sign, a season). Do NOT start with "The civilization began…".`;
+
+  const user = `Era: ${era}. State of the people: ${state}. Chapter ${turnNumber + 1}.
+
+${continuation}
 
 Respond with JSON exactly matching this schema:
 {
-  "event": "1-2 sentence dilemma description (reference current weak stats when relevant — e.g. famine pressure if food is low)",
+  "event": "ONE sentence, max 18 words, concrete event (no numbers, no stats jargon).",
   "choices": [
     {
-      "label": "SHORT IMPERATIVE LABEL (2-5 words, all caps)",
-      "flavor": "One short evocative sentence after picking (do NOT narrate the numbers)",
-      "effect": { "food": 0, "order": 0, "health": 0, "military": 0, "treasury": 0, "tech": 0, "culture": 0, "population": 0 },
-      "longTermDelay": 4,
-      "longTermEffect": { "food": 0, "order": 0, "health": 0, "military": 0, "treasury": 0, "tech": 0, "culture": 0, "population": 0 },
-      "longTermFlavor": "What unfolds when delayed effect fires (one short sentence)"
+      "label": "Two To Four Words",
+      "flavor": "One sentence, max 14 words, what unfolds after the choice (no numbers).",
+      "effect": { "fortune": 0 }
     }
   ]
 }
-Include 2-4 choices. Omit any stat keys that don't change. Numbers: most ±5 to ±15, max ±30 for catastrophic decisions. Each immediate effect must contain at least 2 nonzero stats. Long-term effects may be empty for genuinely small choices, but most should land hard.`;
+Include 2 or 3 choices. Each must have a different fortune effect (mix of positive and negative). Typical magnitudes: ±5 to ±15. Reserve ±20 to ±25 for genuinely consequential choices. NEVER include stat names like "food" or "treasury" in the prose. NEVER reference numbers. Keep prose plain and readable.`;
 
   const body = {
     slug: SLUG,
@@ -239,8 +253,8 @@ Include 2-4 choices. Omit any stat keys that don't change. Numbers: most ±5 to 
       { role: 'user', content: user }
     ],
     model: 'gpt-5.4-mini',
-    max_tokens: 600,
-    temperature: 0.9,
+    max_tokens: 500,
+    temperature: 0.95,
     response_format: 'json_object'
   };
 
@@ -257,15 +271,12 @@ Include 2-4 choices. Omit any stat keys that don't change. Numbers: most ±5 to 
   if (!parsed || !Array.isArray(parsed.choices) || parsed.choices.length < 2) {
     throw new Error('ai_bad_shape');
   }
-  parsed.choices = parsed.choices.slice(0, 4).map(c => ({
-    label: String(c.label || 'PROCEED').toUpperCase().slice(0, 40),
-    flavor: String(c.flavor || ''),
-    effect: clampEffect(c.effect),
-    longTermDelay: clampInt(c.longTermDelay, 3, 6, 4),
-    longTermEffect: clampEffect(c.longTermEffect),
-    longTermFlavor: String(c.longTermFlavor || '')
+  parsed.choices = parsed.choices.slice(0, 3).map(c => ({
+    label: titleCaseClip(String(c.label || 'Press On'), 28),
+    flavor: clipSentence(String(c.flavor || ''), 110),
+    effect: clampSimpleEffect(c.effect)
   }));
-  parsed.event = String(parsed.event || 'A choice is upon you.');
+  parsed.event = clipSentence(String(parsed.event || 'A choice is upon you.'), 140);
   parsed._t = Date.now();
 
   questionCache[cacheKey] = parsed;
@@ -273,47 +284,67 @@ Include 2-4 choices. Omit any stat keys that don't change. Numbers: most ±5 to 
   return parsed;
 }
 
-function clampEffect(e) {
-  const out = {};
-  const keys = ['food', 'order', 'health', 'military', 'treasury', 'tech', 'culture', 'population'];
-  if (!e || typeof e !== 'object') return out;
-  for (const k of keys) {
-    if (typeof e[k] === 'number' && e[k] !== 0) {
-      out[k] = Math.max(-30, Math.min(30, Math.round(e[k])));
-    }
+function clampSimpleEffect(e) {
+  const out = { fortune: 0 };
+  if (e && typeof e === 'object' && typeof e.fortune === 'number') {
+    out.fortune = Math.max(-25, Math.min(25, Math.round(e.fortune)));
   }
   return out;
 }
 
-function clampInt(v, lo, hi, dflt) {
-  const n = Math.round(Number(v));
-  if (!isFinite(n)) return dflt;
-  return Math.max(lo, Math.min(hi, n));
+function clipSentence(s, maxLen) {
+  s = s.trim().replace(/\s+/g, ' ');
+  if (s.length <= maxLen) return s;
+  const cut = s.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut) + '…';
+}
+
+function titleCaseClip(s, maxLen) {
+  s = s.trim().replace(/\s+/g, ' ');
+  // Don't force-titlecase — model already returns Title Case; just clip + strip
+  // accidental trailing punctuation.
+  s = s.replace(/[.?!:;]+$/, '');
+  return s.length > maxLen ? s.slice(0, maxLen).trimEnd() + '…' : s;
+}
+
+// Hidden 5-bucket label of fortune — never shown as a number to the player,
+// only as a 1-word state on the HUD and as flavor for the AI prompt.
+function stateLabelForFortune(f) {
+  if (f >=  60) return 'Thriving';
+  if (f >=  20) return 'Holding';
+  if (f >= -20) return 'Uneasy';
+  if (f >= -60) return 'Faltering';
+  return 'Crumbling';
 }
 
 // ── Fallback question (used if AI is unreachable) ─────────────────────────────
 function fallbackQuestion() {
-  return {
-    event: 'The oracles fall silent. Your council must decide blind, and the silence itself carries cost.',
-    choices: [
-      {
-        label: 'PRESS ON',
-        flavor: 'You march forward without their counsel.',
-        effect: { order: -5, military: +4, treasury: -4, tech: +2 },
-        longTermDelay: 4,
-        longTermEffect: { culture: +6, health: -5 },
-        longTermFlavor: 'Tales of your boldness spread, but the wounded never fully recover.'
-      },
-      {
-        label: 'WAIT IT OUT',
-        flavor: 'You hold position, conserving strength.',
-        effect: { food: -4, order: +3, treasury: -3 },
-        longTermDelay: 4,
-        longTermEffect: { tech: -5, military: -4 },
-        longTermFlavor: 'Rivals out-pace you while you waited.'
-      }
-    ]
-  };
+  const beats = [
+    {
+      event: 'A wandering trader offers grain in exchange for a season of guarded passage.',
+      choices: [
+        { label: 'Strike The Bargain', flavor: 'The granary fills; warriors march beside the trader.',  effect: { fortune: +8 } },
+        { label: 'Refuse The Trade',   flavor: 'They leave, muttering. The villagers go to bed hungry.', effect: { fortune: -6 } }
+      ]
+    },
+    {
+      event: 'The first frost arrives a month early and the river skins over.',
+      choices: [
+        { label: 'Burn The Reserves', flavor: 'Fires roar through the night. Everyone wakes warm.',     effect: { fortune: +6 } },
+        { label: 'Ration The Wood',   flavor: 'Some elders do not survive the cold.',                   effect: { fortune: -10 } },
+        { label: 'Pray For Mercy',    flavor: 'A wind shifts the air. Whether it heard, no one knows.', effect: { fortune: -2 } }
+      ]
+    },
+    {
+      event: 'A child returns from the woods speaking words no one taught her.',
+      choices: [
+        { label: 'Mark Her A Seer', flavor: 'The people begin to whisper, then to listen.',          effect: { fortune: +4 } },
+        { label: 'Send Her Away',   flavor: 'She vanishes by morning. The woods grow louder at night.', effect: { fortune: -8 } }
+      ]
+    }
+  ];
+  return beats[Math.floor(Math.random() * beats.length)];
 }
 
 // ── Start Game ────────────────────────────────────────────────────────────────
@@ -325,13 +356,13 @@ function startGame() {
   document.getElementById('civ-title').textContent = civName;
 
   // Reset state
-  stats = { population: 1, food: 55, order: 55, health: 65, military: 25, treasury: 15, tech: 0, culture: 50 };
+  stats = { population: 1, tech: 0, fortune: 20 };
   peakPopulation = 1;
   peakTech = 0;
+  peakFortune = 20;
   turnNumber = 0;
   pathKey = '';
   chronicle = [];
-  pendingEffects = [];
   pendingDecision = null;
   gameOver = false;
   collapsed = false;
@@ -354,18 +385,7 @@ function startGame() {
 async function nextTurn() {
   if (gameOver) return;
 
-  // Apply any long-term effects whose trigger turn has come.
-  const firing = pendingEffects.filter(p => p.triggerTurn === turnNumber);
-  pendingEffects = pendingEffects.filter(p => p.triggerTurn !== turnNumber);
-  let echoText = '';
-  if (firing.length) {
-    firing.forEach(p => {
-      applyEffect(p.effect);
-      if (p.flavor) echoText += (echoText ? '  ' : '') + `◆ ${p.flavor}`;
-    });
-  }
-
-  // Check collapse from any cause before posing next dilemma.
+  // Check collapse before posing next dilemma.
   if (checkCollapse()) {
     triggerCollapse();
     return;
@@ -383,21 +403,35 @@ async function nextTurn() {
     q = fallbackQuestion();
   }
   pendingDecision = q;
-  presentDecision(q, echoText);
+  presentDecision(q);
 }
 
-function presentDecision(q, echoText) {
+function presentDecision(q) {
   phase = 'decision';
   document.getElementById('thinking-panel').style.display = 'none';
   document.getElementById('decision-panel').style.display = 'flex';
+
+  // Chapter tag + "story so far" recap from the last beat (if any).
+  const chapterTag = document.getElementById('decision-era-tag');
+  if (chapterTag) chapterTag.textContent = `Chapter ${turnNumber + 1}`;
+
+  const recapEl = document.getElementById('story-so-far');
+  if (recapEl) {
+    if (chronicle.length) {
+      const last = chronicle[chronicle.length - 1];
+      recapEl.textContent = `Last chapter: ${last.flavor}`;
+      recapEl.style.display = 'block';
+    } else {
+      recapEl.textContent = '';
+      recapEl.style.display = 'none';
+    }
+  }
+
   document.getElementById('decision-event').textContent = q.event;
-  // Show any long-term echo from a past choice in the flavor slot until the
-  // user picks something new.
-  document.getElementById('decision-flavor').textContent = echoText || '';
+  document.getElementById('decision-flavor').textContent = '';
 
   const choicesEl = document.getElementById('decision-choices');
   choicesEl.innerHTML = '';
-  // Adapt grid: 1 col when >2 choices to give labels room.
   choicesEl.style.gridTemplateColumns = q.choices.length >= 3 ? '1fr' : '1fr 1fr';
 
   q.choices.forEach((c, idx) => {
@@ -422,17 +456,8 @@ function resolveDecision(idx) {
     if (i === idx) b.classList.add('picked');
   });
 
-  // Apply immediate effect.
+  // Apply effect (single fortune axis).
   applyEffect(choice.effect);
-
-  // Schedule long-term effect.
-  if (choice.longTermEffect && Object.keys(choice.longTermEffect).length) {
-    pendingEffects.push({
-      triggerTurn: turnNumber + (choice.longTermDelay || 4),
-      effect: choice.longTermEffect,
-      flavor: choice.longTermFlavor || ''
-    });
-  }
 
   const era = ERAS[eraIndexFromTech(stats.tech)].name;
   chronicle.push({
@@ -460,84 +485,54 @@ function resolveDecision(idx) {
   }, 1400);
 }
 
-// ── Effects, Stats Drift, Collapse ────────────────────────────────────────────
+// ── Effects, Drift, Collapse ──────────────────────────────────────────────────
 function applyEffect(eff) {
   if (!eff) return;
-  if (eff.food)       stats.food = clamp(stats.food + eff.food, 0, 100);
-  if (eff.order)      stats.order = clamp(stats.order + eff.order, 0, 100);
-  if (eff.health)     stats.health = clamp(stats.health + eff.health, 0, 100);
-  if (eff.military)   stats.military = clamp(stats.military + eff.military, 0, 100);
-  if (eff.treasury)   stats.treasury = clamp(stats.treasury + eff.treasury, -50, 100);
-  if (eff.tech)       stats.tech = Math.max(0, stats.tech + eff.tech);
-  if (eff.culture)    stats.culture = clamp(stats.culture + eff.culture, 0, 100);
-  if (eff.population) stats.population = Math.max(0, stats.population + eff.population);
-
-  peakPopulation = Math.max(peakPopulation, stats.population);
-  peakTech = Math.max(peakTech, stats.tech);
+  if (typeof eff.fortune === 'number' && eff.fortune !== 0) {
+    stats.fortune = clamp(stats.fortune + eff.fortune, -100, 100);
+  }
+  peakFortune = Math.max(peakFortune, stats.fortune);
 }
 
-// Per-turn drift. Interlocking and unforgiving — each system feeds the next:
-// pop consumes food, low food/order rots health, military upkeep drains
-// treasury, debt rots order, crowding erodes order. Growth is gated by the
-// WORST of food/order/health (bottleneck rule) — every system has to be
-// healthy to grow, but any one can sink the civ.
+// Per-turn drift. Single axis, simple feedback:
+//   - fortune slowly bleeds toward zero (entropy)
+//   - population grows when fortune is positive, shrinks when negative
+//   - tech advances when fortune > 0 and there are people
 function driftAfterTurn() {
-  // 1. Food consumption scales with population (log so huge civs don't insta-starve).
-  const consumption = 1 + Math.log10(Math.max(10, stats.population)) * 1.2;
-  stats.food = clamp(stats.food - consumption, 0, 100);
+  // Mild entropy — fortune drifts toward 0 each turn.
+  if (stats.fortune > 0) stats.fortune = Math.max(0, stats.fortune - 1.5);
+  else if (stats.fortune < 0) stats.fortune = Math.min(0, stats.fortune + 1.0);
 
-  // 2. Health drain — baseline trickle, plus penalties when food/order are weak.
-  let healthDrain = 0.8;
-  if (stats.food < 30)  healthDrain += 2.5;
-  if (stats.order < 30) healthDrain += 1.8;
-  stats.health = clamp(stats.health - healthDrain, 0, 100);
-
-  // 3. Military upkeep — bigger army costs more coin, AND the army slowly
-  //    decays without active investment.
-  const upkeep = stats.military / 25; // 0..4 coin/turn
-  stats.treasury = clamp(stats.treasury - upkeep, -50, 100);
-  stats.military = clamp(stats.military - 0.6, 0, 100);
-
-  // 4. Treasury can refill from a stable, sizable population (taxation).
-  if (stats.order > 50 && stats.population > 5) {
-    const tax = Math.min(3.5, Math.log10(Math.max(10, stats.population)) * 0.6 * (stats.order / 100));
-    stats.treasury = clamp(stats.treasury + tax, -50, 100);
+  // Population: grows quickly with positive fortune, dies off quickly with very
+  // negative fortune. The curve is intentionally forgiving early so a fledgling
+  // civ has a chance to find its feet.
+  const growthFactor = stats.fortune / 100; // -1..+1
+  if (growthFactor > 0) {
+    const grown = Math.max(1, Math.round(stats.population * (0.18 + growthFactor * 0.22)));
+    stats.population = stats.population + grown;
+  } else if (growthFactor < -0.2) {
+    const lost = Math.max(1, Math.round(stats.population * Math.abs(growthFactor) * 0.30));
+    stats.population = Math.max(0, stats.population - lost);
   }
 
-  // 5. Order pressures — crowding hurts; debt hurts; sickness hurts.
-  let orderDrain = 0;
-  if (stats.population > 100) orderDrain += (Math.log10(stats.population) - 2) * 0.7; // grows with size
-  if (stats.treasury < 0)     orderDrain += Math.abs(stats.treasury) / 18;            // debt rots cohesion
-  if (stats.health < 40)      orderDrain += (40 - stats.health) / 25;                 // sickness panics
-  stats.order = clamp(stats.order - orderDrain, 0, 100);
-
-  // 6. Population growth — bottlenecked by the WEAKEST of food/order/health.
-  //    A single failing pillar can collapse the population.
-  const minVital = Math.min(stats.food, stats.order, stats.health);
-  const vitalPressure = (minVital - 45) / 20; // -2.25..+2.75
-  const techBonus = stats.tech / 80;
-  const growth = vitalPressure * (0.55 + techBonus * 0.35);
-  const delta = Math.round(stats.population * growth * 0.10 + growth);
-  stats.population = Math.max(0, stats.population + delta);
-
-  // 7. Tech creeps up only when there's an ordered population to do the work.
-  if (stats.population > 0 && stats.order > 25) {
-    stats.tech = stats.tech + 0.4 + Math.log10(Math.max(10, stats.population)) * 0.12;
+  // Tech: creeps up when fortune is non-negative and there's a community to do the work.
+  if (stats.population > 0 && stats.fortune > -10) {
+    const ramp = 0.6 + Math.max(0, stats.fortune) / 80;
+    stats.tech = stats.tech + ramp + Math.log10(Math.max(10, stats.population)) * 0.10;
   }
 
   peakPopulation = Math.max(peakPopulation, stats.population);
   peakTech = Math.max(peakTech, stats.tech);
+  peakFortune = Math.max(peakFortune, stats.fortune);
 }
 
 function checkCollapse() {
-  if (stats.population <= 0)  { collapseReason = 'Your last hearth went cold. The civilization is no more.'; return true; }
-  if (stats.food <= 0)        { collapseReason = 'Famine swept the land. None remained to bury the rest.'; return true; }
-  if (stats.order <= 0)       { collapseReason = 'Civil war shattered every institution. Nothing held.'; return true; }
-  if (stats.health <= 0)      { collapseReason = 'Plague hollowed the streets. The healers died last.'; return true; }
-  if (stats.treasury <= -50)  { collapseReason = 'The treasury defaulted. Creditors descended; nothing remained.'; return true; }
-  // Once you're a real civilization, having no army means a single raid ends you.
-  if (stats.military <= 0 && stats.population > 100) {
-    collapseReason = 'Defenseless, the city was taken in a single night.';
+  if (stats.population <= 0) {
+    collapseReason = 'The last hearth went cold. The civilization is no more.';
+    return true;
+  }
+  if (stats.fortune <= -95) {
+    collapseReason = 'The people lost all hope. By morning, the village was empty.';
     return true;
   }
   return false;
@@ -593,7 +588,9 @@ function gameLoop(ts) {
 function spawnBuilding(eraIdx) {
   const groundY = H - 28;
   // Stats influence height/width — order = neat tall buildings, low order = scattered shorter.
-  const h = 8 + Math.floor(visualRng() * (10 + eraIdx * 2.2 + stats.order * 0.08));
+  // Buildings grow taller when the people are flourishing (positive fortune).
+  const orderProxy = Math.max(0, stats.fortune);
+  const h = 8 + Math.floor(visualRng() * (10 + eraIdx * 2.2 + orderProxy * 0.08));
   const w = 8 + Math.floor(visualRng() * (5 + eraIdx * 1.2));
   buildings.push({
     x: 18 + visualRng() * (W - 36),
@@ -605,7 +602,8 @@ function spawnBuilding(eraIdx) {
 
 function spawnPerson(eraIdx) {
   // Color hints from culture: high culture = colorful clothes, low = drab.
-  const colorful = stats.culture > 60;
+  // Colorful crowds when fortune is high; drab when struggling.
+  const colorful = stats.fortune > 30;
   const palette = colorful
     ? ['#ffcc88','#ff88aa','#88ccff','#aaff88','#ffff88']
     : ['#cc8844','#aa7744','#8a6633'];
@@ -649,23 +647,14 @@ function spawnTriumphs() {
 function updateHUD() {
   const eraIdx = eraIndexFromTech(stats.tech);
   document.getElementById('stat-pop').textContent = formatPop(stats.population);
-  document.getElementById('stat-food').textContent = Math.round(stats.food);
-  document.getElementById('stat-order').textContent = Math.round(stats.order);
-  document.getElementById('stat-health').textContent = Math.round(stats.health);
-  document.getElementById('stat-military').textContent = Math.round(stats.military);
-  document.getElementById('stat-treasury').textContent = Math.round(stats.treasury);
-  document.getElementById('stat-tech').textContent = Math.round(stats.tech);
+  document.getElementById('stat-status').textContent = stateLabelForFortune(stats.fortune);
   document.getElementById('stat-turns').textContent = turnNumber;
   document.getElementById('age-badge').textContent = ERAS[eraIdx].name;
-  document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · Turn ${turnNumber}`;
+  document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · Chapter ${turnNumber}`;
 
-  // Warn-color anything dangerous. Treasury warns when in debt; military warns
-  // once the civ is large enough that defenselessness becomes lethal.
-  document.getElementById('stat-food').classList.toggle('warn', stats.food < 25);
-  document.getElementById('stat-order').classList.toggle('warn', stats.order < 25);
-  document.getElementById('stat-health').classList.toggle('warn', stats.health < 25);
-  document.getElementById('stat-military').classList.toggle('warn', stats.military < 15 && stats.population > 80);
-  document.getElementById('stat-treasury').classList.toggle('warn', stats.treasury < 0);
+  // Warn-color the State pill when things are getting bleak.
+  const warn = stats.fortune < -40;
+  document.getElementById('stat-status').classList.toggle('warn', warn);
 }
 
 function formatPop(n) {
@@ -726,7 +715,9 @@ function draw(dt) {
     ctx.fillRect(Math.floor(b.x + b.w / 2 - 3), Math.floor(b.y), 3, b.h);
     if (b.h > 18 && b.w > 8) {
       ctx.fillStyle = '#ffee88';
-      ctx.globalAlpha = Math.min(0.85, 0.3 + stats.order / 200 + stats.tech / 200);
+      // Window lights brighten when fortune is positive and tech is climbing.
+      const lightLevel = Math.max(0, stats.fortune) / 200 + stats.tech / 200;
+      ctx.globalAlpha = Math.min(0.85, 0.3 + lightLevel);
       for (let wy = b.y + 4; wy < b.y + b.h - 4; wy += 6) {
         for (let wx = b.x - b.w / 2 + 2; wx < b.x + b.w / 2 - 4; wx += 6) {
           if (visualRng() < 0.55) ctx.fillRect(Math.floor(wx), Math.floor(wy), 2, 2);
@@ -779,8 +770,8 @@ function draw(dt) {
     ctx.globalAlpha = 1;
   });
 
-  // Low-stat overlay tint (red flicker when ANY hard-fail stat is critical).
-  if (stats.food < 20 || stats.order < 20 || stats.health < 20 || stats.treasury < -25) {
+  // Red overlay tint when fortune is critical.
+  if (stats.fortune < -50) {
     ctx.globalAlpha = 0.08 + Math.sin(performance.now() * 0.003) * 0.04;
     ctx.fillStyle = '#ff0000';
     ctx.fillRect(0, 0, W, H);
@@ -812,24 +803,33 @@ function showVerdict(triumph) {
   document.getElementById('verdict-title').textContent = outcome;
   document.getElementById('verdict-civ-name').textContent = civName;
 
+  // Render the chronicle as a flowing saga paragraph rather than a bullet list.
+  // Each chapter contributes one short sentence, joined into a single block.
   const logEl = document.getElementById('verdict-decisions');
   if (chronicle.length === 0) {
-    logEl.innerHTML = '<div class="decision-line">No decisions recorded.</div>';
+    logEl.innerHTML = '<div class="saga-empty">The story ended before it began.</div>';
   } else {
-    logEl.innerHTML = chronicle.map(d =>
-      `<div class="decision-line"><span class="turn-tag">Turn ${d.turn} · ${d.era}</span><br><span class="decision-choice">${escapeHtml(d.choice)}</span><span class="decision-flavor">${escapeHtml(d.flavor)}</span></div>`
-    ).join('');
+    const sentences = chronicle.map(d => {
+      // Strip trailing punctuation from event/flavor before joining so we don't
+      // get "X.. They chose Y..".
+      const stripDot = s => String(s || '').trim().replace(/[.?!]+$/, '');
+      const event  = stripDot(d.event);
+      const flavor = stripDot(d.flavor);
+      return `${event}. They ${verbForChoice(d.choice)} — ${flavor}.`;
+    });
+    const closer = collapseReason
+      ? ` And so, ${collapseReason.charAt(0).toLowerCase()}${collapseReason.slice(1)}`
+      : '';
+    logEl.innerHTML = `<p class="saga-paragraph">${escapeHtml(sentences.join(' '))}${escapeHtml(closer)}</p>`;
   }
 
   const eraIdx = eraIndexFromTech(peakTech);
   const statsEl = document.getElementById('verdict-stats');
   const rows = [
-    ['Turns survived', turnNumber],
+    ['Chapters told',   turnNumber],
     ['Peak population', formatPop(peakPopulation)],
-    ['Peak era', ERAS[eraIdx].name],
-    ['Peak tech', Math.round(peakTech)],
+    ['Reached era',     ERAS[eraIdx].name],
   ];
-  if (collapseReason) rows.push(['Cause', collapseReason]);
   statsEl.innerHTML = rows.map(([k, v]) =>
     `<div><span class="stat-key">${k}</span>${escapeHtml(String(v))}</div>`
   ).join('');
@@ -841,10 +841,19 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Convert the imperative choice label ("Strike The Bargain", "Build The Wall")
+// into a past-tense verb phrase that flows in the saga paragraph
+// ("they struck the bargain", "they built the wall"). We don't try to be
+// linguistically perfect — just lowercase it; the leading "They" reads fine.
+function verbForChoice(label) {
+  const s = String(label || '').trim().toLowerCase();
+  return s ? `chose to ${s}` : 'chose';
+}
+
 // ── Share ─────────────────────────────────────────────────────────────────────
 function share() {
   const eraName = ERAS[eraIndexFromTech(peakTech)].name.toLowerCase();
-  const txt = `${civName} lasted ${turnNumber} turns and reached the ${eraName} before ${collapsed ? 'collapsing' : 'enduring'}. Peak population: ${formatPop(peakPopulation)}. — benlirio.com/apps/grow-my-civilization/`;
+  const txt = `The saga of ${civName} ran ${turnNumber} chapters, reached the ${eraName}, and ended with ${formatPop(peakPopulation)} souls. — benlirio.com/apps/grow-my-civilization/`;
   if (navigator.share) {
     navigator.share({ title: 'Grow My Civilization', text: txt, url: 'https://benlirio.com/apps/grow-my-civilization/' });
   } else {

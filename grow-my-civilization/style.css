@@ -310,7 +310,7 @@ html, body {
 
 #stats-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   row-gap: 10px;
   background: var(--parchment-1);
@@ -395,12 +395,27 @@ html, body {
 #decision-era-tag::before { content: '— '; }
 #decision-era-tag::after  { content: ' —'; }
 
+#story-so-far {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-style: italic;
+  text-align: center;
+  line-height: 1.45;
+  padding: 0 6px;
+  margin-top: -4px;
+  opacity: 0.85;
+}
+
+#story-so-far::before { content: '“'; opacity: 0.6; }
+#story-so-far::after  { content: '”'; opacity: 0.6; }
+
 #decision-event {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 500;
   color: var(--ink);
-  line-height: 1.4;
+  line-height: 1.45;
   text-align: center;
   padding: 0 4px;
   font-style: italic;
@@ -557,48 +572,31 @@ html, body {
 #verdict-decisions-label::after  { content: ' —'; }
 
 #verdict-decisions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   border: 1px solid var(--rule);
-  padding: 12px 14px;
-  max-height: 260px;
+  padding: 16px 18px;
+  max-height: 320px;
   overflow-y: auto;
   text-align: left;
   background: var(--parchment-2);
 }
 
-.decision-line {
+.saga-paragraph {
   font-family: 'EB Garamond', Georgia, serif;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
-  line-height: 1.5;
-  padding-bottom: 6px;
-  border-bottom: 1px dotted rgba(180, 140, 80, 0.4);
+  line-height: 1.7;
+  text-align: left;
+  margin: 0;
+  text-indent: 1.4em;
 }
 
-.decision-line:last-child { border-bottom: none; }
-
-.decision-line .turn-tag {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 11px;
+.saga-empty {
+  font-family: 'EB Garamond', Georgia, serif;
   font-style: italic;
   color: var(--ink-soft);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.decision-choice {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-weight: 700;
-  color: var(--illum-red);
-}
-
-.decision-flavor {
-  display: block;
-  margin-top: 2px;
-  color: var(--ink-faded);
-  font-style: italic;
+  text-align: center;
+  font-size: 13px;
+  padding: 8px 0;
 }
 
 #verdict-stats {
