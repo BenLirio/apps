@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catch of the Day — Lake Verity Survey</title>
+  <meta property="og:title" content="Catch of the Day — Lake Verity Survey">
+  <meta property="og:description" content="Cast, fight, release. The Lake Verity Survey will catalogue your specimen.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/catch-of-the-day/">
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="stage">
+    <!-- INTRO -->
+    <section id="intro" class="screen">
+      <div class="paper-frame intro-frame">
+        <div class="masthead">
+          <div class="masthead-line"></div>
+          <h1>Lake Verity Survey</h1>
+          <h2>Field Station No. 7 &middot; Vol. III &middot; 1834</h2>
+          <div class="masthead-line"></div>
+        </div>
+
+        <p class="dedication">
+          A naturalist's survey of the lake, conducted by tap and patience.
+          Cast the line. Endure the struggle. Bring the specimen to plate.
+        </p>
+
+        <ul class="protocol">
+          <li><span class="numeral">I.</span> Hold to draw the rod. Release at strength.</li>
+          <li><span class="numeral">II.</span> Tap to give slack when the line strains.</li>
+          <li><span class="numeral">III.</span> Mistime twice and the specimen flees.</li>
+        </ul>
+
+        <button id="begin-btn" class="quill-btn">Begin the Survey</button>
+        <p class="footnote">No bait will be wasted. The Survey records every cast.</p>
+      </div>
+    </section>
+
+    <!-- GAME -->
+    <section id="game" class="screen hidden">
+      <div class="game-shell">
+        <div class="hud">
+          <div class="hud-cell">
+            <div class="hud-label">Phase</div>
+            <div class="hud-val" id="phase-label">Cast</div>
+          </div>
+          <div class="hud-cell">
+            <div class="hud-label">Tension</div>
+            <div class="tension-bar"><div class="tension-fill" id="tension-fill"></div><div class="tension-band" id="tension-band"></div></div>
+          </div>
+          <div class="hud-cell">
+            <div class="hud-label">Strikes</div>
+            <div class="hud-val"><span id="strike-pips">&middot; &middot;</span></div>
+          </div>
+        </div>
+        <canvas id="lake" width="350" height="450"></canvas>
+        <div class="prompt-line" id="prompt-line">Hold the rod. Release with strength.</div>
+        <button id="action-btn" class="rod-btn">HOLD TO CAST</button>
+      </div>
+    </section>
+
+    <!-- LOADING (between game and reveal) -->
+    <section id="loading" class="screen hidden">
+      <div class="paper-frame loading-frame">
+        <div class="ink-quill"></div>
+        <p class="loading-copy" id="loading-copy">Pressing the specimen between sheets of vellum&hellip;</p>
+      </div>
+    </section>
+
+    <!-- REVEAL -->
+    <section id="reveal" class="screen hidden">
+      <div class="plate-wrap">
+        <article class="field-plate" id="plate">
+          <header class="plate-header">
+            <div class="plate-line"></div>
+            <div class="plate-meta">
+              <span class="meta-left">Lake Verity Survey</span>
+              <span class="meta-right">Plate <span id="plate-num">VII</span></span>
+            </div>
+            <h3 class="plate-title" id="plate-title">Glass-Toothed Drift Carp</h3>
+            <div class="latin" id="plate-latin"><i>Cyprinus vitreodens</i></div>
+            <div class="plate-line"></div>
+          </header>
+
+          <figure class="plate-figure">
+            <div class="exhibit-tag">Exhibit A</div>
+            <div class="image-frame" id="image-frame">
+              <div class="image-wash"></div>
+              <img id="fish-img" alt="Field-plate illustration of the catch" />
+              <svg id="fallback-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" style="display:none">
+                <rect width="400" height="400" fill="#e8dcc1"/>
+                <g stroke="#3a2614" stroke-width="1.5" fill="none">
+                  <path d="M80 200 Q200 130 320 200 Q200 270 80 200 Z" fill="#c8b58a"/>
+                  <path d="M320 200 L370 160 L370 240 Z" fill="#b8a578"/>
+                  <circle cx="120" cy="195" r="6" fill="#3a2614"/>
+                  <circle cx="120" cy="195" r="2" fill="#fff"/>
+                  <path d="M100 200 Q200 180 300 200" />
+                  <path d="M100 210 Q200 220 300 210" />
+                  <path d="M150 175 L160 195 M170 170 L180 200 M190 170 L200 200 M210 175 L220 195 M230 180 L240 200"/>
+                </g>
+                <text x="200" y="370" font-family="serif" font-style="italic" text-anchor="middle" fill="#3a2614" font-size="14">— specimen unrendered —</text>
+              </svg>
+              <div class="corner tl"></div><div class="corner tr"></div>
+              <div class="corner bl"></div><div class="corner br"></div>
+            </div>
+            <figcaption class="caption-strip" id="caption-strip">
+              fig. i. — collected by tap and patience, this date.
+            </figcaption>
+          </figure>
+
+          <section class="plate-body">
+            <div class="row">
+              <div class="col">
+                <div class="col-label">Behavioural Note</div>
+                <p class="body-prose" id="behavioral-note">A vigorous specimen, retrieved without ceremony.</p>
+              </div>
+            </div>
+
+            <div class="row two-col">
+              <div class="col">
+                <div class="col-label">Field Measurements</div>
+                <table class="metrics" id="metrics-table"></table>
+              </div>
+              <div class="col">
+                <div class="col-label">Status</div>
+                <div class="status-stamp" id="status-stamp">COMMON</div>
+                <div class="col-label" style="margin-top:14px">Habitat</div>
+                <p class="body-prose tight" id="habitat-note">Verity Basin, eastern shallows.</p>
+              </div>
+            </div>
+
+            <blockquote class="naturalist-quote" id="quote">
+              &ldquo;The fish, when held aloft, regarded me with the practiced indifference of one who has seen worse weather.&rdquo;
+              <cite>&mdash; Dr. E. Halverston, Verity Survey, 1834</cite>
+            </blockquote>
+          </section>
+
+          <footer class="plate-footer">
+            <div class="plate-line"></div>
+            <div class="footer-row">
+              <span class="footer-cell">Cat. No. <span id="cat-no">VS-0000</span></span>
+              <span class="footer-cell">Logged: <span id="log-date"></span></span>
+              <span class="footer-cell">Verity Survey, Field Station No. 7</span>
+            </div>
+          </footer>
+        </article>
+      </div>
+
+      <div class="reveal-actions">
+        <button id="share-btn" class="quill-btn" onclick="share()">Share this Plate</button>
+        <button id="recast-btn" class="quill-btn ghost">Cast Again</button>
+      </div>
+
+      <div id="share" style="display:none"></div>
+    </section>
+  </main>
+</body>
+</html>
