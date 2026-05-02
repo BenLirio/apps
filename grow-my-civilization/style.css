@@ -26,16 +26,21 @@
 }
 
 /* Match body bg on html so overscroll on mobile doesn't flash a different
-   color through. Two things to keep in mind on mobile Chrome:
+   color through. Three things to keep in mind on mobile Chrome / iOS Safari:
    (1) Don't put `overflow-x: hidden` or `display: flex` on html/body — that
        combo (with min-height: 100vh) triggers a scroll-to-top jump when
        reaching the bottom of the page. Center #app with margin: 0 auto.
-   (2) Use `100dvh` (dynamic viewport) instead of `100vh` for the body
-       min-height — Chrome's URL bar collapses as the user scrolls down, and
-       100vh is pinned to the *expanded* viewport, so when the bar hides the
-       body grows by ~50px and the browser yanks scroll position to compensate
-       (the user reads this as a "jump up" when reaching the bottom).
-       100dvh tracks the current visible viewport, so no reflow.
+   (2) Use `100svh` (small viewport height) for body min-height. The history:
+       100vh pins to the expanded viewport → URL-bar collapse causes reflow
+       and a scroll-jump. 100dvh tracks the current viewport → URL bar can
+       get *stuck mid-collapse* because the body resizes WITH the bar's
+       transition, removing the scroll signal that would push the bar to a
+       fully-expanded or fully-collapsed end state. 100svh decouples body
+       from the URL bar entirely: body always matches the URL-bar-visible
+       size, never reflows on bar transitions, and the URL bar is free to
+       settle at whatever state it likes without a feedback loop. If the bar
+       happens to collapse, the html background (matched to body) fills the
+       extra visible area below.
    (3) `overscroll-behavior-y: none` kills the rubber-band bounce at the
        bottom which can also visibly snap the page on overscroll. */
 html, body {
@@ -55,7 +60,7 @@ body {
   color: var(--ink);
   font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
   font-size: 18px;
-  min-height: 100dvh;
+  min-height: 100svh;
 }
 
 #app {
