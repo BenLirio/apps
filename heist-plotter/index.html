@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heist Plotter — Bureau of Notable Capers</title>
+  <meta property="og:title" content="Heist Plotter — Bureau of Notable Capers">
+  <meta property="og:description" content="Plot your route in five marks. The Bureau will issue your after-action dossier.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/heist-plotter/">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Special+Elite&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="plotter-screen" class="screen">
+    <header class="brief">
+      <div class="bureau-mark">BUREAU OF NOTABLE CAPERS</div>
+      <h1 class="case-title">CASE INTAKE FORM</h1>
+      <p class="brief-copy">The Bureau of Notable Capers requires a route on file. Plot your approach in five marks.</p>
+      <div class="floor-label" id="floor-label">FACILITY: —</div>
+    </header>
+
+    <div class="legend">
+      <div class="legend-row">
+        <span class="legend-num">1</span><span>ENTRY</span>
+        <span class="legend-num">2</span><span>DISTRACTION</span>
+        <span class="legend-num">3</span><span>TARGET</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-num">4</span><span>SWITCH-BACK</span>
+        <span class="legend-num">5</span><span>EXFIL</span>
+      </div>
+    </div>
+
+    <div class="grid-wrap">
+      <svg id="floor" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet" aria-label="floor plan"></svg>
+    </div>
+
+    <div class="next-slot" id="next-slot">NEXT MARK: <strong>1 — ENTRY</strong></div>
+
+    <div class="actions">
+      <button id="reset-btn" class="btn btn-ghost" type="button">RESET</button>
+      <button id="file-btn" class="btn btn-primary" type="button" disabled>FILE REPORT</button>
+    </div>
+  </div>
+
+  <div id="loading-screen" class="screen hidden">
+    <div class="loading-stamp">filing case with the Bureau...</div>
+    <div class="loading-typewriter"></div>
+  </div>
+
+  <div id="report-screen" class="screen hidden">
+    <article class="dossier" id="dossier">
+      <div class="dossier-paper-stain"></div>
+      <header class="dossier-head">
+        <div class="dossier-bureau">BUREAU OF NOTABLE CAPERS</div>
+        <div class="dossier-title">AFTER-ACTION DOSSIER</div>
+        <div class="dossier-meta">
+          <span id="case-no">CASE FILE NO. —</span>
+          <span id="case-date">—</span>
+        </div>
+      </header>
+
+      <section class="alias-block">
+        <div class="field-label">OPERATIVE ALIAS</div>
+        <div class="alias-value" id="alias-value">—</div>
+      </section>
+
+      <section class="exhibit">
+        <div class="field-label">EXHIBIT A — PLAN OF APPROACH</div>
+        <div class="exhibit-frame">
+          <svg id="exhibit-svg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div class="exhibit-caption" id="exhibit-caption">—</div>
+      </section>
+
+      <section class="haul-block">
+        <div class="field-label">TARGET HAUL</div>
+        <div class="haul-value" id="haul-value">$0</div>
+      </section>
+
+      <section class="accomplices">
+        <div class="field-label">ACCOMPLICES OF RECORD</div>
+        <ul id="accomplice-list">
+          <li>—</li>
+          <li>—</li>
+          <li>—</li>
+        </ul>
+      </section>
+
+      <section class="assessment">
+        <div class="field-label">ASSESSMENT</div>
+        <p id="assessment-text">—</p>
+      </section>
+
+      <div class="stamp" id="verdict-stamp">CASE: —</div>
+      <div class="redact-line"></div>
+    </article>
+
+    <div id="share">
+      <button onclick="share()" class="btn btn-primary share-btn">SHARE THIS DOSSIER</button>
+      <button id="replot-btn" class="btn btn-ghost" type="button">PLOT A NEW JOB</button>
+    </div>
+  </div>
+</body>
+</html>
