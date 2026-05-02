@@ -23,7 +23,10 @@ html, body {
   color: var(--cream);
   font-family: 'VT323', 'Courier New', monospace;
   min-height: 100vh;
+  /* `clip` avoids an iOS Safari scroll-jump bug that `hidden` can trigger
+     when content reflows mid-scroll; `hidden` stays as the fallback. */
   overflow-x: hidden;
+  overflow-x: clip;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   -webkit-font-smoothing: none;
@@ -50,25 +53,25 @@ body::before {
 #stage {
   max-width: 420px;
   margin: 0 auto;
-  padding: 18px 14px 40px;
+  padding: 12px 14px 28px;
   position: relative;
 }
 
 #intro .lede {
   font-family: 'Press Start 2P', 'VT323', monospace;
-  font-size: 11px;
-  line-height: 1.7;
+  font-size: 10px;
+  line-height: 1.55;
   letter-spacing: 0.5px;
   color: var(--lamp);
   text-align: center;
-  margin: 6px 0 18px;
+  margin: 4px 0 12px;
   text-shadow: 2px 2px 0 var(--ink);
 }
 
 /* ---------- MACHINE ---------- */
 
 #machine {
-  width: 300px;
+  width: 280px;
   margin: 0 auto;
   background: var(--red);
   border: 4px solid var(--ink);
@@ -76,7 +79,7 @@ body::before {
     inset -4px -8px 0 var(--red-dk),
     inset 4px 4px 0 #e05a52,
     6px 6px 0 var(--shadow);
-  padding: 10px;
+  padding: 8px;
   position: relative;
 }
 
@@ -113,10 +116,10 @@ body::before {
 /* Window */
 .m-window {
   position: relative;
-  height: 170px;
+  height: 150px;
   background: linear-gradient(180deg, #1a2e3a 0%, #0d1a22 100%);
   border: 3px solid var(--ink);
-  padding: 10px;
+  padding: 8px;
   overflow: hidden;
 }
 
@@ -276,10 +279,10 @@ body::before {
 
 /* Chute */
 .m-chute {
-  margin-top: 10px;
+  margin-top: 8px;
   background: var(--ink);
   border: 3px solid #000;
-  height: 64px;
+  height: 56px;
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 6px 0 #000;
@@ -331,11 +334,11 @@ body::before {
 /* ---------- COIN TRAY ---------- */
 
 .coin-tray {
-  margin: 22px auto 0;
+  margin: 14px auto 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .coin {
@@ -580,9 +583,9 @@ body::before {
 
 .foot {
   text-align: center;
-  margin-top: 30px;
+  margin-top: 18px;
   opacity: 0.55;
-  font-size: 16px;
+  font-size: 15px;
 }
 .foot p { margin: 0; }
 
@@ -591,7 +594,7 @@ body::before {
 /* ---------- narrow screens ---------- */
 
 @media (max-width: 360px) {
-  #machine { width: 272px; }
+  #machine { width: 264px; }
   .can { width: 34px; height: 58px; }
   .big-button { width: 62px; height: 62px; }
 }

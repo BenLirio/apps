@@ -504,22 +504,32 @@ function wireCoin() {
   });
 
   // Pointer-based drag (touch + mouse fallback)
-  let dragging = false;
+  // active = pointer is down on the coin
+  // phase  = 'idle' (no commitment yet) | 'dragging' (we own the pointer, block scroll)
+  // Without the idle phase, a finger that lands on the coin while trying to
+  // scroll the page would immediately capture the pointer and block scroll.
+  let active = false;
+  let phase = 'idle';
   let startX = 0, startY = 0;
-  let ghost = null;
+  const COMMIT_THRESHOLD = 8;
 
   coin.addEventListener('pointerdown', (e) => {
     if (coinInserted) return;
-    dragging = true;
+    active = true;
+    phase = 'idle';
     startX = e.clientX; startY = e.clientY;
-    coin.setPointerCapture(e.pointerId);
-    coin.classList.add('dragging');
   });
   coin.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
+    if (!active) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
+    if (phase === 'idle') {
+      if (Math.sqrt(dx*dx + dy*dy) < COMMIT_THRESHOLD) return;
+      phase = 'dragging';
+      try { coin.setPointerCapture(e.pointerId); } catch (_) {}
+      coin.classList.add('dragging');
+    }
+    e.preventDefault();
     coin.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
 
     // check if over the slot
@@ -534,20 +544,28 @@ function wireCoin() {
     }
   });
   coin.addEventListener('pointerup', (e) => {
-    if (!dragging) return;
-    dragging = false;
+    if (!active) return;
+    const wasDragging = phase === 'dragging';
+    active = false;
+    phase = 'idle';
     coin.classList.remove('dragging');
-    const slotRect = slot.getBoundingClientRect();
-    const over = (
-      e.clientX >= slotRect.left && e.clientX <= slotRect.right &&
-      e.clientY >= slotRect.top  && e.clientY <= slotRect.bottom
-    );
-    coin.style.transform = '';
-    slot.classList.remove('drag-over');
-    if (over) insertCoin();
+    if (wasDragging) {
+      try { coin.releasePointerCapture(e.pointerId); } catch (_) {}
+      const slotRect = slot.getBoundingClientRect();
+      const over = (
+        e.clientX >= slotRect.left && e.clientX <= slotRect.right &&
+        e.clientY >= slotRect.top  && e.clientY <= slotRect.bottom
+      );
+      coin.style.transform = '';
+      slot.classList.remove('drag-over');
+      if (over) insertCoin();
+    }
+    // If we never committed to dragging, fall through — the click handler
+    // below will still fire and offer the tap-then-tap-slot fallback.
   });
   coin.addEventListener('pointercancel', () => {
-    dragging = false;
+    active = false;
+    phase = 'idle';
     coin.classList.remove('dragging');
     coin.style.transform = '';
     slot.classList.remove('drag-over');
@@ -649,41 +667,60 @@ function dropCan() {
 
 function wirePulltab() {
   const tab = els.pulltab;
-  let dragging = false;
+  // Drag state: 'idle' → user touched but hasn't moved enough to commit
+  // 'dragging' → user is actively pulling (we own the pointer + block scroll)
+  let phase = 'idle';
+  let active = false;
   let startX = 0, startY = 0;
   let moved = 0;
+  // Only commit to a drag (and start blocking scroll) once the user has
+  // moved this far. Otherwise a brush-by touch while scrolling past the
+  // tab would hijack the gesture and pop the page around.
+  const COMMIT_THRESHOLD = 8;
 
   tab.addEventListener('pointerdown', (e) => {
-    dragging = true;
+    active = true;
+    phase = 'idle';
     startX = e.clientX; startY = e.clientY;
     moved = 0;
-    try { tab.setPointerCapture(e.pointerId); } catch (_) {}
   });
   tab.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
+    if (!active) return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
     moved = Math.sqrt(dx*dx + dy*dy);
+    if (phase === 'idle') {
+      if (moved < COMMIT_THRESHOLD) return;
+      phase = 'dragging';
+      try { tab.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    e.preventDefault();
     tab.style.transform = 'translate(calc(-50% + ' + dx + 'px), ' + dy + 'px)';
     if (moved > 40) {
-      dragging = false;
+      active = false;
+      phase = 'idle';
       try { tab.releasePointerCapture(e.pointerId); } catch (_) {}
       peelOpen();
     }
   });
-  tab.addEventListener('pointerup', () => {
-    if (!dragging) return;
-    dragging = false;
-    if (moved < 15) {
-      // treated as a tap — allow tap-to-peel as a robust fallback
+  tab.addEventListener('pointerup', (e) => {
+    if (!active) return;
+    const wasDragging = phase === 'dragging';
+    active = false;
+    phase = 'idle';
+    if (wasDragging) {
+      try { tab.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    if (moved < COMMIT_THRESHOLD) {
+      // Treat as a tap — allow tap-to-peel as a robust fallback.
       peelOpen();
     } else if (moved < 40) {
       tab.style.transform = 'translateX(-50%)';
     }
   });
   tab.addEventListener('pointercancel', () => {
-    dragging = false;
+    active = false;
+    phase = 'idle';
     tab.style.transform = 'translateX(-50%)';
   });
 
@@ -719,9 +756,15 @@ function showPeel(canNum) {
   els.pulltab.style.transform = 'translateX(-50%)';
   els.fortunePaper.classList.remove('revealed');
 
-  // Hide machine interaction elements, show peel screen
+  // Hide the machine + coin tray + intro so the reveal is the whole screen.
+  // Without this, the peel screen renders below a tall vending machine and
+  // mobile users have to scroll past it to find their fortune.
   hideAllScreens();
+  document.getElementById('machine').style.display = 'none';
+  els.coinTray.style.display = 'none';
+  if (els.introLede) els.introLede.style.display = 'none';
   els.peelScreen.classList.remove('hidden');
+  jumpToTop();
 
   // Mark as opened + persist
   if (state.opened.indexOf(canNum) === -1) {
@@ -731,6 +774,16 @@ function showPeel(canNum) {
 
   // Update URL fragment to reflect the can the user drew (for sharing)
   setFragmentForToday(canNum);
+}
+
+// Jump to the top of the document at screen transitions so the user
+// doesn't get stranded on a screen they were scrolled past.
+function jumpToTop() {
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  } catch (_) {
+    window.scrollTo(0, 0);
+  }
 }
 
 function wireBack() {
@@ -749,6 +802,7 @@ function wireBack() {
         els.share.style.display = '';
       }
     }
+    jumpToTop();
   });
 }
 
