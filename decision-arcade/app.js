@@ -1,34 +1,38 @@
 // Decision Arcade — 5 picture rounds. Pick whichever picture hits.
 // The clock keeps you honest. Picks aggregate into 3 personality axes.
 //
-// Each round: 2 image options, no text. Pictures are intentionally abstract
-// and aesthetic — vibe-picks rather than morality prompts.
+// Each round: 2 image options, no text. Pictures are intentionally
+// concrete-but-evocative — vibe-picks rather than morality prompts.
+// First 3 pairs each carry a strong, distinct visual world (interior cozy /
+// open road, sharp geometry / soft watercolor, single chair / shared table)
+// so the contrast lands at a glance instead of all reading as "small bright
+// thing in the dark."
 //
 // Axes (each gets multiple rounds for finer scoring):
-//   0  Practical  ←→  Adventurous   (candle/meteor, papermap/paperplane)
-//   1  Logic      ←→  Feeling       (icecube/inkdrop, cairn/redthread)
-//   2  Solitary   ←→  Connected     (lonetree/campfire)
+//   0  Practical  ←→  Adventurous   (steaming-mug/open-road, papermap/paperplane)
+//   1  Logic      ←→  Feeling       (blueprint/watercolor-bleed, cairn/redthread)
+//   2  Solitary   ←→  Connected     (empty-chair/string-lights)
 
 const ROUNDS = [
   { axis: 0, options: [
-    { img: 'images/candle.png',     alt: 'a single candle flame in the dark', v: 0.05 },
-    { img: 'images/meteor.png',     alt: 'a shooting star across the night sky', v: 0.95 },
+    { img: 'images/steaming-mug.png',     alt: 'a steaming ceramic mug on a wooden table by a rainy window', v: 0.05 },
+    { img: 'images/open-road.png',        alt: 'an empty winding road vanishing into misty mountains at dawn', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/icecube.png',    alt: 'a clear ice cube on a dark surface', v: 0.05 },
-    { img: 'images/inkdrop.png',    alt: 'a drop of ink blooming in water', v: 0.95 },
+    { img: 'images/blueprint.png',        alt: 'an architectural blueprint with a brass drafting compass', v: 0.05 },
+    { img: 'images/watercolor-bleed.png', alt: 'warm watercolor pigments bleeding across white paper', v: 0.95 },
   ]},
   { axis: 2, options: [
-    { img: 'images/lonetree.png',   alt: 'a single tree on a hill at twilight', v: 0.05 },
-    { img: 'images/campfire.png',   alt: 'a small campfire with rising sparks', v: 0.95 },
+    { img: 'images/empty-chair.png',      alt: 'a single empty armchair facing a sunlit window', v: 0.05 },
+    { img: 'images/string-lights.png',    alt: 'an outdoor dinner table lit by crisscrossing string lights', v: 0.95 },
   ]},
   { axis: 0, options: [
-    { img: 'images/papermap.png',   alt: 'a folded paper map on a wooden table', v: 0.05 },
-    { img: 'images/paperplane.png', alt: 'a paper airplane mid-flight at dusk', v: 0.95 },
+    { img: 'images/papermap.png',         alt: 'a folded paper map on a wooden table', v: 0.05 },
+    { img: 'images/paperplane.png',       alt: 'a paper airplane mid-flight at dusk', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/cairn.png',      alt: 'a balanced stack of river stones', v: 0.05 },
-    { img: 'images/redthread.png',  alt: 'a tangled knot of red thread', v: 0.95 },
+    { img: 'images/cairn.png',            alt: 'a balanced stack of river stones', v: 0.05 },
+    { img: 'images/redthread.png',        alt: 'a tangled knot of red thread', v: 0.95 },
   ]},
 ];
 
