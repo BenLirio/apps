@@ -60,6 +60,8 @@
       uploadElementData();
       uploadPalette();
       uploadReactions();
+      uploadTraits();
+      uploadCellular();
     }
   }
 
@@ -117,11 +119,16 @@
   // GPU resources
   let stateTexA = null, stateTexB = null;     // ping-pong RGBA8UI grids
   let stateFboA = null, stateFboB = null;
+  let tempTexA = null, tempTexB = null;       // ping-pong RGBA8UI temperature (R=temp)
+  let tempFboA = null, tempFboB = null;
   let elementDataTex = null;                   // 256x1 RGBA8UI: kind, density, paramA, paramB
   let paletteTex = null;                       // 256x4 RGBA8: 4 color variants per element
   let reactionsTex = null;                     // 256x3 RGBA8UI: per-id reaction slots
+  let traitsTex = null;                        // 256x2 RGBA8UI: per-id trait slots
+  let cellularDataTex = null;                  // 256x2 RGBA8UI: per-id cellular CA params
   let progSim = null, progPaint = null, progRender = null, progClear = null, progReact = null;
   let progContact = null, progBlast = null;
+  let progHeat = null, progIgnition = null, progCellular = null;
   let quadVao = null;
   let frameCounter = 0;
   // Settle frames live in the B channel of state texture for explosives. We
@@ -205,15 +212,26 @@
     if (stateTexB) gl.deleteTexture(stateTexB);
     if (stateFboA) gl.deleteFramebuffer(stateFboA);
     if (stateFboB) gl.deleteFramebuffer(stateFboB);
+    if (tempTexA)  gl.deleteTexture(tempTexA);
+    if (tempTexB)  gl.deleteTexture(tempTexB);
+    if (tempFboA)  gl.deleteFramebuffer(tempFboA);
+    if (tempFboB)  gl.deleteFramebuffer(tempFboB);
 
     stateTexA = createUI8Texture(COLS, ROWS);
     stateTexB = createUI8Texture(COLS, ROWS);
     stateFboA = makeFbo(stateTexA);
     stateFboB = makeFbo(stateTexB);
 
-    // Clear both to empty
+    tempTexA = createUI8Texture(COLS, ROWS);
+    tempTexB = createUI8Texture(COLS, ROWS);
+    tempFboA = makeFbo(tempTexA);
+    tempFboB = makeFbo(tempTexB);
+
+    // Clear state to empty, temperature to ambient (30).
     clearStateTo(stateFboA, 0, 0, 0, 0);
     clearStateTo(stateFboB, 0, 0, 0, 0);
+    clearStateTo(tempFboA, 30, 0, 0, 0);
+    clearStateTo(tempFboB, 30, 0, 0, 0);
   }
 
   // ── GL helpers ─────────────────────────────────────────────────────────────
@@ -681,6 +699,216 @@
   // cell goes empty. Each fragment writes only itself, so the "neighbor changes
   // me" inversion is the only fragment-shader-friendly formulation of the CPU
   // sim's "I change my neighbors" rule. Reactions run once per frame.
+  // Heat shader: each cell's new temperature is a conductivity-weighted blend
+  // of (its previous temp, the average of its 8 neighbors' temps, the trait
+  // emitTemp of its element kind, and ambient 30). Hot elements force their
+  // emission temp; cold elements pull toward theirs. Cells decay slightly
+  // toward ambient so heat doesn't accumulate forever.
+  const FS_HEAT = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uTemp;
+    uniform highp usampler2D uTraits;
+    uniform ivec2 uSize;
+
+    struct TraitInfo {
+      uint emitTemp;
+      uint ignitionPoint;
+      uint flammability;
+      uint conductivity;
+      uint corrosivity;
+      uint hardness;
+    };
+    TraitInfo getTraits(uint id) {
+      uvec4 r0 = texelFetch(uTraits, ivec2(int(id), 0), 0);
+      uvec4 r1 = texelFetch(uTraits, ivec2(int(id), 1), 0);
+      return TraitInfo(r0.r, r0.g, r0.b, r0.a, r1.r, r1.g);
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uint selfId = texelFetch(uState, px, 0).r;
+      uint cur = texelFetch(uTemp, px, 0).r;
+      // Average neighbor temperatures.
+      uint sum = 0u;
+      uint count = 0u;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) continue;
+          sum += texelFetch(uTemp, np, 0).r;
+          count++;
+        }
+      }
+      float avg = count > 0u ? float(sum) / float(count) : float(cur);
+      float curF = float(cur);
+
+      // Diffusion strength scales with self's conductivity.
+      TraitInfo t = (selfId == 0u) ? TraitInfo(30u, 255u, 0u, 100u, 0u, 0u) : getTraits(selfId);
+      float k = float(t.conductivity) / 255.0;
+      float newT = mix(curF, avg, clamp(k * 0.5, 0.0, 0.5));
+
+      // Element-driven emission: hot/cold cells pull toward emitTemp.
+      float emit = float(t.emitTemp);
+      if (emit > newT) newT = mix(newT, emit, 0.30);
+      else             newT = mix(newT, emit, 0.05);
+
+      // Slow decay toward ambient (30) so transient heat dissipates.
+      newT = mix(newT, 30.0, 0.015);
+
+      uint outT = uint(clamp(newT, 0.0, 255.0));
+      outColor = uvec4(outT, 0u, 0u, 0u);
+    }
+  `;
+
+  // Ignition shader: cells with non-zero flammability whose temperature is
+  // above their ignitionPoint roll a per-frame chance (= flammability/255)
+  // and convert to fire (if a "fire" element is registered) or to empty.
+  // Ignition-prone cells write themselves out as the "fire" id passed via
+  // uniform; non-ignitable cells pass through unchanged.
+  const FS_IGNITION = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uTemp;
+    uniform highp usampler2D uTraits;
+    uniform ivec2 uSize;
+    uniform int uFrame;
+    uniform uint uFireId;   // id to convert to when igniting; 0 = vanish
+
+    uint hash3(uvec3 v) {
+      v = v * 1664525u + 1013904223u;
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      v ^= (v >> 16u);
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      return v.x;
+    }
+    struct TraitInfo {
+      uint emitTemp;
+      uint ignitionPoint;
+      uint flammability;
+      uint conductivity;
+      uint corrosivity;
+      uint hardness;
+    };
+    TraitInfo getTraits(uint id) {
+      uvec4 r0 = texelFetch(uTraits, ivec2(int(id), 0), 0);
+      uvec4 r1 = texelFetch(uTraits, ivec2(int(id), 1), 0);
+      return TraitInfo(r0.r, r0.g, r0.b, r0.a, r1.r, r1.g);
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      if (self.r == 0u) { outColor = self; return; }
+      TraitInfo t = getTraits(self.r);
+      if (t.flammability == 0u) { outColor = self; return; }
+      uint temp = texelFetch(uTemp, px, 0).r;
+      if (temp < t.ignitionPoint) { outColor = self; return; }
+      // Roll
+      uint h = hash3(uvec3(uint(px.x) * 1009u + 7u,
+                           uint(px.y) * 31u  + 13u,
+                           uint(uFrame) * 41u + 3u));
+      if ((h & 0xFFu) >= t.flammability) { outColor = self; return; }
+      // Ignite: become fire if registered, else vanish.
+      if (uFireId == 0u) {
+        outColor = uvec4(0u);
+      } else {
+        uint v = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame) + 1234u)) & 3u;
+        outColor = uvec4(uFireId, v, 0u, 0u);
+      }
+    }
+  `;
+
+  // Cellular CA shader. Run once per frame per cellular element (gated by
+  // cellularTick on the JS side). For each cell, count neighbors that match
+  // the cellular id OR any of its birthFrom ids. If the cell is the cellular
+  // id, apply survive rule with surviveChance gate. If empty, apply born
+  // rule with growChance gate. Other cells pass through unchanged.
+  const FS_CELLULAR = `#version 300 es
+    precision highp float; precision highp int;
+    in vec2 vUv;
+    out uvec4 outColor;
+    uniform highp usampler2D uState;
+    uniform highp usampler2D uCellularData;  // 256x2: row0=(bornLo,surviveLo,growChance,surviveChance), row1=(extras,bF0,bF1,bF2)
+    uniform ivec2 uSize;
+    uniform uint uCellularId;
+    uniform int uFrame;
+
+    uint hash3(uvec3 v) {
+      v = v * 1664525u + 1013904223u;
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      v ^= (v >> 16u);
+      v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+      return v.x;
+    }
+
+    void main() {
+      ivec2 px = ivec2(gl_FragCoord.xy);
+      uvec4 self = texelFetch(uState, px, 0);
+      bool selfIsThis  = (self.r == uCellularId);
+      bool selfIsEmpty = (self.r == 0u);
+      if (!selfIsThis && !selfIsEmpty) { outColor = self; return; }
+
+      // Decode cellular params for uCellularId.
+      uvec4 cd0 = texelFetch(uCellularData, ivec2(int(uCellularId), 0), 0);
+      uvec4 cd1 = texelFetch(uCellularData, ivec2(int(uCellularId), 1), 0);
+      uint bornMask    = cd0.r | ((cd1.r & 1u) << 8);
+      uint surviveMask = cd0.g | ((cd1.r & 2u) << 7);
+      uint growChance  = cd0.b;
+      uint survChance  = cd0.a;
+      uint bF0 = cd1.g;
+      uint bF1 = cd1.b;
+      uint bF2 = cd1.a;
+
+      // Count neighbors that count as "alive" for this cellular element.
+      uint nCount = 0u;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          ivec2 np = px + ivec2(dx, dy);
+          if (np.x < 0 || np.y < 0 || np.x >= uSize.x || np.y >= uSize.y) continue;
+          uint nId = texelFetch(uState, np, 0).r;
+          if (nId == 0u) continue;
+          if (nId == uCellularId
+              || (bF0 != 0u && nId == bF0)
+              || (bF1 != 0u && nId == bF1)
+              || (bF2 != 0u && nId == bF2)) {
+            nCount++;
+          }
+        }
+      }
+      if (nCount > 8u) nCount = 8u;
+      uint maskBit = 1u << nCount;
+
+      uint h = hash3(uvec3(uint(px.x), uint(px.y), uint(uFrame)));
+      if (selfIsThis) {
+        bool survives = (surviveMask & maskBit) != 0u;
+        if (!survives) {
+          // Stochastic death gate: surviveChance = chance to escape death.
+          uint h2 = (h >> 8) & 0xFFu;
+          if (h2 >= survChance) { outColor = uvec4(0u); return; }
+        }
+        outColor = self;
+        return;
+      }
+      // self is empty: maybe birth.
+      if ((bornMask & maskBit) != 0u) {
+        uint h3 = h & 0xFFu;
+        if (h3 < growChance) {
+          uint v = (h >> 16) & 3u;
+          outColor = uvec4(uCellularId, v, 0u, 0u);
+          return;
+        }
+      }
+      outColor = self;
+    }
+  `;
+
   const FS_REACT = `#version 300 es
     precision highp float; precision highp int;
     in vec2 vUv;
@@ -806,6 +1034,9 @@
     progReact  = linkProgram(VS_QUAD, FS_REACT);
     progContact= linkProgram(VS_QUAD, FS_CONTACT);
     progBlast  = linkProgram(VS_QUAD, FS_BLAST);
+    progHeat   = linkProgram(VS_QUAD, FS_HEAT);
+    progIgnition = linkProgram(VS_QUAD, FS_IGNITION);
+    progCellular = linkProgram(VS_QUAD, FS_CELLULAR);
 
     // Fullscreen triangle (covers the framebuffer with two tris).
     quadVao = gl.createVertexArray();
@@ -837,9 +1068,27 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
+    // Traits texture: 256 wide × 2 tall, RGBA8UI.
+    // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
+    // Row 1 = (corrosivity, hardness, _, _)
+    traitsTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 2);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    // Cellular CA params texture: 256 wide × 2 tall, RGBA8UI.
+    cellularDataTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, cellularDataTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8UI, 256, 2);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
     uploadElementData();
     uploadPalette();
     uploadReactions();
+    uploadTraits();
+    uploadCellular();
   }
 
   // Pack registry into the lookup texture.
@@ -929,6 +1178,82 @@
     }
     gl.bindTexture(gl.TEXTURE_2D, reactionsTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 3, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
+  }
+
+  // Pack each element's traits into 2 rows of RGBA8UI per id.
+  // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
+  // Row 1 = (corrosivity, hardness, _, _)
+  function uploadTraits() {
+    const buf = new Uint8Array(256 * 2 * 4);
+    for (let id = 0; id < 256; id++) {
+      const spec = registry[id];
+      if (!spec) continue;
+      const emitTemp      = clamp255(spec.emitTemp,      30);
+      const ignitionPoint = clamp255(spec.ignitionPoint, 255);
+      const flammability  = clamp255(Math.round(((typeof spec.flammability === 'number') ? spec.flammability : 0) * 255), 0);
+      const conductivity  = clamp255(spec.conductivity,  100);
+      const corrosivity   = clamp255(spec.corrosivity,   0);
+      const hardness      = clamp255(spec.hardness,      80);
+      const o0 = (0 * 256 + id) * 4;
+      buf[o0+0] = emitTemp;
+      buf[o0+1] = ignitionPoint;
+      buf[o0+2] = flammability;
+      buf[o0+3] = conductivity;
+      const o1 = (1 * 256 + id) * 4;
+      buf[o1+0] = corrosivity;
+      buf[o1+1] = hardness;
+      buf[o1+2] = 0;
+      buf[o1+3] = 0;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
+  }
+
+  function clamp255(v, def) {
+    if (typeof v !== 'number' || !isFinite(v)) return def;
+    return Math.max(0, Math.min(255, Math.round(v)));
+  }
+
+  // Pack cellular CA parameters per id into 2 rows of RGBA8UI.
+  // Row 0 = (bornMaskLo, surviveMaskLo, growChance, surviveChance)
+  // Row 1 = (extras, birthFrom0, birthFrom1, birthFrom2)
+  // extras byte: bit0 = bornMask>>8, bit1 = surviveMask>>8, bits 2-7 = cellularTick
+  function uploadCellular() {
+    const buf = new Uint8Array(256 * 2 * 4);
+    for (let id = 0; id < 256; id++) {
+      const spec = registry[id];
+      if (!spec || spec.kind !== 'cellular') continue;
+      let bornMask = 0;
+      for (const n of (spec.born || [])) {
+        const ni = (n | 0);
+        if (ni >= 0 && ni <= 8) bornMask |= (1 << ni);
+      }
+      let surviveMask = 0;
+      for (const n of (spec.survive || [])) {
+        const ni = (n | 0);
+        if (ni >= 0 && ni <= 8) surviveMask |= (1 << ni);
+      }
+      const tick = Math.max(1, Math.min(30, Math.round(spec.cellularTick || 6)));
+      const growChance    = clamp255(Math.round((typeof spec.growChance    === 'number' ? spec.growChance    : 0.45) * 255), 115);
+      const surviveChance = clamp255(Math.round((typeof spec.surviveChance === 'number' ? spec.surviveChance : 0.92) * 255), 235);
+      const bF = (spec.birthFrom || []).map(k => keyToId[k] || 0).slice(0, 3);
+      while (bF.length < 3) bF.push(0);
+      const extras = ((bornMask >> 8) & 1)
+                   | (((surviveMask >> 8) & 1) << 1)
+                   | ((tick & 0x3F) << 2);
+      const o0 = (0 * 256 + id) * 4;
+      buf[o0+0] = bornMask & 0xff;
+      buf[o0+1] = surviveMask & 0xff;
+      buf[o0+2] = growChance;
+      buf[o0+3] = surviveChance;
+      const o1 = (1 * 256 + id) * 4;
+      buf[o1+0] = extras;
+      buf[o1+1] = bF[0];
+      buf[o1+2] = bF[1];
+      buf[o1+3] = bF[2];
+    }
+    gl.bindTexture(gl.TEXTURE_2D, cellularDataTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, buf);
   }
 
   // ── Overlay / palette UI / pours / paint state ─────────────────────────────
@@ -1065,6 +1390,13 @@
       gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
       gl.viewport(0, 0, COLS, ROWS);
       gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([0,0,0,0]));
+      // Reset temperature to ambient.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboA);
+      gl.viewport(0, 0, COLS, ROWS);
+      gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([30,0,0,0]));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboB);
+      gl.viewport(0, 0, COLS, ROWS);
+      gl.clearBufferuiv(gl.COLOR, 0, new Uint32Array([30,0,0,0]));
     }
     selectedKey = 'wall';
     refreshActiveClass();
@@ -1347,11 +1679,84 @@
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
+  function heatStep() {
+    gl.useProgram(progHeat);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progHeat, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexA);
+    gl.uniform1i(gl.getUniformLocation(progHeat, 'uTemp'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.uniform1i(gl.getUniformLocation(progHeat, 'uTraits'), 2);
+    gl.uniform2i(gl.getUniformLocation(progHeat, 'uSize'), COLS, ROWS);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [tempTexA, tempTexB] = [tempTexB, tempTexA];
+    [tempFboA, tempFboB] = [tempFboB, tempFboA];
+  }
+
+  function ignitionStep() {
+    const fireId = keyToId.fire || 0;
+    gl.useProgram(progIgnition);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+    gl.viewport(0, 0, COLS, ROWS);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uState'), 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, tempTexA);
+    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uTemp'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, traitsTex);
+    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uTraits'), 2);
+    gl.uniform2i(gl.getUniformLocation(progIgnition, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progIgnition, 'uFrame'), frameCounter);
+    gl.uniform1ui(gl.getUniformLocation(progIgnition, 'uFireId'), fireId >>> 0);
+    gl.bindVertexArray(quadVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    [stateTexA, stateTexB] = [stateTexB, stateTexA];
+    [stateFboA, stateFboB] = [stateFboB, stateFboA];
+  }
+
+  function cellularStep() {
+    // Run a separate pass per cellular element. cellularTick gates evaluation.
+    for (const idStr of Object.keys(registry)) {
+      const id = +idStr;
+      const spec = registry[id];
+      if (!spec || spec.kind !== 'cellular') continue;
+      const tick = Math.max(1, Math.min(30, Math.round(spec.cellularTick || 6)));
+      if (frameCounter % tick !== 0) continue;
+      gl.useProgram(progCellular);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
+      gl.viewport(0, 0, COLS, ROWS);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, stateTexA);
+      gl.uniform1i(gl.getUniformLocation(progCellular, 'uState'), 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, cellularDataTex);
+      gl.uniform1i(gl.getUniformLocation(progCellular, 'uCellularData'), 1);
+      gl.uniform2i(gl.getUniformLocation(progCellular, 'uSize'), COLS, ROWS);
+      gl.uniform1ui(gl.getUniformLocation(progCellular, 'uCellularId'), id >>> 0);
+      gl.uniform1i(gl.getUniformLocation(progCellular, 'uFrame'), frameCounter);
+      gl.bindVertexArray(quadVao);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      [stateTexA, stateTexB] = [stateTexB, stateTexA];
+      [stateFboA, stateFboB] = [stateFboB, stateFboA];
+    }
+  }
+
   function loop() {
     spawnFromPours();
     simStep();
     explosionStep();
     reactStep();
+    heatStep();
+    ignitionStep();
+    cellularStep();
     render();
     frameCounter++;
     animId = requestAnimationFrame(loop);
