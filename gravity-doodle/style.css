@@ -131,26 +131,6 @@ header h1 {
   width: 100%;
 }
 
-#btn-drop {
-  flex: 2;
-  height: 48px;
-  background: var(--amber);
-  color: var(--bg);
-  border: 2px solid var(--amber);
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  cursor: pointer;
-  border-radius: 0;
-  text-transform: lowercase;
-  transition: filter 0.15s, transform 0.05s;
-}
-
-#btn-drop:hover:not(:disabled) { filter: brightness(1.1); }
-#btn-drop:active:not(:disabled) { transform: translateY(1px); }
-#btn-drop:disabled { opacity: 0.35; cursor: not-allowed; }
-
 #btn-reset, #btn-probe {
   flex: 1;
   height: 48px;
@@ -690,33 +670,6 @@ header h1 {
 #probe-tooltip .probe-bar.pres.pos > span { background: linear-gradient(90deg, #c0a060, #f0d090); }
 #probe-tooltip .probe-bar.pres.neg > span { background: linear-gradient(90deg, #4080a0, #6090b8); }
 
-/* Discovery toast: bottom of canvas, fades in when something new emerges. */
-#discovery-toast {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(15, 14, 12, 0.92);
-  border: 1px solid var(--amber);
-  color: var(--amber);
-  font-family: inherit;
-  font-size: 0.74rem;
-  letter-spacing: 0.1em;
-  padding: 6px 12px;
-  pointer-events: none;
-  z-index: 5;
-  text-transform: lowercase;
-  max-width: 90%;
-  text-align: center;
-  animation: discovery-fade 4s ease-out forwards;
-}
-@keyframes discovery-fade {
-  0%   { opacity: 0; transform: translate(-50%, 8px); }
-  10%  { opacity: 1; transform: translate(-50%, 0); }
-  85%  { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, -4px); }
-}
-
 /* Short viewports */
 @media (max-height: 780px) {
   body { padding: 8px 8px 12px; }
@@ -724,7 +677,7 @@ header h1 {
   header h1 { font-size: 1.2rem; }
   #tagline { font-size: 0.68rem; }
   #canvas-wrap { max-height: calc(100dvh - 320px); }
-  #btn-drop, #btn-reset, #btn-probe { height: 44px; font-size: 0.85rem; }
+  #btn-reset, #btn-probe { height: 44px; font-size: 0.85rem; }
   .tool-btn, .invent-btn { height: 30px; font-size: 0.66rem; }
 }
 

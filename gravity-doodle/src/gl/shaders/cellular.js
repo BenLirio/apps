@@ -1,8 +1,8 @@
 // FS_CELLULAR — Conway-style growth with optional anisotropy.
 //
-// Encoding:
-//   cellularDataTex row 0: (bornMaskLo, surviveMaskLo, growChance, surviveChance)
-//   cellularDataTex row 1: (extras, birthFromId0, birthFromId1, birthFromId2)
+// Encoding (state.lookups.cellular, 256×2):
+//   row 0: (bornMaskLo, surviveMaskLo, growChance, surviveChance)
+//   row 1: (extras, birthFromId0, birthFromId1, birthFromId2)
 //     extras low bits: bornMask bit 8, surviveMask bit 8, tick (4 bits),
 //                      growBias (2 bits, 0=any 1=up 2=down 3=side).
 

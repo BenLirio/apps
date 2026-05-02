@@ -1,53 +1,45 @@
-// Single source of truth for mutable runtime state. Modules import this
-// object and read or assign properties on it. We deliberately avoid
-// per-module `let` exports because ping-pong texture swaps must be
-// observable everywhere — `[state.stateTexA, state.stateTexB] = ...` is
-// the canonical pattern.
+// Single shared mutable state. Imported as `state` everywhere so that
+// ping-pong swaps and registry mutations are observable across modules.
 //
-// Nothing in here is "configuration" — tunables live in constants.js.
-// Anything in here is something the running app actively mutates.
+// Tunables (constant values) live in constants.js, not here. Anything
+// in this object is something the running app actively mutates.
 
 export const state = {
   // DOM / GL
   canvas: null,
   gl: null,
+  quadVao: null,
+  frame: 0,
 
-  // Grid sizes (full-res state and coarse pressure/airflow grid).
+  // Grid dimensions (full-res sim and coarse 1/4-res air grid).
   cols: 0,
   rows: 0,
   airCols: 0,
   airRows: 0,
 
-  // Ping-pong textures + framebuffers.
-  stateTexA: null, stateTexB: null,
-  stateFboA: null, stateFboB: null,
-  tempTexA:  null, tempTexB:  null,
-  tempFboA:  null, tempFboB:  null,
-  chargeTexA: null, chargeTexB: null,
-  chargeFboA: null, chargeFboB: null,
-  airTexA: null, airTexB: null,
-  airFboA: null, airFboB: null,
+  // Ping-pong texture pairs (PingPong instances; see gl/grid.js).
+  // Each exposes .read() (tex bound to sampler), .write() (fbo we draw
+  // to), .swap() to commit, and .clear(...rgba) to reset.
+  state: null,    // RGBA8UI per cell: (id, variant, ra, rb)
+  temp:  null,    // R = temperature 0-255
+  charge:null,    // R = signed charge in offset binary (128 = 0)
+  air:   null,    // RGBA8UI per coarse cell: (pressure, vx, vy, ambient)
 
-  // Lookup textures (1D-ish strips, one column per element id).
-  elementDataTex: null,
-  paletteTex: null,
-  reactionsTex: null,
-  traitsTex: null,
-  cellularDataTex: null,
-  registersTex: null,
+  // Lookup textures (256-wide strips packed from the JS registry).
+  lookups: {
+    elementData: null,
+    palette:     null,
+    reactions:   null,
+    traits:      null,
+    cellular:    null,
+    registers:   null,
+  },
 
-  // GL programs.
-  progSim: null, progPaint: null, progRender: null, progClear: null,
-  progReact: null, progContact: null, progBlast: null,
-  progHeat: null, progIgnition: null, progCellular: null,
-  progCorrosion: null, progPhase: null,
-  progRegister: null, progCharge: null,
-  progPressure: null, progAdvect: null, progPressureBlast: null,
+  // GL programs, keyed by short name (sim, paint, render, …).
+  programs: {},
 
-  quadVao: null,
-  frameCounter: 0,
-
-  // Element registry — populated by elements/builtins.js then by AI.
+  // Element registry — populated by elements.js (built-ins) and
+  // ai/finalize.js (invented).
   registry: {},
   keyToId: {},
   nextId: 1,
@@ -60,17 +52,6 @@ export const state = {
   holdPaintTimer: null,
   animId: null,
   probeMode: false,
-
-  // Pours (sand pouring from top, gas from bottom).
-  pours: [],
-
-  // Discovery log.
-  discoveryRules: [],
-  discoveredKeys: new Set(),
-  discoveryReadBuf: null,
-  discoveryToastQueue: [],
-  discoveryToastActive: false,
-  discoveryToastTimer: null,
 
   // Element-feedback modal target.
   elfbTargetKey: null,

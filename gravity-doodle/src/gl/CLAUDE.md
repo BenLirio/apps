@@ -5,51 +5,44 @@ the shader source modules under `shaders/`.
 
 ## Files
 
-- `context.js` — `initGL()` boots every program, creates lookup textures,
-  uploads seed data. Also exports `compileShader`, `linkProgram`,
-  `createUI8Texture`, `createU8Texture2D`, `makeFbo`, `clearStateTo`,
-  and the small binders `bindStateA / bindElementData / bindTraits`
-  used by every sim pass.
+- `context.js` — `initGL()` compiles every program (in the `PROGRAMS`
+  map), creates the lookup textures (`state.lookups.*`), and uploads
+  seed data. There is no graceful-degrade path: if a shader fails to
+  compile, init throws and the user gets the error overlay.
 - `uploads.js` — packs the JS element registry into the lookup textures
-  the shaders read. **Texture layouts are documented above each
-  function — read them before changing field positions.** They are
-  referenced by byte offset inside fragment shaders.
-- `grid.js` — `resizeCanvas()` recomputes COLS / ROWS / AIR_COLS /
-  AIR_ROWS and reallocates ping-pong textures. Runs at startup and on
-  window resize.
+  the shaders read. The traits texture is driven by `src/traits.js`;
+  the others (elementData/palette/reactions/cellular/registers) have
+  their layouts documented above each function.
+- `grid.js` — `PingPong` helper class + `resizeCanvas()`. Each per-frame
+  texture pair (`state.state`, `state.temp`, `state.charge`, `state.air`)
+  is a `PingPong` instance with `.read()`, `.write()`, `.swap()`,
+  `.clear(...rgba)`.
 - `shaders/` — one fragment shader per file, exported as a JS string.
   See `shaders/CLAUDE.md`.
 
 ## Lookup textures (each 256 wide; col = element id)
 
-| name              | rows | what's in it                                                                                              |
-|-------------------|------|-----------------------------------------------------------------------------------------------------------|
-| `elementDataTex`  | 1    | (kindCode, density, paramA, paramB)  — paramA = flow/visc/buoy; paramB low7=stickiness, hi=isExplosive    |
-| `paletteTex`      | 4    | RGBA color variants                                                                                        |
-| `reactionsTex`    | 6    | 3 reaction slots × 2 rows (payload + conditions)                                                          |
-| `traitsTex`       | 6    | (heat, material, phase-temps, phase-targets, charge/airflow-factor, airflow-emit/pressure-blast)          |
-| `cellularDataTex` | 2    | (bornMaskLo, surviveMaskLo, growChance, surviveChance) + (extras, birthFromIds×3)                          |
-| `registersTex`    | 2    | (raInit, raDelta_offset, raDiesAt, raTransformsToId) row 0; rb reserved row 1                              |
+| name           | rows | contents                                                                          |
+|----------------|------|-----------------------------------------------------------------------------------|
+| `elementData`  | 1    | (kindCode, density, paramA, paramB) — paramA = flow/viscosity/buoyancy; paramB low7 = stickiness, hi = isExplosive |
+| `palette`      | 4    | RGBA color variants                                                              |
+| `reactions`    | 6    | 3 slots × 2 rows (payload + conditions)                                          |
+| `traits`       | 6    | layout owned by `src/traits.js TRAITS`                                            |
+| `cellular`     | 2    | (born, survive, growChance, surviveChance) + (extras, birthFromIds×3)            |
+| `registers`    | 2    | (raInit, raDelta+128, raDiesAt, raTransformsToId)                                |
 
-The `state*` / `temp*` / `charge*` / `air*` ping-pong textures are the
-mutable fields. State is full-res; the air (pressure/wind) texture is
-1/4 res.
+## Adding a new GPU pass
 
-## Adding a new shader
-
-1. Add `shaders/<name>.js` exporting `FS_<NAME>` (string).
-2. Import it in `context.js` and `tryProg('progXxx', FS_XXX, 'progXxx')`
-   inside `initGL()`.
-3. Add a step function in `../sim/passes.js` that binds inputs, draws
-   the quad, and ping-pongs the relevant texture pair.
-4. Call your step from the right place in `../sim/loop.js`.
+1. Add `shaders/<name>.js` exporting `FS_<NAME>`.
+2. Add `<key>: FS_<NAME>` to the `PROGRAMS` map in `context.js`.
+3. Append a `runPass({ prog: '<key>', ... })` call in
+   `../sim/passes.js runFrame()` at the right point in the order.
 
 ## Common pitfalls
 
-- **Don't forget to ping-pong.** Every shader writes to `*FboB`, then
-  the JS swaps `*TexA`/`*TexB`. If a shader's output is missing, you
-  probably forgot the swap.
 - **Uniform names must match exactly.** A typo silently produces a
-  -1 location and `gl.uniform1i(-1, ...)` is a no-op.
-- **All trait offsets are bytes.** When you add a new trait, find or
-  add a free byte in one of the trait rows; never overlap.
+  `-1` location and `gl.uniform1i(-1, ...)` is a no-op.
+- **`runPass` swaps automatically.** Don't manually swap; just declare
+  which ping-pong to write to.
+- **All trait offsets are bytes.** When you add a new trait, pick a
+  free byte in `src/traits.js`; never overlap an existing slot.

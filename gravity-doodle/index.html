@@ -24,16 +24,13 @@
 
     <div id="controls">
       <div id="action-row">
-        <button id="btn-drop" type="button">pour sand</button>
         <button id="btn-probe" type="button" aria-pressed="false">probe</button>
         <button id="btn-reset" type="button">reset</button>
       </div>
 
       <div id="tool-row" role="group" aria-label="material palette">
         <div class="palette-label">paint:</div>
-        <div id="palette-buttons">
-          <!-- material buttons rendered by JS — three seed materials + invented ones -->
-        </div>
+        <div id="palette-buttons"><!-- rendered by JS --></div>
         <button id="btn-invent" type="button" class="invent-btn" aria-label="invent new element">
           <span class="invent-plus">+</span>
           <span class="invent-label">invent element</span>
@@ -45,10 +42,9 @@
       <canvas id="main-canvas"></canvas>
       <div id="overlay-msg" class="hidden"></div>
       <div id="probe-tooltip" class="hidden"></div>
-      <div id="discovery-toast" class="hidden"></div>
     </div>
 
-    <p id="hint">build walls. pour any liquid — they stack by density (oil floats on water, mercury sinks under). wire copper to a battery and watch charge spread. drop a fan to push smoke. paint lightning on gunpowder. tar sticks to walls. uranium decays to stone. tap probe to read every field — temp, charge, pressure, wind. invent more in plain words.</p>
+    <p id="hint">build walls. paint liquids and they stack by density (oil floats on water, mercury sinks under). wire copper to a battery and watch charge spread. drop a fan to push smoke. paint lightning on gunpowder. tar sticks to walls. uranium decays to stone. tap probe to read every field — temp, charge, pressure. invent more in plain words.</p>
   </div>
 
   <!-- Element feedback modal -->

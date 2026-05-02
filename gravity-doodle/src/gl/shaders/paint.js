@@ -1,6 +1,7 @@
-// FS_PAINT — element-aware painting. Reads registersTex for default
-// raInit; the JS paint code passes uPaintRaOverride (256 = use defaults,
-// <256 = use this value) for randomized gas life and explosive settle.
+// FS_PAINT — element-aware painting. Reads the registers lookup texture
+// for the default raInit; the JS paint code passes uPaintRaOverride
+// (256 = use defaults, <256 = use this value) for randomized gas life
+// and explosive settle.
 
 import { SH_HASH } from './common.js';
 
