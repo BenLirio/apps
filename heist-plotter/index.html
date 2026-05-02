@@ -18,19 +18,19 @@
     <header class="brief">
       <div class="bureau-mark">BUREAU OF NOTABLE CAPERS</div>
       <h1 class="case-title">CASE INTAKE FORM</h1>
-      <p class="brief-copy">The Bureau of Notable Capers requires a route on file. Plot your approach in five marks.</p>
+      <p class="brief-copy">Plot a route from <strong>ENTRY</strong> to <strong>TARGET</strong> to <strong>EXIT</strong>. Each leg must avoid <strong>guard sight-lines</strong> and <strong>walls</strong>. Fewer waypoints = cleaner job.</p>
       <div class="floor-label" id="floor-label">FACILITY: —</div>
     </header>
 
     <div class="legend">
       <div class="legend-row">
-        <span class="legend-num">1</span><span>ENTRY</span>
-        <span class="legend-num">2</span><span>DISTRACTION</span>
-        <span class="legend-num">3</span><span>TARGET</span>
+        <span class="legend-chip chip-entry">A</span><span>ENTRY</span>
+        <span class="legend-chip chip-target">★</span><span>TARGET</span>
+        <span class="legend-chip chip-exit">Z</span><span>EXIT</span>
       </div>
-      <div class="legend-row">
-        <span class="legend-num">4</span><span>SWITCH-BACK</span>
-        <span class="legend-num">5</span><span>EXFIL</span>
+      <div class="legend-row legend-rules">
+        <span class="rule-chip rule-good">— green leg</span><span class="legend-rule-text">clean</span>
+        <span class="rule-chip rule-bad">— red leg</span><span class="legend-rule-text">spotted (walls or sight-lines)</span>
       </div>
     </div>
 
@@ -38,9 +38,16 @@
       <svg id="floor" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid meet" aria-label="floor plan"></svg>
     </div>
 
-    <div class="next-slot" id="next-slot">NEXT MARK: <strong>1 — ENTRY</strong></div>
+    <div class="status-row">
+      <div class="status-pill" id="status-target">TARGET <span>○</span></div>
+      <div class="status-pill" id="status-exit">EXIT <span>○</span></div>
+      <div class="status-pill" id="status-legs">LEGS <span>0</span></div>
+    </div>
+
+    <div class="next-slot" id="next-slot">TAP THE FLOOR TO PLOT YOUR FIRST LEG</div>
 
     <div class="actions">
+      <button id="undo-btn" class="btn btn-ghost" type="button" disabled>UNDO</button>
       <button id="reset-btn" class="btn btn-ghost" type="button">RESET</button>
       <button id="file-btn" class="btn btn-primary" type="button" disabled>FILE REPORT</button>
     </div>
