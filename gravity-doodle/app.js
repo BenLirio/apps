@@ -154,9 +154,17 @@
     }
 
     initBuiltIns();
-    initGL();
-
+    // Build the palette UI first, so that even if a shader fails to compile
+    // the user still sees their paint options (and can read the error).
     rebuildPalette();
+    try {
+      initGL();
+    } catch (err) {
+      console.error('initGL failed:', err);
+      showOverlay('webgl init failed:\n' + (err && err.message ? err.message : err)
+        + '\n\nopen the console for the full shader log.');
+      return;
+    }
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -746,8 +754,15 @@
       float avg = count > 0u ? float(sum) / float(count) : float(cur);
       float curF = float(cur);
 
-      // Diffusion strength scales with self's conductivity.
-      TraitInfo t = (selfId == 0u) ? TraitInfo(30u, 255u, 0u, 100u, 0u, 0u) : getTraits(selfId);
+      // Diffusion strength scales with self's conductivity. Empty cells use
+      // air-like defaults (ambient temp, mild conductivity).
+      TraitInfo t;
+      if (selfId == 0u) {
+        t.emitTemp = 30u; t.ignitionPoint = 255u; t.flammability = 0u;
+        t.conductivity = 100u; t.corrosivity = 0u; t.hardness = 0u;
+      } else {
+        t = getTraits(selfId);
+      }
       float k = float(t.conductivity) / 255.0;
       float newT = mix(curF, avg, clamp(k * 0.5, 0.0, 0.5));
 
@@ -857,8 +872,8 @@
       // Decode cellular params for uCellularId.
       uvec4 cd0 = texelFetch(uCellularData, ivec2(int(uCellularId), 0), 0);
       uvec4 cd1 = texelFetch(uCellularData, ivec2(int(uCellularId), 1), 0);
-      uint bornMask    = cd0.r | ((cd1.r & 1u) << 8);
-      uint surviveMask = cd0.g | ((cd1.r & 2u) << 7);
+      uint bornMask    = cd0.r | ((cd1.r & 1u) << 8u);
+      uint surviveMask = cd0.g | ((cd1.r & 2u) << 7u);
       uint growChance  = cd0.b;
       uint survChance  = cd0.a;
       uint bF0 = cd1.g;
@@ -890,7 +905,7 @@
         bool survives = (surviveMask & maskBit) != 0u;
         if (!survives) {
           // Stochastic death gate: surviveChance = chance to escape death.
-          uint h2 = (h >> 8) & 0xFFu;
+          uint h2 = (h >> 8u) & 0xFFu;
           if (h2 >= survChance) { outColor = uvec4(0u); return; }
         }
         outColor = self;
@@ -900,7 +915,7 @@
       if ((bornMask & maskBit) != 0u) {
         uint h3 = h & 0xFFu;
         if (h3 < growChance) {
-          uint v = (h >> 16) & 3u;
+          uint v = (h >> 16u) & 3u;
           outColor = uvec4(uCellularId, v, 0u, 0u);
           return;
         }
@@ -1027,6 +1042,7 @@
   `;
 
   function initGL() {
+    // Core shaders — must succeed for the sim to run at all.
     progSim    = linkProgram(VS_QUAD, FS_SIM);
     progPaint  = linkProgram(VS_QUAD, FS_PAINT);
     progRender = linkProgram(VS_QUAD, FS_RENDER);
@@ -1034,9 +1050,12 @@
     progReact  = linkProgram(VS_QUAD, FS_REACT);
     progContact= linkProgram(VS_QUAD, FS_CONTACT);
     progBlast  = linkProgram(VS_QUAD, FS_BLAST);
-    progHeat   = linkProgram(VS_QUAD, FS_HEAT);
-    progIgnition = linkProgram(VS_QUAD, FS_IGNITION);
-    progCellular = linkProgram(VS_QUAD, FS_CELLULAR);
+    // Optional shaders — if any of these fails to compile (driver quirks,
+    // GLSL ES extensions), skip just that pass instead of breaking the whole
+    // sim. The loop below checks for null progs before calling.
+    try { progHeat     = linkProgram(VS_QUAD, FS_HEAT);     } catch (e) { console.warn('progHeat compile failed, heat pass disabled:', e); }
+    try { progIgnition = linkProgram(VS_QUAD, FS_IGNITION); } catch (e) { console.warn('progIgnition compile failed, ignition pass disabled:', e); }
+    try { progCellular = linkProgram(VS_QUAD, FS_CELLULAR); } catch (e) { console.warn('progCellular compile failed, cellular pass disabled:', e); }
 
     // Fullscreen triangle (covers the framebuffer with two tris).
     quadVao = gl.createVertexArray();
@@ -1184,6 +1203,7 @@
   // Row 0 = (emitTemp, ignitionPoint, flammability, conductivity)
   // Row 1 = (corrosivity, hardness, _, _)
   function uploadTraits() {
+    if (!traitsTex) return;
     const buf = new Uint8Array(256 * 2 * 4);
     for (let id = 0; id < 256; id++) {
       const spec = registry[id];
@@ -1219,6 +1239,7 @@
   // Row 1 = (extras, birthFrom0, birthFrom1, birthFrom2)
   // extras byte: bit0 = bornMask>>8, bit1 = surviveMask>>8, bits 2-7 = cellularTick
   function uploadCellular() {
+    if (!cellularDataTex) return;
     const buf = new Uint8Array(256 * 2 * 4);
     for (let id = 0; id < 256; id++) {
       const spec = registry[id];
@@ -1680,6 +1701,7 @@
   }
 
   function heatStep() {
+    if (!progHeat) return;
     gl.useProgram(progHeat);
     gl.bindFramebuffer(gl.FRAMEBUFFER, tempFboB);
     gl.viewport(0, 0, COLS, ROWS);
@@ -1700,6 +1722,7 @@
   }
 
   function ignitionStep() {
+    if (!progIgnition) return;
     const fireId = keyToId.fire || 0;
     gl.useProgram(progIgnition);
     gl.bindFramebuffer(gl.FRAMEBUFFER, stateFboB);
@@ -1723,6 +1746,7 @@
   }
 
   function cellularStep() {
+    if (!progCellular) return;
     // Run a separate pass per cellular element. cellularTick gates evaluation.
     for (const idStr of Object.keys(registry)) {
       const id = +idStr;
