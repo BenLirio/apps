@@ -59,13 +59,24 @@
         <textarea id="description" required maxlength="600" placeholder="What did it look like? How did it move? What did it do? What made it unlike anything you had seen before?"></textarea>
       </div>
 
-      <button type="submit" id="submit-btn">FILE REPORT</button>
-      <span class="field-hint">The Bureau will classify your sighting based on your account. Be specific.</span>
+      <button type="submit" id="submit-btn">SUBMIT INITIAL ACCOUNT</button>
+      <span class="field-hint">A follow-up interrogation will be conducted before classification.</span>
+    </form>
+
+    <!-- Follow-up interrogation form -->
+    <form id="followup-form" style="display:none" onsubmit="submitFollowup(event)">
+      <div class="form-divider">SECTION II — FOLLOW-UP INTERROGATION</div>
+      <p class="followup-intro">Based on your initial account, the Bureau requires further detail on the following matters. Your answers will determine final classification.</p>
+
+      <div id="followup-fields"><!-- populated dynamically --></div>
+
+      <button type="submit" id="followup-submit-btn">FILE FINAL REPORT</button>
+      <span class="field-hint">All answers are entered into the Bureau's permanent record.</span>
     </form>
 
     <!-- Loading state -->
     <div id="loading-section" style="display:none">
-      <div class="loading-stamp">PROCESSING</div>
+      <div class="loading-stamp" id="loading-stamp">PROCESSING</div>
       <p class="loading-copy" id="loading-msg">cross-referencing witness account with restricted archives...</p>
       <div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>
     </div>
@@ -106,6 +117,20 @@
         <div class="behavioral-section">
           <div class="section-label">BEHAVIORAL ASSESSMENT &amp; FIELD NOTES</div>
           <div id="behavioral-notes" class="behavioral-text"></div>
+        </div>
+
+        <div class="report-divider-thin"></div>
+
+        <div class="containment-section">
+          <div class="section-label">CONTAINMENT PROTOCOL — WITNESS DIRECTIVES</div>
+          <ol id="containment-list" class="containment-list"></ol>
+        </div>
+
+        <div class="report-divider-thin"></div>
+
+        <div class="prior-section">
+          <div class="section-label">CROSS-REFERENCED PRIOR INCIDENTS</div>
+          <div id="prior-incidents" class="prior-incidents-text"></div>
         </div>
 
         <div class="report-divider-thin"></div>
