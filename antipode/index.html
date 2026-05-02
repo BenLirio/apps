@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ANTIPODE</title>
+  <meta property="og:title" content="ANTIPODE">
+  <meta property="og:description" content="Two opposing balls. One orbit. One touch and you start over.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/antipode/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <div id="title-screen" class="screen">
+      <h1>ANTIPODE</h1>
+      <p class="tagline">two balls. one orbit. opposite ends of nothing.</p>
+      <p class="prompt">Press Space &nbsp;/&nbsp; Tap to begin</p>
+    </div>
+
+    <div id="hud" class="hidden">
+      <div id="score">0</div>
+    </div>
+
+    <div id="death-screen" class="screen hidden">
+      <p class="micro" id="death-micro">the orbit broke you</p>
+      <div class="scores">
+        <div><span class="label">SCORE</span><span class="value" id="final-score">0</span></div>
+        <div><span class="label">BEST</span><span class="value" id="best-score">0</span></div>
+      </div>
+      <p class="prompt">Press Space &nbsp;/&nbsp; Tap to restart</p>
+      <div id="share">
+        <button onclick="share()">Share</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
