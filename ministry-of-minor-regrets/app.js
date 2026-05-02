@@ -1,37 +1,125 @@
 // Ministry of Minor Regrets — bureaucratic-audit calculator.
-// Core arithmetic is fully deterministic. An LLM generates only the closing
-// signature line, referencing the heaviest line item. Both inputs and the
-// signature text are encoded into the URL fragment so shared links re-hydrate
-// the exact receipt without spending an LLM call.
+// One declaration at a time (no scrolling form). 10 questions chosen to feel
+// peculiar and lived-in rather than generic. Core arithmetic is fully
+// deterministic; an LLM generates only the closing signature line. Inputs +
+// signature are encoded into the URL fragment so shared links re-hydrate the
+// exact receipt without spending an LLM call.
 
 const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
 const SLUG = 'ministry-of-minor-regrets';
 
-// ---------- Ministry benchmarks & penalties ----------
-// Each line item is computed from ONE input, visibly, with a clear formula.
+// ---------- Ministry benchmarks & per-line metadata ----------
 
 const BENCHMARKS = {
-  sleep:    { benchmark: 8,  unitLabel: 'hrs',  code: 'RST-404', itemName: 'Insufficient Rest Penalty' },
-  unread:   { benchmark: 10, unitLabel: 'msg',  code: 'COM-219', itemName: 'Correspondence Neglect Fee' },
-  coffees:  { benchmark: 2,  unitLabel: 'cups', code: 'CAF-611', itemName: 'Excess Stimulant Surcharge' },
-  called:   { benchmark: 7,  unitLabel: 'days', code: 'FAM-027', itemName: 'Filial Delay Assessment' },
-  scroll:   { benchmark: 30, unitLabel: 'min',  code: 'SCR-808', itemName: 'Aimless Drift Levy' },
-  standing: { benchmark: 0,  unitLabel: 'meal', code: 'DIG-150', itemName: 'Dignified Dining Default' },
+  sleep:     { benchmark: 8,  unitLabel: 'hrs',  code: 'RST-404', itemName: 'Insufficient Rest Penalty' },
+  unread:    { benchmark: 10, unitLabel: 'msg',  code: 'COM-219', itemName: 'Correspondence Neglect Fee' },
+  tabs:      { benchmark: 8,  unitLabel: 'tabs', code: 'TAB-882', itemName: 'Open-Tab Sediment Levy' },
+  coffees:   { benchmark: 2,  unitLabel: 'cups', code: 'CAF-611', itemName: 'Excess Stimulant Surcharge' },
+  beverages: { benchmark: 0,  unitLabel: 'cup',  code: 'BEV-330', itemName: 'Hydration Backlog Penalty' },
+  forgot:    { benchmark: 0,  unitLabel: 'time', code: 'AMN-117', itemName: 'Threshold Amnesia Citation' },
+  called:    { benchmark: 7,  unitLabel: 'days', code: 'FAM-027', itemName: 'Filial Delay Assessment' },
+  lol:       { benchmark: 3,  unitLabel: 'msg',  code: 'LOL-505', itemName: 'Conversational Garnish Surcharge' },
+  scroll:    { benchmark: 30, unitLabel: 'min',  code: 'SCR-808', itemName: 'Aimless Drift Levy' },
+  photos:    { benchmark: 2,  unitLabel: 'img',  code: 'PHO-714', itemName: 'Camera-Roll Sediment Fee' },
 };
+
+// ---------- Step (declaration) configuration ----------
+
+const STEPS = [
+  {
+    key: 'sleep',
+    label: 'Hours slept last night',
+    hint: 'Ministry benchmark: 8.0 hrs',
+    placeholder: 'e.g. 6.5',
+    step: 0.5, min: 0, max: 24,
+    inputmode: 'decimal',
+  },
+  {
+    key: 'unread',
+    label: 'Unread messages across all inboxes (estimate)',
+    hint: 'Ministry benchmark: 10',
+    placeholder: 'e.g. 184',
+    step: 1, min: 0, max: 99999,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'tabs',
+    label: 'Browser tabs currently open (all windows, all devices)',
+    hint: 'Ministry benchmark: 8',
+    placeholder: 'e.g. 27',
+    step: 1, min: 0, max: 9999,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'coffees',
+    label: 'Coffees consumed today',
+    hint: 'Ministry benchmark: 2',
+    placeholder: 'e.g. 4',
+    step: 1, min: 0, max: 99,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'beverages',
+    label: "Half-finished beverages within arm's reach right now",
+    hint: 'Ministry benchmark: 0 — kindly drink it or remove it',
+    placeholder: 'e.g. 3',
+    step: 1, min: 0, max: 99,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'forgot',
+    label: 'Times you walked into a room and forgot why (today)',
+    hint: 'Ministry benchmark: 0',
+    placeholder: 'e.g. 2',
+    step: 1, min: 0, max: 99,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'called',
+    label: 'Days since you called home',
+    hint: 'Ministry benchmark: 7',
+    placeholder: 'e.g. 22',
+    step: 1, min: 0, max: 9999,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'lol',
+    label: 'Outgoing messages today ending in "lol" or "lmao"',
+    hint: 'Ministry benchmark: 3',
+    placeholder: 'e.g. 9',
+    step: 1, min: 0, max: 9999,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'scroll',
+    label: 'Minutes the thumb wandered (aimless scrolling)',
+    hint: 'Ministry benchmark: 30 min',
+    placeholder: 'e.g. 140',
+    step: 1, min: 0, max: 9999,
+    inputmode: 'numeric',
+  },
+  {
+    key: 'photos',
+    label: 'Photos taken today you will never look at again',
+    hint: 'Ministry benchmark: 2',
+    placeholder: 'e.g. 14',
+    step: 1, min: 0, max: 999,
+    inputmode: 'numeric',
+  },
+];
 
 // ---------- Deterministic line-item arithmetic ----------
 
 function computeSleep(hrs) {
   const b = BENCHMARKS.sleep.benchmark;
   const deficit = Math.max(0, b - hrs);
-  // 42 units per hour below benchmark. Also small over-sleep penalty at >10.
   const excess = Math.max(0, hrs - 10);
   const units = Math.round(deficit * 42 + excess * 18);
   return {
     key: 'sleep',
     name: BENCHMARKS.sleep.itemName,
     code: BENCHMARKS.sleep.code,
-    inputText: `${hrs}h sleep`,
+    inputText: `${stripZeros(hrs)}h sleep`,
     formula: deficit > 0
       ? `below 8h benchmark by ${stripZeros(deficit)}h × 42`
       : excess > 0
@@ -45,7 +133,7 @@ function computeUnread(n) {
   const b = BENCHMARKS.unread.benchmark;
   const excess = Math.max(0, n - b);
   // Log curve so 50 vs 50,000 unread can't dominate the audit. Hard cap
-  // at 250 keeps this line item in the same range as the other five.
+  // keeps this line item in range with the others.
   const raw = excess > 0 ? 60 * Math.log10(1 + excess / 10) : 0;
   const units = Math.min(Math.round(raw), 250);
   return {
@@ -60,10 +148,30 @@ function computeUnread(n) {
   };
 }
 
+function computeTabs(n) {
+  const b = BENCHMARKS.tabs.benchmark;
+  const excess = Math.max(0, n - b);
+  // 6 units per tab past benchmark, log escalation past 30, cap at 240.
+  let raw = excess * 6;
+  if (n > 30) raw += 80 * Math.log10(1 + (n - 30) / 5);
+  const units = Math.min(Math.round(raw), 240);
+  return {
+    key: 'tabs',
+    name: BENCHMARKS.tabs.itemName,
+    code: BENCHMARKS.tabs.code,
+    inputText: `${n} tab${n === 1 ? '' : 's'} open`,
+    formula: excess > 0
+      ? n > 30
+        ? `${excess} past 8-tab budget × 6, +escalation 30+`
+        : `${excess} past 8-tab budget × 6`
+      : 'tabs within budget',
+    units,
+  };
+}
+
 function computeCoffees(c) {
   const b = BENCHMARKS.coffees.benchmark;
   const excess = Math.max(0, c - b);
-  // 55 units per cup above benchmark.
   const units = excess * 55;
   return {
     key: 'coffees',
@@ -77,10 +185,39 @@ function computeCoffees(c) {
   };
 }
 
+function computeBeverages(n) {
+  // 32 units each, +18 escalation per beverage past the first.
+  const units = n > 0 ? Math.round(n * 32 + (n > 1 ? (n - 1) * 18 : 0)) : 0;
+  return {
+    key: 'beverages',
+    name: BENCHMARKS.beverages.itemName,
+    code: BENCHMARKS.beverages.code,
+    inputText: `${n} half-finished beverage${n === 1 ? '' : 's'}`,
+    formula: n > 0
+      ? `${n} × 32, +escalation past the first`
+      : 'no abandoned cups detected',
+    units,
+  };
+}
+
+function computeForgot(n) {
+  // Each doorway lapse: 28 units flat.
+  const units = Math.round(n * 28);
+  return {
+    key: 'forgot',
+    name: BENCHMARKS.forgot.itemName,
+    code: BENCHMARKS.forgot.code,
+    inputText: `${n} doorway lapse${n === 1 ? '' : 's'}`,
+    formula: n > 0
+      ? `${n} doorway lapse${n === 1 ? '' : 's'} × 28`
+      : 'memory holding the line',
+    units,
+  };
+}
+
 function computeCalled(days) {
   const b = BENCHMARKS.called.benchmark;
   const excess = Math.max(0, days - b);
-  // 14 units/day after benchmark, escalating at 30+.
   let units = excess * 14;
   if (days > 30) units += (days - 30) * 18;
   if (days > 90) units += (days - 90) * 22;
@@ -101,10 +238,26 @@ function computeCalled(days) {
   };
 }
 
+function computeLol(n) {
+  const b = BENCHMARKS.lol.benchmark;
+  const excess = Math.max(0, n - b);
+  // 18 units each past the 3-msg garnish allowance.
+  const units = Math.round(excess * 18);
+  return {
+    key: 'lol',
+    name: BENCHMARKS.lol.itemName,
+    code: BENCHMARKS.lol.code,
+    inputText: `${n} message${n === 1 ? '' : 's'} ending in "lol"`,
+    formula: excess > 0
+      ? `${excess} past 3-msg garnish allowance × 18`
+      : 'sincerity within tolerance',
+    units,
+  };
+}
+
 function computeScroll(min) {
   const b = BENCHMARKS.scroll.benchmark;
   const excess = Math.max(0, min - b);
-  // 1.1 units per excess minute.
   const units = Math.round(excess * 1.1);
   return {
     key: 'scroll',
@@ -118,30 +271,38 @@ function computeScroll(min) {
   };
 }
 
-function computeStanding(n) {
-  // Every standing meal costs flat 38 units, escalating per meal.
-  const units = n > 0 ? Math.round(n * 38 + (n > 1 ? (n - 1) * 12 : 0)) : 0;
+function computePhotos(n) {
+  const b = BENCHMARKS.photos.benchmark;
+  const excess = Math.max(0, n - b);
+  // 22 units each past benchmark.
+  const units = Math.round(excess * 22);
   return {
-    key: 'standing',
-    name: BENCHMARKS.standing.itemName,
-    code: BENCHMARKS.standing.code,
-    inputText: `${n} standing meal${n === 1 ? '' : 's'}`,
-    formula: n > 0
-      ? `${n} × 38, +escalation past the first`
-      : 'meals duly seated',
+    key: 'photos',
+    name: BENCHMARKS.photos.itemName,
+    code: BENCHMARKS.photos.code,
+    inputText: `${n} disposable photo${n === 1 ? '' : 's'}`,
+    formula: excess > 0
+      ? `${excess} past 2-photo allowance × 22`
+      : 'photo intake disciplined',
     units,
   };
 }
 
+const FIELD_COMPUTE = {
+  sleep:     computeSleep,
+  unread:    computeUnread,
+  tabs:      computeTabs,
+  coffees:   computeCoffees,
+  beverages: computeBeverages,
+  forgot:    computeForgot,
+  called:    computeCalled,
+  lol:       computeLol,
+  scroll:    computeScroll,
+  photos:    computePhotos,
+};
+
 function computeAll(inputs) {
-  return [
-    computeSleep(inputs.sleep),
-    computeUnread(inputs.unread),
-    computeCoffees(inputs.coffees),
-    computeCalled(inputs.called),
-    computeScroll(inputs.scroll),
-    computeStanding(inputs.standing),
-  ];
+  return STEPS.map(s => FIELD_COMPUTE[s.key](inputs[s.key]));
 }
 
 function stripZeros(n) {
@@ -150,14 +311,12 @@ function stripZeros(n) {
 
 // ---------- Deterministic archetype from the input pattern ----------
 
-function pickArchetype(items, inputs) {
-  // Sort by units desc, pick the top two categories as the personality profile.
+function pickArchetype(items) {
   const sorted = [...items].sort((a, b) => b.units - a.units);
   const total = items.reduce((s, x) => s + x.units, 0);
   const top = sorted[0];
 
-  // If everyone is within tolerance, handle separately.
-  if (total < 40) {
+  if (total < 60) {
     return {
       name: 'The Exemplary Citizen of Tuesday Nights',
       stampLine: 'ASSESSED: COMMENDATION ISSUED',
@@ -168,8 +327,6 @@ function pickArchetype(items, inputs) {
   const second = sorted[1];
   const pair = [top.key, second.key].sort().join('+');
 
-  // Pattern-map: top category (and occasionally the pair) produces a named verdict.
-  // The verdicts intentionally reference a day-of-week flavor for texture.
   const ARCHETYPES = {
     sleep: [
       'The Insomniac Bureaucrat of Thursday Small Hours',
@@ -181,36 +338,64 @@ function pickArchetype(items, inputs) {
       'The Unanswered Prelate of the Open Tab',
       'The Ghost Commissioner of Read Receipts',
     ],
+    tabs: [
+      'The Provisional Custodian of Forty-Seven Open Tabs',
+      'The Sediment-Browser of Last Tuesday\'s Search',
+      'The Unsorted Archivist of the Bookmark Bar',
+    ],
     coffees: [
       'The Perpetual Understudy of Monday Mornings',
       'The Over-Caffeinated Notary of the Printer Room',
       'The Trembling Envoy of the Second Refill',
+    ],
+    beverages: [
+      'The Curator of Unfinished Cups',
+      'The Steward of the Half-Drunk Glass',
+      'The Quartermaster of Cold Coffee Rings',
+    ],
+    forgot: [
+      'The Itinerant Pilgrim of Forgotten Errands',
+      'The Doorway Amnesiac of the Hallway Closet',
+      'The Threshold Wanderer of the Empty Hand',
     ],
     called: [
       'The Estranged Attaché of Somebody Else\'s Landline',
       'The Distant Nephew of a Neglected Rotary',
       'The Reluctant Correspondent to Mothers Everywhere',
     ],
+    lol: [
+      'The Reluctant Garnisher of Sincerity',
+      'The Notary of the Trailing "lol"',
+      'The Soft-Tongued Diplomat of Group Chats',
+    ],
     scroll: [
       'The Vagrant Ambassador of the Feed',
       'The Drifting Undersecretary of Nothing In Particular',
       'The Thumb-Weary Emissary of the Small Rectangle',
     ],
-    standing: [
-      'The Sovereign of the Kitchen Counter',
-      'The Standing Magistrate of the Fridge Door',
-      'The Vertical Diner of the Hallway Bowl',
+    photos: [
+      'The Custodian of the Forty-Image Burst',
+      'The Reluctant Archivist of Unremarkable Wednesdays',
+      'The Unsorted Photographer of the Empty Hour',
     ],
   };
 
-  // Secondary pair overrides for extra specificity
   const PAIR_OVERRIDES = {
-    'coffees+sleep':    'The Trembling Insomniac of the Fourth Cup',
-    'scroll+sleep':     'The Doom-scrolling Night Clerk',
-    'called+unread':    'The Patron Saint of the Unanswered Message',
-    'coffees+scroll':   'The Jittery Archivist of the Infinite Feed',
-    'standing+coffees': 'The Standing Understudy of the Second Espresso',
-    'called+scroll':    'The Estranged Scroll-Keeper of Lost Relations',
+    'coffees+sleep':     'The Trembling Insomniac of the Fourth Cup',
+    'scroll+sleep':      'The Doom-scrolling Night Clerk',
+    'called+unread':     'The Patron Saint of the Unanswered Message',
+    'coffees+scroll':    'The Jittery Archivist of the Infinite Feed',
+    'beverages+coffees': 'The Sediment-Cup Connoisseur of the Late Refill',
+    'called+scroll':     'The Estranged Scroll-Keeper of Lost Relations',
+    'forgot+tabs':       'The Threshold Amnesiac of Forty Open Tabs',
+    'lol+scroll':        'The "Lol" Drifter of the Group Chat Feed',
+    'photos+scroll':     'The Unsorted Curator of the Lost Tuesday',
+    'beverages+sleep':   'The Cold-Coffee Insomniac of the Late Desk',
+    'forgot+sleep':      'The Threshold Hermit of the Foggy Morning',
+    'tabs+scroll':       'The Sediment-Tabbed Drifter of the Second Pane',
+    'lol+unread':        'The Garnisher of Unread Group Chats',
+    'photos+forgot':     'The Burst-Snapper of Forgotten Errands',
+    'beverages+tabs':    'The Cold-Cup Custodian of Forty Open Tabs',
   };
 
   if (PAIR_OVERRIDES[pair] && top.units > 0 && second.units > 0) {
@@ -221,9 +406,8 @@ function pickArchetype(items, inputs) {
     };
   }
 
-  // Deterministic sub-pick within the category (based on integer input magnitude)
   const magnitude = Math.abs(Math.round(top.units)) % 3;
-  const name = ARCHETYPES[top.key][magnitude];
+  const name = (ARCHETYPES[top.key] || ARCHETYPES.sleep)[magnitude];
 
   return {
     name,
@@ -233,17 +417,21 @@ function pickArchetype(items, inputs) {
 }
 
 // ---------- URL fragment encode/decode ----------
-// Fragment = v=1&s=...&u=...&c=...&d=...&sc=...&st=...&sig=<base64 ministry line>
+// v=2 schema: one short key per line item + sig.
+//   s=sleep, u=unread, t=tabs, c=coffees, b=beverages, f=forgot,
+//   d=called(days), l=lol, sc=scroll, p=photos, sig=base64(signature)
+
+const FRAG_KEYS = {
+  sleep: 's', unread: 'u', tabs: 't', coffees: 'c', beverages: 'b',
+  forgot: 'f', called: 'd', lol: 'l', scroll: 'sc', photos: 'p',
+};
 
 function encodeFragment(inputs, signature) {
   const p = new URLSearchParams();
-  p.set('v', '1');
-  p.set('s', String(inputs.sleep));
-  p.set('u', String(inputs.unread));
-  p.set('c', String(inputs.coffees));
-  p.set('d', String(inputs.called));
-  p.set('sc', String(inputs.scroll));
-  p.set('st', String(inputs.standing));
+  p.set('v', '2');
+  for (const k of Object.keys(FRAG_KEYS)) {
+    p.set(FRAG_KEYS[k], String(inputs[k]));
+  }
   if (signature) {
     try {
       const b64 = btoa(unescape(encodeURIComponent(signature))).replace(/=+$/, '');
@@ -257,22 +445,16 @@ function decodeFragment(frag) {
   if (!frag || frag.length < 2) return null;
   const raw = frag.startsWith('#') ? frag.slice(1) : frag;
   const p = new URLSearchParams(raw);
-  if (p.get('v') !== '1') return null;
-  const num = (k, def) => {
+  if (p.get('v') !== '2') return null;
+  const num = (k) => {
     const v = p.get(k);
     if (v === null || v === '') return null;
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
-  const inputs = {
-    sleep:    num('s'),
-    unread:   num('u'),
-    coffees:  num('c'),
-    called:   num('d'),
-    scroll:   num('sc'),
-    standing: num('st'),
-  };
-  for (const k of Object.keys(inputs)) {
+  const inputs = {};
+  for (const k of Object.keys(FRAG_KEYS)) {
+    inputs[k] = num(FRAG_KEYS[k]);
     if (inputs[k] === null) return null;
   }
   let signature = null;
@@ -288,12 +470,16 @@ function decodeFragment(frag) {
 // ---------- Deterministic fallback signatures (if LLM fails) ----------
 
 const FALLBACK_SIG = {
-  sleep:    'In the margin where rest should have been, you signed instead — and the Ministry has filed the difference.',
-  unread:   'The unread column grew taller than the read, and somewhere a notification curled up and gave up waiting.',
-  coffees:  'Your hands are warm, your pulse is a memo, and the kettle has filed a complaint on its own behalf.',
-  called:   'Somewhere a phone rings in a kitchen you used to know the smell of, and nobody has logged the silence.',
-  scroll:   'Your thumb made a small pilgrimage today, and arrived nowhere in particular, and filed no report.',
-  standing: 'You ate with one foot already leaving the room; even the plate considered this a formality.',
+  sleep:     'In the margin where rest should have been, you signed instead — and the Ministry has filed the difference.',
+  unread:    'The unread column grew taller than the read, and somewhere a notification curled up and gave up waiting.',
+  tabs:      'Each open tab is a small unkept promise; the Ministry has counted them and none have offered to close.',
+  coffees:   'Your hands are warm, your pulse is a memo, and the kettle has filed a complaint on its own behalf.',
+  beverages: 'A small archipelago of half-drunk cups now ratifies your day; none of them voted in your favor.',
+  forgot:    'You crossed thresholds today on errands the Ministry never received in writing, and now they cannot be filed.',
+  called:    'Somewhere a phone rings in a kitchen you used to know the smell of, and nobody has logged the silence.',
+  lol:       'Your sincerity has been garnished into laughter; the Ministry accepts the trade but recommends a slower tongue.',
+  scroll:    'Your thumb made a small pilgrimage today, and arrived nowhere in particular, and filed no report.',
+  photos:    'You committed several Tuesdays to permanent record today, and the Ministry will store them with the others.',
 };
 
 function buildFallbackSignature(heaviest) {
@@ -311,12 +497,16 @@ async function generateSignature(archetype, heaviest, total, inputs) {
     "You MUST naturally reference the heaviest line item by its NAME (not its code). " +
     "Do not start with 'The Ministry'. Write as if a weary civil servant sealed the document.";
 
+  const inputDigest = STEPS
+    .map(s => `${s.key}=${inputs[s.key]}`)
+    .join(', ');
+
   const userMsg =
     `Archetype verdict: ${archetype.name}\n` +
     `Heaviest line item name: ${heaviest.name}\n` +
     `Heaviest input context: ${heaviest.inputText} (${heaviest.units} regret units)\n` +
     `Total regret units: ${total}\n` +
-    `All inputs: sleep=${inputs.sleep}h, unread=${inputs.unread}, coffees=${inputs.coffees}, days_since_called_home=${inputs.called}, scroll_min=${inputs.scroll}, standing_meals=${inputs.standing}\n` +
+    `All inputs: ${inputDigest}\n` +
     `Write the closing sentence now. Reference "${heaviest.name}" in your sentence.`;
 
   try {
@@ -335,7 +525,6 @@ async function generateSignature(archetype, heaviest, total, inputs) {
     if (!res.ok) throw new Error('http_' + res.status);
     const data = await res.json();
     let text = (data && data.content || '').trim();
-    // Clean up stray quotes/newlines
     text = text.replace(/^["'\s]+|["'\s]+$/g, '').split('\n')[0];
     if (!text || text.length < 8) throw new Error('empty');
     return text;
@@ -368,7 +557,7 @@ function hashStr(str) {
   return Math.abs(h);
 }
 
-// ---------- Render ----------
+// ---------- Render the receipt ----------
 
 function fmtUnits(n) {
   return n.toLocaleString('en-US') + ' REGRET';
@@ -448,32 +637,168 @@ function escapeHTML(s) {
     .replace(/'/g, '&#39;');
 }
 
+// ---------- Stepper UX ----------
+
+let stepIdx = 0;
+const answers = {};
+
+function renderStep(idx) {
+  const step = STEPS[idx];
+  const total = STEPS.length;
+  const card = document.getElementById('step-card');
+  const existing = answers[step.key];
+  const valAttr = (existing !== undefined && existing !== null && Number.isFinite(existing))
+    ? `value="${existing}"` : '';
+
+  card.innerHTML = `
+    <div class="step-num">DECLARATION ${String(idx + 1).padStart(2, '0')} OF ${String(total).padStart(2, '0')}</div>
+    <label class="step-q-label" for="step-input">${escapeHTML(step.label)}</label>
+    <div class="step-hint">${escapeHTML(step.hint)}</div>
+    <input
+      type="number"
+      class="step-input"
+      id="step-input"
+      inputmode="${step.inputmode}"
+      step="${step.step}"
+      min="${step.min}"
+      max="${step.max}"
+      placeholder="${escapeHTML(step.placeholder)}"
+      autocomplete="off"
+      ${valAttr}
+    >
+    <div class="step-stamp" id="step-stamp" aria-live="polite"></div>
+  `;
+
+  document.getElementById('step-counter').textContent =
+    `DECLARATION ${String(idx + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+
+  const prog = document.getElementById('step-progress');
+  prog.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'progress-dot';
+    if (i < idx) dot.classList.add('done');
+    else if (i === idx) dot.classList.add('current');
+    prog.appendChild(dot);
+  }
+
+  document.getElementById('back-btn').disabled = idx === 0;
+  document.getElementById('next-btn').textContent =
+    idx === total - 1 ? 'SUBMIT FOR ASSESSMENT' : 'FILE & CONTINUE →';
+  document.getElementById('error-line').textContent = '';
+
+  const inputEl = document.getElementById('step-input');
+  inputEl.addEventListener('input', () => {
+    refreshStepStamp();
+    refreshCumulative();
+  });
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nextStep();
+    }
+  });
+
+  refreshStepStamp();
+  refreshCumulative();
+
+  // Focus on desktop only — autofocus on mobile pops the keyboard which can
+  // jitter the layout. Browsers without matchMedia get the desktop path.
+  try {
+    const isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    if (!isCoarse) setTimeout(() => inputEl.focus(), 0);
+  } catch (_) {
+    setTimeout(() => inputEl.focus(), 0);
+  }
+}
+
+function readStepValue() {
+  const inputEl = document.getElementById('step-input');
+  if (!inputEl) return null;
+  const raw = inputEl.value;
+  if (raw === '' || !Number.isFinite(Number(raw))) return null;
+  return Number(raw);
+}
+
+function refreshStepStamp() {
+  const step = STEPS[stepIdx];
+  const stampEl = document.getElementById('step-stamp');
+  if (!stampEl) return;
+  const v = readStepValue();
+  if (v === null) {
+    stampEl.className = 'step-stamp';
+    stampEl.textContent = '';
+    return;
+  }
+  const item = FIELD_COMPUTE[step.key](v);
+  if (item.units > 0) {
+    stampEl.className = 'step-stamp heavy';
+    stampEl.textContent = '+ ' + item.units.toLocaleString('en-US') + ' REGRET — ' + item.formula;
+  } else {
+    stampEl.className = 'step-stamp within';
+    stampEl.textContent = 'WITHIN TOLERANCE — ' + item.formula;
+  }
+}
+
+function refreshCumulative() {
+  let total = 0;
+  let filled = 0;
+  for (const s of STEPS) {
+    let v;
+    if (s.key === STEPS[stepIdx].key) {
+      v = readStepValue();
+    } else if (answers[s.key] !== undefined && answers[s.key] !== null && Number.isFinite(answers[s.key])) {
+      v = answers[s.key];
+    }
+    if (v !== undefined && v !== null) {
+      total += FIELD_COMPUTE[s.key](v).units;
+      filled++;
+    }
+  }
+  const el = document.getElementById('cumulative');
+  if (!el) return;
+  el.textContent = filled === 0
+    ? 'RUNNING TOTAL: 0 REGRET'
+    : `RUNNING TOTAL: ${total.toLocaleString('en-US')} REGRET (${filled}/${STEPS.length} declared)`;
+  el.classList.toggle('hot', total >= 400);
+}
+
+function nextStep() {
+  const step = STEPS[stepIdx];
+  const v = readStepValue();
+  if (v === null || v < step.min || v > step.max) {
+    document.getElementById('error-line').textContent =
+      `the Ministry requires a number between ${step.min} and ${step.max}.`;
+    return;
+  }
+  answers[step.key] = v;
+  if (stepIdx === STEPS.length - 1) {
+    runAssessment(answers, null);
+    return;
+  }
+  stepIdx++;
+  renderStep(stepIdx);
+  scrollAppToTop();
+}
+
+function backStep() {
+  if (stepIdx === 0) return;
+  const v = readStepValue();
+  if (v !== null) answers[STEPS[stepIdx].key] = v;
+  stepIdx--;
+  renderStep(stepIdx);
+  scrollAppToTop();
+}
+
+function scrollAppToTop() {
+  try {
+    document.getElementById('intake').scrollIntoView({ block: 'start', behavior: 'instant' });
+  } catch (_) {
+    window.scrollTo(0, 0);
+  }
+}
+
 // ---------- Orchestration ----------
-
-function readInputs() {
-  const g = (id) => Number(document.getElementById(id).value);
-  const inputs = {
-    sleep:    g('f-sleep'),
-    unread:   g('f-unread'),
-    coffees:  g('f-coffees'),
-    called:   g('f-called'),
-    scroll:   g('f-scroll'),
-    standing: g('f-standing'),
-  };
-  return inputs;
-}
-
-function validInputs(inputs) {
-  const okNum = (n, min, max) => Number.isFinite(n) && n >= min && n <= max;
-  return (
-    okNum(inputs.sleep, 0, 24) &&
-    okNum(inputs.unread, 0, 99999) &&
-    okNum(inputs.coffees, 0, 99) &&
-    okNum(inputs.called, 0, 9999) &&
-    okNum(inputs.scroll, 0, 9999) &&
-    okNum(inputs.standing, 0, 20)
-  );
-}
 
 function showLoading(msg) {
   document.getElementById('intake').hidden = true;
@@ -489,30 +814,35 @@ function showReceipt() {
   document.getElementById('receipt-wrap').hidden = false;
   const share = document.getElementById('share');
   if (share) share.style.display = 'flex';
-  // scroll to top so result is above the fold
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function showIntake() {
+function showIntake(resetIdx) {
   document.getElementById('receipt-wrap').hidden = true;
   document.getElementById('loading').hidden = true;
   document.getElementById('intake').hidden = false;
   const share = document.getElementById('share');
   if (share) share.style.display = 'none';
-  document.getElementById('error-line').textContent = '';
-  // Refresh live stamps so they reflect whatever is currently in the form.
-  for (const k of Object.keys(FIELD_TO_INPUT_ID)) updateLiveStamp(k);
-  updateRunningTally();
+  if (resetIdx) stepIdx = 0;
+  renderStep(stepIdx);
+  scrollAppToTop();
+}
+
+function inputsAllValid(inputs) {
+  for (const s of STEPS) {
+    const v = inputs[s.key];
+    if (!Number.isFinite(v) || v < s.min || v > s.max) return false;
+  }
+  return true;
 }
 
 async function runAssessment(inputs, providedSignature) {
   const items = computeAll(inputs);
   const total = items.reduce((s, x) => s + x.units, 0);
-  const archetype = pickArchetype(items, inputs);
+  const archetype = pickArchetype(items);
 
   showLoading(pickLoadingMsg(JSON.stringify(inputs)));
 
-  // min 800ms of loading drama even if signature is cached/instant
   const minDelay = new Promise((r) => setTimeout(r, 800));
 
   let signature;
@@ -530,7 +860,6 @@ async function runAssessment(inputs, providedSignature) {
   renderReceipt(inputs, items, archetype, total, signature);
   showReceipt();
 
-  // Write the shareable fragment (idempotent — safe if rehydrated)
   const frag = encodeFragment(inputs, signature);
   try {
     history.replaceState(null, '', '#' + frag);
@@ -539,153 +868,26 @@ async function runAssessment(inputs, providedSignature) {
   }
 }
 
-// ---------- Live per-field tally ----------
-// As the user types into a field, the corresponding line item is computed
-// immediately and stamped next to the input — same arithmetic the final
-// receipt uses. This keeps the form engaging instead of saving all the
-// payoff for the submit click.
-
-const FIELD_TO_INPUT_ID = {
-  sleep:    'f-sleep',
-  unread:   'f-unread',
-  coffees:  'f-coffees',
-  called:   'f-called',
-  scroll:   'f-scroll',
-  standing: 'f-standing',
-};
-
-const FIELD_COMPUTE = {
-  sleep:    computeSleep,
-  unread:   computeUnread,
-  coffees:  computeCoffees,
-  called:   computeCalled,
-  scroll:   computeScroll,
-  standing: computeStanding,
-};
-
-function readPartialInputs() {
-  const out = {};
-  for (const k of Object.keys(FIELD_TO_INPUT_ID)) {
-    const raw = document.getElementById(FIELD_TO_INPUT_ID[k]).value;
-    out[k] = raw === '' ? null : Number(raw);
-  }
-  return out;
-}
-
-function updateLiveStamp(key) {
-  const inputEl = document.getElementById(FIELD_TO_INPUT_ID[key]);
-  const stampEl = document.querySelector('.live-stamp[data-stamp="' + key + '"]');
-  if (!stampEl) return null;
-  const raw = inputEl.value;
-  if (raw === '' || !Number.isFinite(Number(raw))) {
-    stampEl.textContent = '';
-    stampEl.classList.remove('show', 'heavy', 'within');
-    return null;
-  }
-  const item = FIELD_COMPUTE[key](Number(raw));
-  if (item.units > 0) {
-    stampEl.textContent = '+ ' + item.units.toLocaleString('en-US') + ' REGRET — ' + item.formula;
-    stampEl.classList.add('show', 'heavy');
-    stampEl.classList.remove('within');
-  } else {
-    stampEl.textContent = 'WITHIN TOLERANCE — ' + item.formula;
-    stampEl.classList.add('show', 'within');
-    stampEl.classList.remove('heavy');
-  }
-  return item;
-}
-
-function updateRunningTally() {
-  const partial = readPartialInputs();
-  let total = 0;
-  let filled = 0;
-  let heaviestKey = null;
-  let heaviestUnits = -1;
-  for (const k of Object.keys(FIELD_COMPUTE)) {
-    if (partial[k] === null || !Number.isFinite(partial[k])) continue;
-    filled++;
-    const item = FIELD_COMPUTE[k](partial[k]);
-    total += item.units;
-    if (item.units > heaviestUnits) {
-      heaviestUnits = item.units;
-      heaviestKey = k;
-    }
-  }
-  const valEl = document.getElementById('rt-val');
-  const subEl = document.getElementById('rt-sub');
-  const tallyEl = document.getElementById('running-tally');
-  if (!valEl || !subEl || !tallyEl) return;
-  if (filled === 0) {
-    valEl.textContent = '0 REGRET';
-    subEl.textContent = 'awaiting first declaration';
-    tallyEl.classList.remove('hot');
-    return;
-  }
-  valEl.textContent = total.toLocaleString('en-US') + ' REGRET';
-  if (filled < 6) {
-    subEl.textContent = filled + ' / 6 declared · provisional';
-  } else if (total < 40) {
-    subEl.textContent = 'within tolerance — commendation likely';
-  } else {
-    const heaviestName = heaviestKey ? BENCHMARKS[heaviestKey].itemName.toLowerCase() : '';
-    subEl.textContent = 'heaviest line: ' + heaviestName;
-  }
-  tallyEl.classList.toggle('hot', total >= 200);
-}
-
-function wireLiveTally() {
-  for (const k of Object.keys(FIELD_TO_INPUT_ID)) {
-    const inputEl = document.getElementById(FIELD_TO_INPUT_ID[k]);
-    if (!inputEl) continue;
-    inputEl.addEventListener('input', () => {
-      updateLiveStamp(k);
-      updateRunningTally();
-    });
-  }
-  // Run once at boot in case the form was hydrated from the fragment.
-  for (const k of Object.keys(FIELD_TO_INPUT_ID)) updateLiveStamp(k);
-  updateRunningTally();
-}
-
 // ---------- Boot ----------
 
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('audit-form');
-  const errEl = document.getElementById('error-line');
-
-  wireLiveTally();
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const inputs = readInputs();
-    if (!validInputs(inputs)) {
-      errEl.textContent = 'hmm — the Ministry requires a number in each field.';
-      return;
-    }
-    errEl.textContent = '';
-    runAssessment(inputs, null);
-  });
-
+  document.getElementById('next-btn').addEventListener('click', nextStep);
+  document.getElementById('back-btn').addEventListener('click', backStep);
   document.getElementById('redo-btn').addEventListener('click', () => {
     try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
-    showIntake();
+    for (const k of Object.keys(answers)) delete answers[k];
+    showIntake(true);
   });
 
-  // Re-hydrate from fragment if present
+  // Re-hydrate from fragment if present (skips stepper entirely).
   const hydrated = decodeFragment(location.hash);
-  if (hydrated && validInputs(hydrated.inputs)) {
-    // Fill the form so "redo" still makes sense
-    document.getElementById('f-sleep').value = hydrated.inputs.sleep;
-    document.getElementById('f-unread').value = hydrated.inputs.unread;
-    document.getElementById('f-coffees').value = hydrated.inputs.coffees;
-    document.getElementById('f-called').value = hydrated.inputs.called;
-    document.getElementById('f-scroll').value = hydrated.inputs.scroll;
-    document.getElementById('f-standing').value = hydrated.inputs.standing;
-    // Refresh live stamps to reflect hydrated values before the assessment runs.
-    for (const k of Object.keys(FIELD_TO_INPUT_ID)) updateLiveStamp(k);
-    updateRunningTally();
+  if (hydrated && inputsAllValid(hydrated.inputs)) {
+    Object.assign(answers, hydrated.inputs);
     runAssessment(hydrated.inputs, hydrated.signature);
+    return;
   }
+
+  renderStep(0);
 });
 
 // ---------- Share (required) ----------

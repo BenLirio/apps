@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Ministry of Minor Regrets — Daily Audit</title>
   <meta property="og:title" content="Ministry of Minor Regrets">
   <meta property="og:description" content="Submit your mundane daily numbers. Receive an itemized audit of your regrets, stamped by the Ministry.">
@@ -15,8 +15,8 @@
 </head>
 <body>
   <main id="app">
-    <section id="intake" class="form-card">
-      <header class="form-header">
+    <section id="intake" class="form-card stepper-card">
+      <header class="stepper-header">
         <div class="seal-row">
           <div class="seal seal-top">
             <span class="seal-inner">MINISTRY<br>OF MINOR<br>REGRETS</span>
@@ -24,76 +24,28 @@
           <div class="form-meta">
             <div class="meta-row"><span>FORM</span><span>MR-17/B</span></div>
             <div class="meta-row"><span>SECTION</span><span>DAILY AUDIT</span></div>
-            <div class="meta-row"><span>JURISDICTION</span><span>DOM. MUNDANE</span></div>
-            <div class="meta-row"><span>REV.</span><span>2026-04</span></div>
+            <div class="meta-row"><span>REV.</span><span>2026-05</span></div>
           </div>
         </div>
-        <h1>Declaration of Minor Regrets</h1>
-        <p class="preamble">
-          Pursuant to Sec. 4(c), all citizens shall submit, in good faith, the following numerical declarations for the preceding 24-hour cycle. Failure to declare may result in additional penalty units at the Ministry's sole discretion.
-        </p>
+        <div class="step-status">
+          <div class="step-counter" id="step-counter">DECLARATION 01 / 10</div>
+          <div class="step-progress" id="step-progress" aria-hidden="true"></div>
+        </div>
       </header>
 
-      <form id="audit-form" autocomplete="off">
-        <label class="field" data-key="sleep">
-          <span class="q-num">01</span>
-          <span class="q-label">Hours slept last night</span>
-          <span class="q-hint">Ministry benchmark: 8.0 hrs</span>
-          <input type="number" inputmode="decimal" step="0.5" min="0" max="24" name="sleep" id="f-sleep" placeholder="e.g. 6.5" required>
-          <span class="live-stamp" data-stamp="sleep" aria-live="polite"></span>
-        </label>
+      <div class="step-card" id="step-card" role="group" aria-label="current declaration">
+        <!-- per-step content injected here -->
+      </div>
 
-        <label class="field" data-key="unread">
-          <span class="q-num">02</span>
-          <span class="q-label">Unread messages (all inboxes, estimate)</span>
-          <span class="q-hint">Ministry benchmark: 10 unread</span>
-          <input type="number" inputmode="numeric" step="1" min="0" max="99999" name="unread" id="f-unread" placeholder="e.g. 184" required>
-          <span class="live-stamp" data-stamp="unread" aria-live="polite"></span>
-        </label>
-
-        <label class="field" data-key="coffees">
-          <span class="q-num">03</span>
-          <span class="q-label">Coffees consumed today</span>
-          <span class="q-hint">Ministry benchmark: 2 units</span>
-          <input type="number" inputmode="numeric" step="1" min="0" max="99" name="coffees" id="f-coffees" placeholder="e.g. 4" required>
-          <span class="live-stamp" data-stamp="coffees" aria-live="polite"></span>
-        </label>
-
-        <label class="field" data-key="called">
-          <span class="q-num">04</span>
-          <span class="q-label">Days since you called home</span>
-          <span class="q-hint">Ministry benchmark: 7 days</span>
-          <input type="number" inputmode="numeric" step="1" min="0" max="9999" name="called" id="f-called" placeholder="e.g. 22" required>
-          <span class="live-stamp" data-stamp="called" aria-live="polite"></span>
-        </label>
-
-        <label class="field" data-key="scroll">
-          <span class="q-num">05</span>
-          <span class="q-label">Minutes of aimless scrolling</span>
-          <span class="q-hint">Ministry benchmark: 30 min</span>
-          <input type="number" inputmode="numeric" step="1" min="0" max="9999" name="scroll" id="f-scroll" placeholder="e.g. 140" required>
-          <span class="live-stamp" data-stamp="scroll" aria-live="polite"></span>
-        </label>
-
-        <label class="field" data-key="standing">
-          <span class="q-num">06</span>
-          <span class="q-label">Meals eaten standing up</span>
-          <span class="q-hint">Ministry benchmark: 0 meals</span>
-          <input type="number" inputmode="numeric" step="1" min="0" max="20" name="standing" id="f-standing" placeholder="e.g. 2" required>
-          <span class="live-stamp" data-stamp="standing" aria-live="polite"></span>
-        </label>
-
-        <div id="running-tally" class="running-tally" aria-live="polite">
-          <span class="rt-label">Running tally</span>
-          <span class="rt-val" id="rt-val">0 REGRET</span>
-          <span class="rt-sub" id="rt-sub">awaiting first declaration</span>
+      <div class="step-foot">
+        <div class="cumulative" id="cumulative">RUNNING TOTAL: 0 REGRET</div>
+        <div class="error-line" id="error-line" aria-live="polite"></div>
+        <div class="step-buttons">
+          <button id="back-btn" type="button" class="step-back" disabled>&larr; BACK</button>
+          <button id="next-btn" type="button" class="step-next">FILE &amp; CONTINUE &rarr;</button>
         </div>
-
-        <div id="error-line" class="error-line" aria-live="polite"></div>
-
-        <button id="submit-btn" type="submit" class="stamp-btn">SUBMIT FOR ASSESSMENT</button>
         <p class="disclaimer">Submission constitutes consent to regret quantification.</p>
-      </form>
+      </div>
     </section>
 
     <section id="loading" class="loading-card" hidden>
