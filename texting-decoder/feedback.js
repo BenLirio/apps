@@ -65,6 +65,15 @@
     var sendBtn = overlay.querySelector('.ef-fb-send');
     var cancelBtn = overlay.querySelector('.ef-fb-cancel');
 
+    // Host apps often attach window-level keydown listeners (e.g. Space to
+    // start/restart a game) that call preventDefault, which would otherwise
+    // swallow characters typed into this textarea. Stop key events from
+    // bubbling out to the host page.
+    function swallow(e) { e.stopPropagation(); }
+    textarea.addEventListener('keydown', swallow);
+    textarea.addEventListener('keyup', swallow);
+    textarea.addEventListener('keypress', swallow);
+
     function open() {
       overlay.classList.add('open');
       status.textContent = '';
