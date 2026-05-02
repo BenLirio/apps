@@ -498,6 +498,9 @@ function showIntake() {
   const share = document.getElementById('share');
   if (share) share.style.display = 'none';
   document.getElementById('error-line').textContent = '';
+  // Refresh live stamps so they reflect whatever is currently in the form.
+  for (const k of Object.keys(FIELD_TO_INPUT_ID)) updateLiveStamp(k);
+  updateRunningTally();
 }
 
 async function runAssessment(inputs, providedSignature) {
@@ -534,11 +537,121 @@ async function runAssessment(inputs, providedSignature) {
   }
 }
 
+// ---------- Live per-field tally ----------
+// As the user types into a field, the corresponding line item is computed
+// immediately and stamped next to the input — same arithmetic the final
+// receipt uses. This keeps the form engaging instead of saving all the
+// payoff for the submit click.
+
+const FIELD_TO_INPUT_ID = {
+  sleep:    'f-sleep',
+  unread:   'f-unread',
+  coffees:  'f-coffees',
+  called:   'f-called',
+  scroll:   'f-scroll',
+  standing: 'f-standing',
+};
+
+const FIELD_COMPUTE = {
+  sleep:    computeSleep,
+  unread:   computeUnread,
+  coffees:  computeCoffees,
+  called:   computeCalled,
+  scroll:   computeScroll,
+  standing: computeStanding,
+};
+
+function readPartialInputs() {
+  const out = {};
+  for (const k of Object.keys(FIELD_TO_INPUT_ID)) {
+    const raw = document.getElementById(FIELD_TO_INPUT_ID[k]).value;
+    out[k] = raw === '' ? null : Number(raw);
+  }
+  return out;
+}
+
+function updateLiveStamp(key) {
+  const inputEl = document.getElementById(FIELD_TO_INPUT_ID[key]);
+  const stampEl = document.querySelector('.live-stamp[data-stamp="' + key + '"]');
+  if (!stampEl) return null;
+  const raw = inputEl.value;
+  if (raw === '' || !Number.isFinite(Number(raw))) {
+    stampEl.textContent = '';
+    stampEl.classList.remove('show', 'heavy', 'within');
+    return null;
+  }
+  const item = FIELD_COMPUTE[key](Number(raw));
+  if (item.units > 0) {
+    stampEl.textContent = '+ ' + item.units.toLocaleString('en-US') + ' REGRET — ' + item.formula;
+    stampEl.classList.add('show', 'heavy');
+    stampEl.classList.remove('within');
+  } else {
+    stampEl.textContent = 'WITHIN TOLERANCE — ' + item.formula;
+    stampEl.classList.add('show', 'within');
+    stampEl.classList.remove('heavy');
+  }
+  return item;
+}
+
+function updateRunningTally() {
+  const partial = readPartialInputs();
+  let total = 0;
+  let filled = 0;
+  let heaviestKey = null;
+  let heaviestUnits = -1;
+  for (const k of Object.keys(FIELD_COMPUTE)) {
+    if (partial[k] === null || !Number.isFinite(partial[k])) continue;
+    filled++;
+    const item = FIELD_COMPUTE[k](partial[k]);
+    total += item.units;
+    if (item.units > heaviestUnits) {
+      heaviestUnits = item.units;
+      heaviestKey = k;
+    }
+  }
+  const valEl = document.getElementById('rt-val');
+  const subEl = document.getElementById('rt-sub');
+  const tallyEl = document.getElementById('running-tally');
+  if (!valEl || !subEl || !tallyEl) return;
+  if (filled === 0) {
+    valEl.textContent = '0 REGRET';
+    subEl.textContent = 'awaiting first declaration';
+    tallyEl.classList.remove('hot');
+    return;
+  }
+  valEl.textContent = total.toLocaleString('en-US') + ' REGRET';
+  if (filled < 6) {
+    subEl.textContent = filled + ' / 6 declared · provisional';
+  } else if (total < 40) {
+    subEl.textContent = 'within tolerance — commendation likely';
+  } else {
+    const heaviestName = heaviestKey ? BENCHMARKS[heaviestKey].itemName.toLowerCase() : '';
+    subEl.textContent = 'heaviest line: ' + heaviestName;
+  }
+  tallyEl.classList.toggle('hot', total >= 200);
+}
+
+function wireLiveTally() {
+  for (const k of Object.keys(FIELD_TO_INPUT_ID)) {
+    const inputEl = document.getElementById(FIELD_TO_INPUT_ID[k]);
+    if (!inputEl) continue;
+    inputEl.addEventListener('input', () => {
+      updateLiveStamp(k);
+      updateRunningTally();
+    });
+  }
+  // Run once at boot in case the form was hydrated from the fragment.
+  for (const k of Object.keys(FIELD_TO_INPUT_ID)) updateLiveStamp(k);
+  updateRunningTally();
+}
+
 // ---------- Boot ----------
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('audit-form');
   const errEl = document.getElementById('error-line');
+
+  wireLiveTally();
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -566,6 +679,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('f-called').value = hydrated.inputs.called;
     document.getElementById('f-scroll').value = hydrated.inputs.scroll;
     document.getElementById('f-standing').value = hydrated.inputs.standing;
+    // Refresh live stamps to reflect hydrated values before the assessment runs.
+    for (const k of Object.keys(FIELD_TO_INPUT_ID)) updateLiveStamp(k);
+    updateRunningTally();
     runAssessment(hydrated.inputs, hydrated.signature);
   }
 });

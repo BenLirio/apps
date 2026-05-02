@@ -1,15 +1,20 @@
-/* Aesthetic: thermal-receipt + brutalist government-form — carbon-copy pink paper, monospace audit type, stamped seals, hard rules, no gradients */
+/* Aesthetic: thermal-receipt + brutalist government-form — manila form paper,
+   monospace audit type, navy seals, stamp-red verdicts, hard rules, no gradients */
 
 :root {
-  --paper: #ffd6de;          /* carbon-copy pink */
-  --paper-shadow: #e9a8b2;
-  --ink: #1a0f12;
-  --ink-soft: #3a2428;
+  --paper: #f3e6c2;          /* manila form */
+  --paper-shadow: #d6c596;
+  --ink: #14181f;
+  --ink-soft: #3a4150;
   --stamp-red: #b81d2b;
-  --stamp-red-faded: #a82634;
-  --seal-blue: #1f3e7a;
-  --rule: #1a0f12;
-  --bg-outer: #2a1b1f;
+  --stamp-red-faded: #92131f;
+  --seal-blue: #14366b;
+  --rule: #14181f;
+  --bg-outer: #1c2230;       /* deep navy backdrop, away from the wine-pink uncanny */
+  --bg-outer-2: #0e1219;
+  --within: #1f6b3b;
+  --within-soft: rgba(31,107,59,0.12);
+  --hot: #b81d2b;
 }
 
 * { box-sizing: border-box; }
@@ -29,8 +34,8 @@ html, body {
 body {
   padding: 20px 12px 60px;
   background-image:
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px),
-    radial-gradient(circle at 20% 10%, #3a252b 0%, #2a1b1f 55%, #18100f 100%);
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 4px),
+    radial-gradient(circle at 20% 10%, #2a3346 0%, var(--bg-outer) 55%, var(--bg-outer-2) 100%);
 }
 
 #app {
@@ -509,6 +514,96 @@ body {
 }
 .redo-btn:hover { background: var(--ink); color: var(--paper); }
 
+/* ---------- live per-field stamp ---------- */
+.live-stamp {
+  display: none;
+  margin: 6px 0 0;
+  font-family: 'Special Elite', 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.live-stamp.show {
+  display: inline-block;
+  opacity: 1;
+  transform: translateY(0);
+}
+.live-stamp.heavy {
+  color: var(--stamp-red);
+  border: 1.5px dashed var(--stamp-red);
+  padding: 3px 6px;
+  display: inline-block;
+  background: rgba(184,29,43,0.06);
+}
+.live-stamp.within {
+  color: var(--within);
+  border: 1.5px dashed var(--within);
+  padding: 3px 6px;
+  display: inline-block;
+  background: var(--within-soft);
+}
+
+/* ---------- running tally ---------- */
+.running-tally {
+  margin: 16px 0 4px;
+  padding: 10px 12px;
+  border: 2px solid var(--ink);
+  background: rgba(20,24,31,0.04);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  position: sticky;
+  bottom: 8px;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+.running-tally::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px dotted var(--ink);
+  pointer-events: none;
+  opacity: 0.45;
+}
+.rt-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+.rt-val {
+  font-family: 'Special Elite', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.rt-sub {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.running-tally.hot .rt-val {
+  color: var(--hot);
+}
+.running-tally.hot {
+  border-color: var(--hot);
+  background: rgba(184,29,43,0.06);
+}
+.running-tally.hot .rt-label {
+  color: var(--hot);
+}
+
 /* ---------- narrow screens ---------- */
 @media (max-width: 380px) {
   body { padding: 14px 8px 50px; }
@@ -516,4 +611,6 @@ body {
   .form-header h1 { font-size: 20px; }
   .stamp-verdict { font-size: 15px; padding: 8px 10px; }
   .seal { width: 70px; height: 70px; }
+  .rt-val { font-size: 16px; }
+  .live-stamp { font-size: 10px; letter-spacing: 1px; }
 }

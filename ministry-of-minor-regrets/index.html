@@ -35,47 +35,59 @@
       </header>
 
       <form id="audit-form" autocomplete="off">
-        <label class="field">
+        <label class="field" data-key="sleep">
           <span class="q-num">01</span>
           <span class="q-label">Hours slept last night</span>
           <span class="q-hint">Ministry benchmark: 8.0 hrs</span>
           <input type="number" inputmode="decimal" step="0.5" min="0" max="24" name="sleep" id="f-sleep" placeholder="e.g. 6.5" required>
+          <span class="live-stamp" data-stamp="sleep" aria-live="polite"></span>
         </label>
 
-        <label class="field">
+        <label class="field" data-key="unread">
           <span class="q-num">02</span>
           <span class="q-label">Unread messages (all inboxes, estimate)</span>
           <span class="q-hint">Ministry benchmark: 10 unread</span>
           <input type="number" inputmode="numeric" step="1" min="0" max="99999" name="unread" id="f-unread" placeholder="e.g. 184" required>
+          <span class="live-stamp" data-stamp="unread" aria-live="polite"></span>
         </label>
 
-        <label class="field">
+        <label class="field" data-key="coffees">
           <span class="q-num">03</span>
           <span class="q-label">Coffees consumed today</span>
           <span class="q-hint">Ministry benchmark: 2 units</span>
           <input type="number" inputmode="numeric" step="1" min="0" max="99" name="coffees" id="f-coffees" placeholder="e.g. 4" required>
+          <span class="live-stamp" data-stamp="coffees" aria-live="polite"></span>
         </label>
 
-        <label class="field">
+        <label class="field" data-key="called">
           <span class="q-num">04</span>
           <span class="q-label">Days since you called home</span>
           <span class="q-hint">Ministry benchmark: 7 days</span>
           <input type="number" inputmode="numeric" step="1" min="0" max="9999" name="called" id="f-called" placeholder="e.g. 22" required>
+          <span class="live-stamp" data-stamp="called" aria-live="polite"></span>
         </label>
 
-        <label class="field">
+        <label class="field" data-key="scroll">
           <span class="q-num">05</span>
           <span class="q-label">Minutes of aimless scrolling</span>
           <span class="q-hint">Ministry benchmark: 30 min</span>
           <input type="number" inputmode="numeric" step="1" min="0" max="9999" name="scroll" id="f-scroll" placeholder="e.g. 140" required>
+          <span class="live-stamp" data-stamp="scroll" aria-live="polite"></span>
         </label>
 
-        <label class="field">
+        <label class="field" data-key="standing">
           <span class="q-num">06</span>
           <span class="q-label">Meals eaten standing up</span>
           <span class="q-hint">Ministry benchmark: 0 meals</span>
           <input type="number" inputmode="numeric" step="1" min="0" max="20" name="standing" id="f-standing" placeholder="e.g. 2" required>
+          <span class="live-stamp" data-stamp="standing" aria-live="polite"></span>
         </label>
+
+        <div id="running-tally" class="running-tally" aria-live="polite">
+          <span class="rt-label">Running tally</span>
+          <span class="rt-val" id="rt-val">0 REGRET</span>
+          <span class="rt-sub" id="rt-sub">awaiting first declaration</span>
+        </div>
 
         <div id="error-line" class="error-line" aria-live="polite"></div>
 
