@@ -80,77 +80,162 @@
     orbitRadius = Math.max(64, Math.min(110, W * 0.16));
   }
 
-  // --- Patterns ---
-  // Each pattern returns an array of obstacle rects. Coordinates are world-space (x in pixels, y is the *top* of the pattern band).
-  // The orbit "diameter gap" players must thread is 2*orbitRadius wide (with ball radius slack), centered on orbitCenter.x.
-  // A pattern is *passable* if there exists an x-range of >= 2*orbitRadius+gap that is free of bars at the orbit's y-band.
-  function makePatterns() {
-    const W2 = W;
-    const cx = W2 / 2;
-    const barH = 22;
-    const orbitDiam = orbitRadius * 2;
-    const passWidth = orbitDiam + BALL_R * 2 + 20; // safe channel width
+  // --- Pattern generation ---
+  // Every pattern is constructed to be geometrically passable; the previous
+  // "edge-gap" patterns were impossible because the two balls span 2r around
+  // the orbit center cx, but the gap was anchored at x=0 with width ~2r+42 —
+  // there's no rotation that places both balls inside an off-center channel
+  // when cx >> channel width.
+  //
+  // Geometry crib (cx = orbit center x, r = orbit radius):
+  //   Ball positions: red=(cx+r·cosθ, cy+r·sinθ), blue=(cx-r·cosθ, cy-r·sinθ).
+  //   Both balls span x ∈ [cx - r·|cosθ|, cx + r·|cosθ|], collapsing to x = cx
+  //   at vertical (cosθ=0) and spreading to the full diameter at horizontal.
+  //
+  // Barrier passability (with BALL_R buffer):
+  //   centerGap(halfGap):  passable for |cosθ| < (halfGap - BALL_R)/r.
+  //                        Always passable when halfGap ≥ r + BALL_R.
+  //   sideBar(innerX):     passable for |cosθ| < (cx - innerX - BALL_R)/r.
+  //                        Always passable when innerX ≤ cx - r - BALL_R.
+  //   narrowCenter(w):     passable for |cosθ| > (w/2 + BALL_R)/r.
+  //                        Possible at all when w < 2·(r - BALL_R).
+  //
+  // Sequenced barriers: vertical spacing dy gives the player ≈ dy/fallSpeed
+  // frames to rotate. ANG_MAX = 0.07 rad/frame, so a 90° (1.57 rad) flip needs
+  // ≥ ~25 useful frames. dy = 240 at peak fallSpeed (~5 px/frame) → ~48 frames,
+  // tight but comfortable. Inter-pattern gap ≥ 170 keeps that budget intact.
+
+  const BAR_H = 22;
+  const SAFE = 8;
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function weightedPick(items) {
+    let total = 0;
+    for (const i of items) total += i.weight;
+    let v = Math.random() * total;
+    for (const i of items) {
+      v -= i.weight;
+      if (v <= 0) return i.name;
+    }
+    return items[items.length - 1].name;
+  }
+
+  function patternBounds() {
+    const cx = orbitCenter.x;
+    const r = orbitRadius;
+    return {
+      cx, r,
+      wideHalfGap: r + BALL_R + SAFE + 4,             // always-passable center gap
+      safeInnerEdgeLeft: cx - r - BALL_R - SAFE,      // always-passable left bar edge
+      safeInnerEdgeRight: cx + r + BALL_R + SAFE,     // always-passable right bar edge
+      maxNarrowW: 2 * (r - BALL_R) - SAFE * 2,        // upper bound on splittable narrow bar
+      minTightHalfGap: BALL_R + 14,                   // hard lower bound on center channel
+    };
+  }
+
+  function makeCenterGap(y, halfGap) {
+    const cx = orbitCenter.x;
     const out = [];
-
-    // single bar offset left
-    out.push((y) => [
-      { x: 0, y, w: cx - passWidth / 2, h: barH }
-    ]);
-    // single bar offset right
-    out.push((y) => [
-      { x: cx + passWidth / 2, y, w: W2 - (cx + passWidth / 2), h: barH }
-    ]);
-    // two bars with center gap
-    out.push((y) => [
-      { x: 0, y, w: cx - passWidth / 2, h: barH },
-      { x: cx + passWidth / 2, y, w: W2 - (cx + passWidth / 2), h: barH }
-    ]);
-    // narrow center bar — gap on either side wide enough
-    out.push((y) => {
-      const narrow = Math.max(40, Math.min(120, W2 * 0.12));
-      return [{ x: cx - narrow / 2, y, w: narrow, h: barH }];
-    });
-    // diagonal staircase: bar offset slightly + small bar lower on one side (two-row pattern)
-    out.push((y) => {
-      const off = passWidth * 0.6;
-      return [
-        { x: 0, y, w: cx - off / 2, h: barH },
-        { x: cx + off / 2, y: y + barH * 2.2, w: W2 - (cx + off / 2), h: barH }
-      ];
-    });
-    // two-row staggered (left-then-right)
-    out.push((y) => [
-      { x: 0, y, w: cx - passWidth / 2, h: barH },
-      { x: cx + passWidth / 2, y: y + barH * 2.2, w: W2 - (cx + passWidth / 2), h: barH }
-    ]);
-    // big bar with a hole on one side + small notch
-    out.push((y) => {
-      const side = Math.random() < 0.5 ? -1 : 1;
-      // Bar covers most of width, leaving a passWidth gap on `side`
-      if (side < 0) {
-        return [{ x: passWidth, y, w: W2 - passWidth, h: barH }];
-      } else {
-        return [{ x: 0, y, w: W2 - passWidth, h: barH }];
-      }
-    });
-
+    if (cx - halfGap > 0) out.push({ x: 0, y, w: cx - halfGap, h: BAR_H });
+    if (W - (cx + halfGap) > 0) out.push({ x: cx + halfGap, y, w: W - (cx + halfGap), h: BAR_H });
     return out;
   }
-  let PATTERNS = [];
+  function makeSideBar(y, side, innerX) {
+    if (side < 0) {
+      if (innerX <= 0) return [];
+      return [{ x: 0, y, w: innerX, h: BAR_H }];
+    }
+    if (innerX >= W) return [];
+    return [{ x: innerX, y, w: W - innerX, h: BAR_H }];
+  }
+  function makeNarrowCenter(y, w) {
+    const cx = orbitCenter.x;
+    return [{ x: cx - w / 2, y, w, h: BAR_H }];
+  }
 
-  function spawnPattern(topY) {
-    const fn = PATTERNS[Math.floor(Math.random() * PATTERNS.length)];
-    const rects = fn(topY);
-    // tag with pattern id so we can score once when fully passed
-    const pid = Math.random().toString(36).slice(2);
-    rects.forEach(r => { r.pid = pid; r.scored = false; });
-    obstacles.push(...rects);
+  function pickPattern(topY, difficulty) {
+    const b = patternBounds();
+    const types = [
+      { name: 'wide_center',       weight: Math.max(0.10, 0.55 - difficulty * 0.35) },
+      { name: 'wide_side',         weight: Math.max(0.10, 0.45 - difficulty * 0.25) },
+      { name: 'narrow_center',     weight: 0.20 + difficulty * 0.35 },
+      { name: 'tight_channel',     weight: 0.15 + difficulty * 0.30 },
+      { name: 'split_then_center', weight: 0.05 + difficulty * 0.55 },
+      { name: 'center_then_split', weight: 0.05 + difficulty * 0.55 },
+    ];
+    const type = weightedPick(types);
+    const out = [];
+
+    switch (type) {
+      case 'wide_center':
+        out.push(...makeCenterGap(topY, b.wideHalfGap));
+        break;
+      case 'wide_side': {
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const innerX = side < 0 ? b.safeInnerEdgeLeft : b.safeInnerEdgeRight;
+        out.push(...makeSideBar(topY, side, innerX));
+        break;
+      }
+      case 'narrow_center': {
+        const w = Math.min(b.maxNarrowW * 0.95, lerp(b.r * 0.5, b.r * 1.3, difficulty));
+        out.push(...makeNarrowCenter(topY, w));
+        break;
+      }
+      case 'tight_channel': {
+        const half = Math.max(b.minTightHalfGap, lerp(b.r * 0.55, b.r * 0.30, difficulty));
+        out.push(...makeCenterGap(topY, half));
+        break;
+      }
+      case 'split_then_center': {
+        const wn = Math.min(b.maxNarrowW * 0.85, lerp(b.r * 0.5, b.r * 1.15, difficulty));
+        const half = Math.max(b.minTightHalfGap + 4, lerp(b.r * 0.55, b.r * 0.34, difficulty));
+        out.push(...makeNarrowCenter(topY, wn));
+        out.push(...makeCenterGap(topY + 240, half));
+        break;
+      }
+      case 'center_then_split': {
+        const half = Math.max(b.minTightHalfGap + 4, lerp(b.r * 0.55, b.r * 0.34, difficulty));
+        const wn = Math.min(b.maxNarrowW * 0.85, lerp(b.r * 0.5, b.r * 1.15, difficulty));
+        out.push(...makeCenterGap(topY, half));
+        out.push(...makeNarrowCenter(topY + 240, wn));
+        break;
+      }
+    }
+    return out;
+  }
+
+  function currentDifficulty() {
+    return Math.min(1, timeAlive / 5400); // ramps to peak over ~90s @ 60fps
+  }
+
+  function spawnNextPattern() {
+    let topmost = -50;
+    for (const o of obstacles) if (o.y < topmost) topmost = o.y;
+
+    const difficulty = currentDifficulty();
+    const pattern = pickPattern(0, difficulty);
+    if (pattern.length === 0) return;
+
+    let extent = 0;
+    for (const r of pattern) extent = Math.max(extent, r.y + r.h);
+
+    const interGap = Math.max(170, 240 - timeAlive * 0.035);
+    const newTop = topmost - extent - interGap;
+
+    // One pid per barrier (rects sharing a y-row); each cleared barrier scores +1.
+    const yToPid = new Map();
+    for (const r of pattern) {
+      r.y += newTop;
+      if (!yToPid.has(r.y)) yToPid.set(r.y, Math.random().toString(36).slice(2));
+      r.pid = yToPid.get(r.y);
+      r.scored = false;
+    }
+    obstacles.push(...pattern);
   }
 
   function resetGame() {
     layout();
-    PATTERNS = makePatterns();
-    angle = -Math.PI / 2;       // red on top? actually start with red at right (0). Let's start at 0.
     angle = 0;
     angVel = 0;
     trailA.length = 0;
@@ -159,10 +244,7 @@
     score = 0;
     timeAlive = 0;
     baseFallSpeed = 2.4;
-    // First few patterns staggered up the screen
-    for (let i = 0; i < 3; i++) {
-      spawnPattern(-200 - i * 220);
-    }
+    for (let i = 0; i < 3; i++) spawnNextPattern();
     scoreEl.textContent = '0';
   }
 
@@ -309,47 +391,31 @@
       o.y += fallSpeed;
     }
 
-    // Score: when an obstacle's bottom passes below orbit (any obstacle in pattern), score the pattern once
+    // Score: each barrier (rects sharing a pid) increments score once fully past the orbit.
     const orbitBottom = orbitCenter.y + orbitRadius + BALL_R;
-    const scoredPids = new Set();
+    const groups = new Map();
     for (const o of obstacles) {
-      if (!o.scored && (o.y + o.h) > orbitBottom) {
-        if (!scoredPids.has(o.pid)) {
-          // first time this frame we see this pid passing
-          // mark all rects in this pid scored
-          scoredPids.add(o.pid);
-        }
+      if (o.scored) continue;
+      if (!groups.has(o.pid)) groups.set(o.pid, []);
+      groups.get(o.pid).push(o);
+    }
+    let scoredThisFrame = false;
+    for (const group of groups.values()) {
+      if (group.every(o => (o.y + o.h) > orbitBottom)) {
+        for (const o of group) o.scored = true;
+        score++;
+        scoredThisFrame = true;
       }
     }
-    if (scoredPids.size > 0) {
-      for (const o of obstacles) {
-        if (scoredPids.has(o.pid) && !o.scored) {
-          // Only score once per pattern: when *all* rects in the pattern have passed
-          const allPassed = obstacles.filter(x => x.pid === o.pid).every(x => (x.y + x.h) > orbitBottom);
-          if (allPassed) {
-            // Mark all as scored to prevent double counting
-            for (const x of obstacles) if (x.pid === o.pid) x.scored = true;
-            score++;
-            scoreEl.textContent = String(score);
-          }
-          break;
-        }
-      }
-    }
+    if (scoredThisFrame) scoreEl.textContent = String(score);
 
-    // Cull obstacles that are off-screen
     obstacles = obstacles.filter(o => o.y < H + 200);
 
-    // Spawn new patterns when topmost obstacle has descended enough
-    let topmost = -Infinity;
-    for (const o of obstacles) if (o.y < topmost || topmost === -Infinity) topmost = o.y;
-    // Spawn cadence tightens with time
-    const spawnGap = Math.max(150, 240 - timeAlive * 0.05);
-    if (obstacles.length === 0 || topmost > -spawnGap) {
-      // Find current min y to place new pattern above it
-      let minY = -spawnGap;
-      for (const o of obstacles) if (o.y < minY) minY = o.y;
-      spawnPattern(minY - spawnGap);
+    // Spawn new patterns once the highest obstacle has descended past the spawn line.
+    let topmost = Infinity;
+    for (const o of obstacles) if (o.y < topmost) topmost = o.y;
+    if (obstacles.length === 0 || topmost > -50) {
+      spawnNextPattern();
     }
 
     // Collisions
@@ -476,7 +542,6 @@
   // --- Init ---
   function init() {
     layout();
-    PATTERNS = makePatterns();
     bestScoreEl.textContent = String(getBest());
     // gentle ambient rotation on title
     angle = -Math.PI / 4;
