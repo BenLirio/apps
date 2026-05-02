@@ -22,100 +22,42 @@ const RARITY_TIERS = {
 };
 
 // ====================== SPECIES CATALOG ======================
-// Each species: { id, name, kind, rarity, palette, draw }
+// Each species: { id, name, kind, rarity, baseSpeed }
 // kind = crawler | flyer | drifter | hopper | zigzag — controls trajectory.
 // rarity = common | uncommon | rare | legendary — controls spawn weight + visual treatment.
+// Visuals are committed PNGs at bugs/{id}.png — Victorian natural-history
+// engravings, transparent backgrounds, oriented with the insect facing up.
 const SPECIES = [
-  { id: 'clockroach',   name: 'Gold-banded clock-roach', kind: 'crawler', rarity: 'common', baseSpeed: 1.0,
-    palette: ['#5a3f24', '#b89149', '#241808'],
-    draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:true,antennae:true,wings:false,legs:6}) },
-  { id: 'stainmoth',    name: 'Stained-glass moth', kind: 'flyer', rarity: 'legendary', baseSpeed: 1.6,
-    palette: ['#b3402a', '#2c5d63', '#f1e3c4'],
-    draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:true}) },
-  { id: 'cigwalker',    name: 'Cigarette-bearer', kind: 'crawler', rarity: 'common', baseSpeed: 0.7,
-    palette: ['#3a2418', '#d8c290', '#ff6b35'],
-    draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:false,antennae:true,wings:false,legs:6,cig:true}) },
-  { id: 'velvetbumble', name: 'Velvet bumble-pretender', kind: 'flyer', rarity: 'common', baseSpeed: 1.2,
-    palette: ['#1a140d', '#e0a82e', '#f1e3c4'],
-    draw: (c1,c2,c3) => bumbleShape(c1,c2,c3) },
-  { id: 'paperwasp',    name: 'Hand-folded paper wasp', kind: 'flyer', rarity: 'uncommon', baseSpeed: 1.8,
-    palette: ['#d4c08a', '#5a3f24', '#b3402a'],
-    draw: (c1,c2,c3) => waspShape(c1,c2,c3) },
-  { id: 'glassbeetle',  name: 'Translucent glass beetle', kind: 'crawler', rarity: 'rare', baseSpeed: 0.9,
-    palette: ['#cfe7e7', '#2c5d63', '#1f2a23'],
-    draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:true}) },
-  { id: 'inkmite',      name: 'Ink-spilling mite', kind: 'crawler', rarity: 'common', baseSpeed: 0.6,
-    palette: ['#1f1410', '#2c5d63', '#f1e3c4'],
-    draw: (c1,c2,c3) => mitelikeShape(c1,c2,c3) },
-  { id: 'lampfly',      name: 'Streetlamp lace-fly', kind: 'flyer', rarity: 'rare', baseSpeed: 2.0,
-    palette: ['#f3dca3', '#5a3f24', '#fff'],
-    draw: (c1,c2,c3) => laceflyShape(c1,c2,c3) },
-  { id: 'minerbug',     name: 'Coal-miner ground beetle', kind: 'crawler', rarity: 'common', baseSpeed: 0.85,
-    palette: ['#2a2018', '#7a6242', '#0f0a06'],
-    draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'ribbonworm',   name: 'Ribbon-worm caterpillar', kind: 'crawler', rarity: 'common', baseSpeed: 0.5,
-    palette: ['#b3402a', '#f1e3c4', '#5a3f24'],
-    draw: (c1,c2,c3) => caterpillarShape(c1,c2,c3) },
-  { id: 'jewelhopper',  name: 'Velvet-jeweled grasshopper', kind: 'hopper', rarity: 'uncommon', baseSpeed: 1.1,
-    palette: ['#2c5d63', '#e0a82e', '#1f2a23'],
-    draw: (c1,c2,c3) => grasshopperShape(c1,c2,c3) },
-  { id: 'mournfly',     name: 'Mourning bottle-fly', kind: 'zigzag', rarity: 'uncommon', baseSpeed: 2.2,
-    palette: ['#1a140d', '#5a8071', '#2c5d63'],
-    draw: (c1,c2,c3) => bottleflyShape(c1,c2,c3) },
-  { id: 'silkdrifter',  name: 'Silk-thread drifter', kind: 'drifter', rarity: 'common', baseSpeed: 0.4,
-    palette: ['#f1e3c4', '#cfe7e7', '#5a3f24'],
-    draw: (c1,c2,c3) => silkShape(c1,c2,c3) },
-  { id: 'amberbee',     name: 'Amber-cased bee-mimic', kind: 'flyer', rarity: 'uncommon', baseSpeed: 1.5,
-    palette: ['#e0a82e', '#5a3f24', '#1a140d'],
-    draw: (c1,c2,c3) => bumbleShape(c1,c2,c3) },
-  { id: 'ironcricket',  name: 'Iron-shell cricket', kind: 'hopper', rarity: 'uncommon', baseSpeed: 0.95,
-    palette: ['#3a3a3a', '#7a6242', '#1f1f1f'],
-    draw: (c1,c2,c3) => grasshopperShape(c1,c2,c3) },
-  { id: 'paperghost',   name: 'Paper-ghost moth', kind: 'flyer', rarity: 'uncommon', baseSpeed: 1.3,
-    palette: ['#f1e3c4', '#d4c08a', '#5a3f24'],
-    draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:false}) },
-  { id: 'rustbeetle',   name: 'Rusted hinge-beetle', kind: 'crawler', rarity: 'common', baseSpeed: 0.8,
-    palette: ['#7a3a1a', '#b89149', '#1a0e06'],
-    draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'silvermidge',  name: 'Silver tax-collector midge', kind: 'zigzag', rarity: 'common', baseSpeed: 2.4,
-    palette: ['#cfd6d8', '#2c5d63', '#1f1f1f'],
-    draw: (c1,c2,c3) => laceflyShape(c1,c2,c3) },
-  { id: 'velvetdarner', name: 'Velvet darner', kind: 'flyer', rarity: 'rare', baseSpeed: 1.9,
-    palette: ['#3a2a52', '#e0a82e', '#1a140d'],
-    draw: (c1,c2,c3) => waspShape(c1,c2,c3) },
-  { id: 'bookworm',     name: 'Marginalia bookworm', kind: 'crawler', rarity: 'common', baseSpeed: 0.55,
-    palette: ['#a07a3a', '#f1e3c4', '#3a2418'],
-    draw: (c1,c2,c3) => caterpillarShape(c1,c2,c3) },
-  { id: 'opalmoth',     name: 'Opal-eyed dusk moth', kind: 'flyer', rarity: 'legendary', baseSpeed: 1.4,
-    palette: ['#5a4a7a', '#e6c8d8', '#1a140d'],
-    draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:true}) },
-  { id: 'leafmime',     name: 'Polite leaf-mime', kind: 'crawler', rarity: 'common', baseSpeed: 0.7,
-    palette: ['#5a8071', '#a8c099', '#2c3a30'],
-    draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:false,antennae:true,wings:false,legs:6}) },
-  { id: 'bronzebug',    name: 'Bronze-collared sundial bug', kind: 'crawler', rarity: 'common', baseSpeed: 1.0,
-    palette: ['#b89149', '#3a2a10', '#e0c87a'],
-    draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'foglace',      name: 'Fog-lace darner', kind: 'zigzag', rarity: 'rare', baseSpeed: 1.7,
-    palette: ['#c8d4d6', '#2c5d63', '#fff'],
-    draw: (c1,c2,c3) => laceflyShape(c1,c2,c3) },
-  { id: 'porcelainbee', name: 'Porcelain-cup bee', kind: 'flyer', rarity: 'rare', baseSpeed: 1.3,
-    palette: ['#f5ecd6', '#b3402a', '#1a140d'],
-    draw: (c1,c2,c3) => bumbleShape(c1,c2,c3) },
-  { id: 'spectrebug',   name: 'Spectacled assembly-bug', kind: 'crawler', rarity: 'common', baseSpeed: 0.75,
-    palette: ['#5a3f24', '#cfe7e7', '#1f1410'],
-    draw: (c1,c2,c3) => bodyOval(c1,c2,c3,{bands:true,antennae:true,wings:true,legs:6}) },
-  { id: 'sootmoth',     name: 'Soot-eating chimney moth', kind: 'flyer', rarity: 'common', baseSpeed: 1.5,
-    palette: ['#2a2218', '#d4c08a', '#5a4a3a'],
-    draw: (c1,c2,c3) => mothShape(c1,c2,c3,{stained:false}) },
-  { id: 'spiralweevil', name: 'Spiral-shelled weevil', kind: 'crawler', rarity: 'common', baseSpeed: 0.65,
-    palette: ['#6f4a24', '#e0c87a', '#2a1808'],
-    draw: (c1,c2,c3) => beetleShape(c1,c2,c3,{glass:false}) },
-  { id: 'fernhopper',   name: 'Fern-frond hopper', kind: 'hopper', rarity: 'common', baseSpeed: 1.05,
-    palette: ['#4a6a3a', '#e0c87a', '#1f2a18'],
-    draw: (c1,c2,c3) => grasshopperShape(c1,c2,c3) },
-  { id: 'velvetfly',    name: 'Velvet seamstress fly', kind: 'flyer', rarity: 'common', baseSpeed: 2.1,
-    palette: ['#3a2418', '#b3402a', '#e0a82e'],
-    draw: (c1,c2,c3) => bottleflyShape(c1,c2,c3) },
+  { id: 'clockroach',   name: 'Gold-banded clock-roach',     kind: 'crawler', rarity: 'common',    baseSpeed: 1.0 },
+  { id: 'stainmoth',    name: 'Stained-glass moth',           kind: 'flyer',   rarity: 'legendary', baseSpeed: 1.6 },
+  { id: 'cigwalker',    name: 'Cigarette-bearer',             kind: 'crawler', rarity: 'common',    baseSpeed: 0.7 },
+  { id: 'velvetbumble', name: 'Velvet bumble-pretender',      kind: 'flyer',   rarity: 'common',    baseSpeed: 1.2 },
+  { id: 'paperwasp',    name: 'Hand-folded paper wasp',       kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.8 },
+  { id: 'glassbeetle',  name: 'Translucent glass beetle',     kind: 'crawler', rarity: 'rare',      baseSpeed: 0.9 },
+  { id: 'inkmite',      name: 'Ink-spilling mite',            kind: 'crawler', rarity: 'common',    baseSpeed: 0.6 },
+  { id: 'lampfly',      name: 'Streetlamp lace-fly',          kind: 'flyer',   rarity: 'rare',      baseSpeed: 2.0 },
+  { id: 'minerbug',     name: 'Coal-miner ground beetle',     kind: 'crawler', rarity: 'common',    baseSpeed: 0.85 },
+  { id: 'ribbonworm',   name: 'Ribbon-worm caterpillar',      kind: 'crawler', rarity: 'common',    baseSpeed: 0.5 },
+  { id: 'jewelhopper',  name: 'Velvet-jeweled grasshopper',   kind: 'hopper',  rarity: 'uncommon',  baseSpeed: 1.1 },
+  { id: 'mournfly',     name: 'Mourning bottle-fly',          kind: 'zigzag',  rarity: 'uncommon',  baseSpeed: 2.2 },
+  { id: 'silkdrifter',  name: 'Silk-thread drifter',          kind: 'drifter', rarity: 'common',    baseSpeed: 0.4 },
+  { id: 'amberbee',     name: 'Amber-cased bee-mimic',        kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.5 },
+  { id: 'ironcricket',  name: 'Iron-shell cricket',           kind: 'hopper',  rarity: 'uncommon',  baseSpeed: 0.95 },
+  { id: 'paperghost',   name: 'Paper-ghost moth',             kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.3 },
+  { id: 'rustbeetle',   name: 'Rusted hinge-beetle',          kind: 'crawler', rarity: 'common',    baseSpeed: 0.8 },
+  { id: 'silvermidge',  name: 'Silver tax-collector midge',   kind: 'zigzag',  rarity: 'common',    baseSpeed: 2.4 },
+  { id: 'velvetdarner', name: 'Velvet darner',                kind: 'flyer',   rarity: 'rare',      baseSpeed: 1.9 },
+  { id: 'bookworm',     name: 'Marginalia bookworm',          kind: 'crawler', rarity: 'common',    baseSpeed: 0.55 },
+  { id: 'opalmoth',     name: 'Opal-eyed dusk moth',          kind: 'flyer',   rarity: 'legendary', baseSpeed: 1.4 },
+  { id: 'leafmime',     name: 'Polite leaf-mime',             kind: 'crawler', rarity: 'common',    baseSpeed: 0.7 },
+  { id: 'bronzebug',    name: 'Bronze-collared sundial bug',  kind: 'crawler', rarity: 'common',    baseSpeed: 1.0 },
+  { id: 'foglace',      name: 'Fog-lace darner',              kind: 'zigzag',  rarity: 'rare',      baseSpeed: 1.7 },
+  { id: 'porcelainbee', name: 'Porcelain-cup bee',            kind: 'flyer',   rarity: 'rare',      baseSpeed: 1.3 },
+  { id: 'spectrebug',   name: 'Spectacled assembly-bug',      kind: 'crawler', rarity: 'common',    baseSpeed: 0.75 },
+  { id: 'sootmoth',     name: 'Soot-eating chimney moth',     kind: 'flyer',   rarity: 'common',    baseSpeed: 1.5 },
+  { id: 'spiralweevil', name: 'Spiral-shelled weevil',        kind: 'crawler', rarity: 'common',    baseSpeed: 0.65 },
+  { id: 'fernhopper',   name: 'Fern-frond hopper',            kind: 'hopper',  rarity: 'common',    baseSpeed: 1.05 },
+  { id: 'velvetfly',    name: 'Velvet seamstress fly',        kind: 'flyer',   rarity: 'common',    baseSpeed: 2.1 },
 ];
 
 // ====================== LATIN ROOTS for binomials ======================
@@ -291,235 +233,13 @@ function fmtTime(ts) {
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
-// ====================== SVG SHAPE LIBRARY ======================
-// Each builder returns an SVG string (square viewbox 0 0 80 80).
-// Body color c1, accent c2, deep c3.
-function svgFrame(inner) {
-  return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
-}
-function bodyOval(c1, c2, c3, opt) {
-  // generic 6-leg crawler
-  let s = '';
-  // legs
-  if (opt.legs) {
-    for (let i = 0; i < 3; i++) {
-      const y = 32 + i * 7;
-      s += `<line x1="40" y1="${y}" x2="${22}" y2="${y - 3}" stroke="${c3}" stroke-width="2"/>`;
-      s += `<line x1="40" y1="${y}" x2="${58}" y2="${y - 3}" stroke="${c3}" stroke-width="2"/>`;
-    }
-  }
-  // body
-  s += `<ellipse cx="40" cy="44" rx="14" ry="22" fill="${c1}" stroke="${c3}" stroke-width="1.5"/>`;
-  // head
-  s += `<circle cx="40" cy="22" r="8" fill="${c1}" stroke="${c3}" stroke-width="1.5"/>`;
-  // eye dots
-  s += `<circle cx="37" cy="20" r="1.4" fill="${c3}"/><circle cx="43" cy="20" r="1.4" fill="${c3}"/>`;
-  // bands
-  if (opt.bands) {
-    s += `<path d="M28,38 Q40,42 52,38" stroke="${c2}" stroke-width="3" fill="none"/>`;
-    s += `<path d="M28,48 Q40,52 52,48" stroke="${c2}" stroke-width="3" fill="none"/>`;
-    s += `<path d="M30,58 Q40,62 50,58" stroke="${c2}" stroke-width="3" fill="none"/>`;
-  }
-  // wings (flat)
-  if (opt.wings) {
-    s += `<ellipse cx="28" cy="40" rx="10" ry="14" fill="${c2}" opacity=".55"/>`;
-    s += `<ellipse cx="52" cy="40" rx="10" ry="14" fill="${c2}" opacity=".55"/>`;
-  }
-  // antennae
-  if (opt.antennae) {
-    s += `<path d="M37,16 Q32,8 28,4" stroke="${c3}" stroke-width="1.5" fill="none"/>`;
-    s += `<path d="M43,16 Q48,8 52,4" stroke="${c3}" stroke-width="1.5" fill="none"/>`;
-  }
-  if (opt.cig) {
-    s += `<rect x="46" y="18" width="14" height="3" fill="#f1e3c4" stroke="${c3}" stroke-width=".6"/>`;
-    s += `<rect x="58" y="18" width="3" height="3" fill="${c2}"/>`;
-    s += `<path d="M61,18 Q63,14 64,12" stroke="#cfd6d8" stroke-width="1" fill="none"/>`;
-  }
-  return svgFrame(s);
-}
-function mothShape(c1, c2, c3, opt) {
-  let s = '';
-  // wings
-  s += `<path d="M40,40 Q12,18 8,38 Q14,52 40,46 Z" fill="${c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<path d="M40,40 Q68,18 72,38 Q66,52 40,46 Z" fill="${c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<path d="M40,46 Q18,58 18,68 Q34,62 40,52 Z" fill="${c2}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<path d="M40,46 Q62,58 62,68 Q46,62 40,52 Z" fill="${c2}" stroke="${c3}" stroke-width="1.2"/>`;
-  if (opt.stained) {
-    // stained-glass paneling
-    s += `<path d="M22,32 L28,42 M30,28 L34,44 M52,42 L58,32 M50,28 L46,44" stroke="${c3}" stroke-width=".8" opacity=".65"/>`;
-    s += `<circle cx="22" cy="38" r="2" fill="${c2}"/><circle cx="58" cy="38" r="2" fill="${c2}"/>`;
-  } else {
-    s += `<path d="M22,32 Q28,38 24,44 M58,32 Q52,38 56,44" stroke="${c3}" stroke-width=".8" opacity=".5" fill="none"/>`;
-  }
-  // body
-  s += `<ellipse cx="40" cy="44" rx="3.5" ry="14" fill="${c3}"/>`;
-  // head + antennae
-  s += `<circle cx="40" cy="30" r="3" fill="${c3}"/>`;
-  s += `<path d="M38,28 Q34,22 30,20" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  s += `<path d="M42,28 Q46,22 50,20" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  return svgFrame(s);
-}
-function bumbleShape(c1, c2, c3) {
-  let s = '';
-  // wings (clear)
-  s += `<ellipse cx="26" cy="34" rx="14" ry="9" fill="#fff" opacity=".55" stroke="${c3}" stroke-width=".6"/>`;
-  s += `<ellipse cx="54" cy="34" rx="14" ry="9" fill="#fff" opacity=".55" stroke="${c3}" stroke-width=".6"/>`;
-  // body
-  s += `<ellipse cx="40" cy="46" rx="14" ry="18" fill="${c2}" stroke="${c3}" stroke-width="1.4"/>`;
-  // bands
-  s += `<path d="M27,40 L53,40" stroke="${c1}" stroke-width="5"/>`;
-  s += `<path d="M28,52 L52,52" stroke="${c1}" stroke-width="5"/>`;
-  s += `<path d="M30,60 L50,60" stroke="${c1}" stroke-width="3"/>`;
-  // head
-  s += `<circle cx="40" cy="30" r="6" fill="${c1}" stroke="${c3}" stroke-width="1.4"/>`;
-  // antennae
-  s += `<path d="M37,26 Q33,18 31,16" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  s += `<path d="M43,26 Q47,18 49,16" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  return svgFrame(s);
-}
-function waspShape(c1, c2, c3) {
-  let s = '';
-  // wings (long)
-  s += `<ellipse cx="40" cy="34" rx="22" ry="6" fill="#fff" opacity=".6" stroke="${c3}" stroke-width=".5"/>`;
-  // body — segmented
-  s += `<ellipse cx="40" cy="30" rx="6" ry="5" fill="${c1}" stroke="${c3}" stroke-width="1"/>`;
-  s += `<ellipse cx="40" cy="44" rx="6" ry="9" fill="${c1}" stroke="${c3}" stroke-width="1"/>`;
-  s += `<path d="M34,42 L46,42 M34,48 L46,48" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<ellipse cx="40" cy="60" rx="5" ry="8" fill="${c2}" stroke="${c3}" stroke-width="1"/>`;
-  s += `<path d="M40,68 L40,74" stroke="${c3}" stroke-width="2"/>`; // stinger
-  // head
-  s += `<circle cx="40" cy="20" r="4" fill="${c1}" stroke="${c3}" stroke-width="1"/>`;
-  s += `<path d="M37,17 Q33,10 30,8 M43,17 Q47,10 50,8" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  return svgFrame(s);
-}
-function beetleShape(c1, c2, c3, opt) {
-  let s = '';
-  // legs
-  for (let i = 0; i < 3; i++) {
-    const y = 38 + i * 8;
-    s += `<line x1="36" y1="${y}" x2="${20}" y2="${y + 4}" stroke="${c3}" stroke-width="2"/>`;
-    s += `<line x1="44" y1="${y}" x2="${60}" y2="${y + 4}" stroke="${c3}" stroke-width="2"/>`;
-  }
-  // body — beetle dome
-  s += `<ellipse cx="40" cy="46" rx="18" ry="22" fill="${c1}" stroke="${c3}" stroke-width="1.6"/>`;
-  // wing-case split
-  s += `<line x1="40" y1="26" x2="40" y2="66" stroke="${c3}" stroke-width="1.4"/>`;
-  if (opt.glass) {
-    s += `<path d="M28,32 Q34,38 32,46 M52,32 Q46,38 48,46" stroke="${c2}" stroke-width=".8" fill="none" opacity=".7"/>`;
-  } else {
-    s += `<path d="M28,40 Q40,38 52,40" stroke="${c2}" stroke-width="1.6" fill="none" opacity=".7"/>`;
-  }
-  // head
-  s += `<ellipse cx="40" cy="22" rx="8" ry="6" fill="${c1}" stroke="${c3}" stroke-width="1.4"/>`;
-  // mandibles
-  s += `<path d="M36,16 L32,12 M44,16 L48,12" stroke="${c3}" stroke-width="1.2"/>`;
-  return svgFrame(s);
-}
-function mitelikeShape(c1, c2, c3) {
-  let s = '';
-  // many legs
-  for (let i = 0; i < 4; i++) {
-    const y = 32 + i * 6;
-    s += `<line x1="40" y1="${y}" x2="${18}" y2="${y - 4 + i * 2}" stroke="${c3}" stroke-width="1.6"/>`;
-    s += `<line x1="40" y1="${y}" x2="${62}" y2="${y - 4 + i * 2}" stroke="${c3}" stroke-width="1.6"/>`;
-  }
-  // round body
-  s += `<circle cx="40" cy="44" r="16" fill="${c1}" stroke="${c3}" stroke-width="1.5"/>`;
-  s += `<circle cx="40" cy="44" r="10" fill="${c2}" opacity=".4"/>`;
-  // ink drip
-  s += `<path d="M40,60 Q42,68 40,72 Q38,68 40,60 Z" fill="${c2}"/>`;
-  return svgFrame(s);
-}
-function laceflyShape(c1, c2, c3) {
-  let s = '';
-  // wings — lacy
-  s += `<path d="M40,38 Q14,20 10,40 Q18,46 40,42 Z" fill="${c1}" opacity=".75" stroke="${c2}" stroke-width=".6"/>`;
-  s += `<path d="M40,38 Q66,20 70,40 Q62,46 40,42 Z" fill="${c1}" opacity=".75" stroke="${c2}" stroke-width=".6"/>`;
-  s += `<path d="M40,42 Q22,52 24,62 Q34,56 40,46 Z" fill="${c1}" opacity=".55" stroke="${c2}" stroke-width=".6"/>`;
-  s += `<path d="M40,42 Q58,52 56,62 Q46,56 40,46 Z" fill="${c1}" opacity=".55" stroke="${c2}" stroke-width=".6"/>`;
-  // veins
-  s += `<path d="M40,38 L18,32 M40,38 L20,40 M40,38 L18,46 M40,38 L62,32 M40,38 L60,40 M40,38 L62,46" stroke="${c3}" stroke-width=".5" opacity=".6"/>`;
-  // body
-  s += `<ellipse cx="40" cy="42" rx="2.2" ry="10" fill="${c3}"/>`;
-  s += `<circle cx="40" cy="32" r="2.6" fill="${c3}"/>`;
-  s += `<path d="M38,30 L34,24 M42,30 L46,24" stroke="${c3}" stroke-width=".8" fill="none"/>`;
-  return svgFrame(s);
-}
-function caterpillarShape(c1, c2, c3) {
-  let s = '';
-  // segments along a slight curve
-  for (let i = 0; i < 6; i++) {
-    const cx = 18 + i * 9;
-    const cy = 44 + Math.sin(i) * 3;
-    const r = 6 + (i === 5 ? 1 : 0);
-    s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${(i % 2) ? c2 : c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  }
-  // head
-  s += `<circle cx="68" cy="42" r="6" fill="${c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<circle cx="69" cy="40" r="1.2" fill="${c3}"/>`;
-  s += `<path d="M68,36 Q70,30 72,28 M70,38 Q74,34 76,32" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  return svgFrame(s);
-}
-function grasshopperShape(c1, c2, c3) {
-  let s = '';
-  // hind leg (big)
-  s += `<path d="M44,46 L62,38 L58,52 Z" fill="${c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<line x1="58" y1="52" x2="68" y2="62" stroke="${c3}" stroke-width="2"/>`;
-  // mid + fore legs
-  s += `<line x1="40" y1="48" x2="30" y2="60" stroke="${c3}" stroke-width="1.5"/>`;
-  s += `<line x1="36" y1="40" x2="22" y2="46" stroke="${c3}" stroke-width="1.5"/>`;
-  // body
-  s += `<ellipse cx="36" cy="42" rx="14" ry="8" fill="${c1}" stroke="${c3}" stroke-width="1.4"/>`;
-  s += `<path d="M22,38 Q36,32 50,40" stroke="${c2}" stroke-width="2" fill="none" opacity=".7"/>`;
-  // head
-  s += `<circle cx="22" cy="40" r="6" fill="${c1}" stroke="${c3}" stroke-width="1.4"/>`;
-  s += `<circle cx="20" cy="38" r="1.4" fill="${c3}"/>`;
-  // antennae
-  s += `<path d="M20,36 Q14,28 10,24 M22,34 Q18,26 14,22" stroke="${c3}" stroke-width="1" fill="none"/>`;
-  return svgFrame(s);
-}
-function bottleflyShape(c1, c2, c3) {
-  let s = '';
-  // wings translucent
-  s += `<ellipse cx="28" cy="32" rx="14" ry="7" fill="#fff" opacity=".5" stroke="${c3}" stroke-width=".6"/>`;
-  s += `<ellipse cx="52" cy="32" rx="14" ry="7" fill="#fff" opacity=".5" stroke="${c3}" stroke-width=".6"/>`;
-  // metallic body
-  s += `<ellipse cx="40" cy="44" rx="11" ry="14" fill="${c2}" stroke="${c3}" stroke-width="1.4"/>`;
-  s += `<ellipse cx="40" cy="40" rx="6" ry="6" fill="${c1}" opacity=".75"/>`;
-  // head w/ big eye
-  s += `<circle cx="40" cy="28" r="6" fill="${c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<circle cx="38" cy="26" r="3" fill="${c2}"/><circle cx="42" cy="26" r="3" fill="${c2}"/>`;
-  // legs
-  s += `<line x1="34" y1="50" x2="22" y2="60" stroke="${c3}" stroke-width="1.5"/>`;
-  s += `<line x1="46" y1="50" x2="58" y2="60" stroke="${c3}" stroke-width="1.5"/>`;
-  s += `<line x1="34" y1="44" x2="20" y2="48" stroke="${c3}" stroke-width="1.5"/>`;
-  s += `<line x1="46" y1="44" x2="60" y2="48" stroke="${c3}" stroke-width="1.5"/>`;
-  return svgFrame(s);
-}
-function silkShape(c1, c2, c3) {
-  let s = '';
-  // floating spider-on-thread
-  s += `<line x1="40" y1="0" x2="40" y2="32" stroke="${c3}" stroke-width=".6" opacity=".7"/>`;
-  s += `<ellipse cx="40" cy="44" rx="10" ry="9" fill="${c1}" stroke="${c3}" stroke-width="1.2"/>`;
-  s += `<circle cx="40" cy="36" r="4" fill="${c2}" stroke="${c3}" stroke-width="1"/>`;
-  // legs - 8
-  for (let i = 0; i < 4; i++) {
-    const a = 0.5 + i * 0.35;
-    const x1 = 40 + Math.cos(a) * 10;
-    const y1 = 44 + Math.sin(a) * 9;
-    const x2 = 40 + Math.cos(a) * 22;
-    const y2 = 44 + Math.sin(a) * 14;
-    s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c3}" stroke-width="1.2"/>`;
-    const x1m = 40 - Math.cos(a) * 10;
-    const x2m = 40 - Math.cos(a) * 22;
-    s += `<line x1="${x1m}" y1="${y1}" x2="${x2m}" y2="${y2}" stroke="${c3}" stroke-width="1.2"/>`;
-  }
-  return svgFrame(s);
-}
-
-function speciesSvg(species) {
-  const [c1, c2, c3] = species.palette;
-  return species.draw(c1, c2, c3);
+// ====================== SPECIES IMAGE ======================
+// Each species ships as a pre-generated PNG (Victorian engraving style,
+// transparent background, oriented facing up). The same asset is used in
+// the drift, the slot strip, and the specimen plate.
+function speciesImg(species) {
+  const safeName = (species.name || '').replace(/"/g, '&quot;');
+  return `<img src="bugs/${species.id}.png" alt="${safeName}" draggable="false">`;
 }
 
 // ====================== GAME STATE ======================
@@ -638,7 +358,7 @@ function spawnBug() {
   const baseSpeed = species.baseSpeed * (0.7 + Math.random() * 0.6); // px per frame at 60fps
   const wobbleAmp = species.kind === 'flyer' ? 1.4 : (species.kind === 'drifter' ? 0.6 : 0.5);
   const wobbleHz = species.kind === 'flyer' ? 0.008 : 0.005;
-  const sizePx = (species.kind === 'drifter' ? 36 : species.kind === 'flyer' ? 38 : 42) * (0.9 + Math.random() * 0.3);
+  const sizePx = (species.kind === 'drifter' ? 44 : species.kind === 'flyer' ? 48 : 52) * (0.9 + Math.random() * 0.3);
 
   // DOM
   const el = document.createElement('div');
@@ -647,7 +367,7 @@ function spawnBug() {
   el.style.height = sizePx + 'px';
   el.style.left = '0';
   el.style.top = '0';
-  el.innerHTML = speciesSvg(species);
+  el.innerHTML = speciesImg(species);
   el.addEventListener('pointerdown', (ev) => {
     ev.preventDefault();
     pinBug(id);
@@ -748,7 +468,7 @@ function updateBugs(now) {
     }
 
     // render — face direction of travel
-    const angle = Math.atan2(b.vy + panicY, b.vx + panicX) + Math.PI / 2; // svgs face up
+    const angle = Math.atan2(b.vy + panicY, b.vx + panicX) + Math.PI / 2; // images face up
     b.el.style.transform = `translate(${b.x - b.sizePx/2}px, ${b.y - b.sizePx/2}px) rotate(${angle}rad)`;
   }
 }
@@ -798,7 +518,7 @@ function pinBug(id) {
   if (slot) {
     slot.classList.add('filled', 'rarity-' + b.rarity);
     const species = SPECIES.find(s => s.id === b.speciesId);
-    slot.innerHTML = speciesSvg(species);
+    slot.innerHTML = speciesImg(species);
   }
   updateCaughtLabel();
 
@@ -944,7 +664,7 @@ function renderPlate() {
     const epi = epithetFor(c.speciesId, c.ts);
     const note = fieldNoteFor(c.speciesId, c.ts);
     card.innerHTML = `
-      <div class="specimen-art"><div class="specimen-pin"></div>${speciesSvg(species)}</div>
+      <div class="specimen-art"><div class="specimen-pin"></div>${speciesImg(species)}</div>
       <p class="specimen-num">Specimen ${String(i + 1).padStart(2, '0')} &middot; pinned ${fmtTime(c.ts)}</p>
       <p class="specimen-latin">${genus} ${epi}</p>
       <p class="specimen-rarity">${RARITY_TIERS[tier].label}</p>

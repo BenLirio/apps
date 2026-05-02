@@ -243,6 +243,14 @@ html, body {
   filter: drop-shadow(0 2px 2px rgba(0,0,0,.45));
   will-change: transform;
 }
+.bug img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
 
 .bug.pinned {
   animation: pin-thump .35s ease-out forwards;
@@ -280,7 +288,12 @@ html, body {
   background: rgba(241,227,196,.92);
   border: 1px solid var(--brass-dark);
 }
-.slot svg { width: 78%; height: 78%; }
+.slot svg, .slot img {
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  display: block;
+}
 
 /* ===== Plate (result) ===== */
 #screen-plate {
@@ -336,10 +349,15 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 78px;
+  height: 92px;
   position: relative;
 }
-.specimen-art svg { width: 70px; height: 70px; }
+.specimen-art svg, .specimen-art img {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  display: block;
+}
 .specimen-pin {
   position: absolute;
   top: 6px; left: 50%;
