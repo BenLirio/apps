@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Elevator Bingo</title>
+  <meta property="og:title" content="Elevator Bingo">
+  <meta property="og:description" content="A 60-second pixel elevator. Tap each archetype as they board before the doors close on floor 30.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/elevator-bingo/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%23161616%22%2F%3E%3Crect%20x%3D%2218%22%20y%3D%2210%22%20width%3D%2228%22%20height%3D%2244%22%20fill%3D%22%23ffd23f%22%2F%3E%3Crect%20x%3D%2222%22%20y%3D%2214%22%20width%3D%229%22%20height%3D%2236%22%20fill%3D%22%23161616%22%2F%3E%3Crect%20x%3D%2233%22%20y%3D%2214%22%20width%3D%229%22%20height%3D%2236%22%20fill%3D%22%23161616%22%2F%3E%3C%2Fsvg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Title screen -->
+    <section id="screen-title" class="screen active">
+      <div class="title-card">
+        <div class="title-eyebrow">FIELD STUDIES, INC.</div>
+        <h1 class="title-name">ELEVATOR<br>BINGO</h1>
+        <div class="title-blurb">
+          <p>You have 60 seconds.</p>
+          <p>30 floors. 12 archetypes.</p>
+          <p>Tap each one as they board.</p>
+          <p class="title-tease">Today's ride is the same for everyone.<br>Tomorrow's is different.</p>
+        </div>
+        <button id="btn-start" class="big-btn">PRESS LOBBY</button>
+        <div class="title-meta" id="title-meta">Daily Ride · loading…</div>
+      </div>
+    </section>
+
+    <!-- Game screen -->
+    <section id="screen-game" class="screen">
+      <div class="hud">
+        <div class="hud-floor">FL <span id="hud-floor">01</span><span class="hud-floor-total">/30</span></div>
+        <div class="hud-timer">
+          <div class="hud-timer-label">DOORS</div>
+          <div class="hud-timer-bar"><div id="hud-timer-fill"></div></div>
+        </div>
+        <div class="hud-score">HIT <span id="hud-hit">0</span></div>
+      </div>
+
+      <div class="stage">
+        <canvas id="cab" width="320" height="280"></canvas>
+        <div id="stage-status" class="stage-status">Lobby. Doors opening…</div>
+      </div>
+
+      <div class="card-area">
+        <div class="card-label">FIELD CARD · tap the archetype that just boarded</div>
+        <div id="bingo-card" class="bingo-card"></div>
+      </div>
+    </section>
+
+    <!-- Result screen -->
+    <section id="screen-result" class="screen">
+      <div class="result-stamp-wrap">
+        <article class="field-card" id="field-card">
+          <header class="field-head">
+            <div class="field-stamp">FIELD NOTES</div>
+            <div class="field-floor">FROM FLOOR 30</div>
+          </header>
+          <div class="field-verdict">
+            <div class="field-verdict-label">VERDICT</div>
+            <div class="field-verdict-name" id="verdict-name">—</div>
+          </div>
+          <div class="field-stats">
+            <div class="stat"><div class="stat-num" id="stat-hit">0</div><div class="stat-lbl">CAUGHT</div></div>
+            <div class="stat"><div class="stat-num" id="stat-miss">0</div><div class="stat-lbl">MISSED</div></div>
+            <div class="stat"><div class="stat-num" id="stat-wrong">0</div><div class="stat-lbl">MIS-IDed</div></div>
+          </div>
+          <div class="field-map">
+            <div class="field-map-label">CORRECTLY TAGGED</div>
+            <div id="field-map-grid" class="field-map-grid"></div>
+          </div>
+          <div class="field-note" id="field-note">—</div>
+          <div class="field-foot">
+            <div>Daily Ride <span id="field-seed">—</span></div>
+            <div>Field Studies, Inc.</div>
+          </div>
+        </article>
+      </div>
+      <div id="share">
+        <button onclick="share()" class="big-btn">SHARE FIELD CARD</button>
+        <button id="btn-copy" class="ghost-btn">COPY VERDICT</button>
+        <button id="btn-replay" class="ghost-btn">RIDE AGAIN</button>
+      </div>
+      <p class="result-foot-note">Tomorrow's ride boards at midnight UTC.</p>
+    </section>
+  </div>
+</body>
+</html>
