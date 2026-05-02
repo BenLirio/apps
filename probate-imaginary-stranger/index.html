@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Probate of an Imaginary Stranger</title>
+  <meta property="og:title" content="The Probate of an Imaginary Stranger">
+  <meta property="og:description" content="Pick 7 items from a stranger's apartment. The Office of the Public Trustee will issue an official Probate Inventory and a verdict on who they were.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/probate-imaginary-stranger/">
+  <meta property="og:image" content="https://benlirio.com/apps/probate-imaginary-stranger/favicon.jpg">
+  <meta name="theme-color" content="#d4c4a0">
+  <link rel="icon" type="image/jpeg" href="favicon.jpg">
+  <link rel="apple-touch-icon" href="favicon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Cutive+Mono&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="folder">
+    <div id="folder-tab">FILE NO. <span id="case-no">—</span></div>
+
+    <!-- PRE-INTERACTION: case briefing -->
+    <section id="briefing" class="screen">
+      <header class="masthead">
+        <div class="dept">OFFICE OF THE PUBLIC TRUSTEE</div>
+        <div class="dept-sub">DIVISION OF UNCLAIMED ESTATES &middot; INTAKE FORM 14-B</div>
+      </header>
+      <h1 class="title">RE: The Probate of an<br>Imaginary Stranger</h1>
+      <div class="memo">
+        <p><strong>MEMO TO INTAKE CLERK:</strong></p>
+        <p>The decedent left no will, no next of kin, and a one-bedroom apartment of <em>twenty (20)</em> miscellaneous personal effects. By statute, you must select <strong>seven (7)</strong> items to be entered into the official Probate Inventory.</p>
+        <p>Your selections will determine, by departmental algorithm, the decedent's <em>Most Probable Identity</em>. Choose with care. Do not choose with care. Either is fine. The estate, as ever, will settle.</p>
+      </div>
+      <button id="enter-btn" class="rubber-btn">ENTER THE APARTMENT &raquo;</button>
+    </section>
+
+    <!-- APARTMENT SCENE -->
+    <section id="apartment-screen" class="screen hidden">
+      <header class="masthead">
+        <div class="dept">FORM 14-C &middot; FIELD INSPECTION OF PREMISES</div>
+      </header>
+      <div class="picks-bar">
+        <span class="picks-label">SELECTED:</span>
+        <span id="picks-count">0</span> / 7
+        <button id="undo-btn" type="button">UNDO LAST</button>
+      </div>
+      <div id="apartment-wrap">
+        <div id="apartment">
+          <!-- room labels and items injected by JS -->
+        </div>
+      </div>
+      <div class="picks-list-wrap">
+        <div class="picks-list-label">YOUR INVENTORY (TAP AN ITEM ON MAP TO ADD):</div>
+        <ol id="picks-list"></ol>
+      </div>
+      <button id="file-btn" class="rubber-btn" disabled>FILE THE INVENTORY &raquo;</button>
+    </section>
+
+    <!-- LOADING / FILING -->
+    <section id="filing" class="screen hidden">
+      <div class="filing-stack">
+        <div class="filing-line" id="filing-text">stamping carbon copies in triplicate&hellip;</div>
+        <div class="filing-bar"><span></span></div>
+      </div>
+    </section>
+
+    <!-- RESULT: TRI-FOLDED INVENTORY -->
+    <section id="result-screen" class="screen hidden">
+      <article id="document">
+        <div class="fold fold-top"></div>
+        <div class="fold fold-bottom"></div>
+        <header class="doc-header">
+          <div class="doc-seal">O.P.T.</div>
+          <div class="doc-titles">
+            <div class="doc-dept">OFFICE OF THE PUBLIC TRUSTEE</div>
+            <div class="doc-form">PROBATE INVENTORY &middot; FORM 14-D (TRIPLICATE)</div>
+            <div class="doc-case">FILE NO. <span class="case-no-out">—</span></div>
+          </div>
+        </header>
+
+        <h2 class="doc-section">SCHEDULE A &mdash; INVENTORY OF EFFECTS</h2>
+        <ol id="lots-list" class="lots"></ol>
+
+        <h2 class="doc-section">SCHEDULE B &mdash; DETERMINATION OF DECEDENT'S IDENTITY</h2>
+        <div class="verdict-block">
+          <div class="verdict-label">PURSUANT TO ALGORITHM 14-Q, THE DECEDENT IS DEEMED:</div>
+          <div class="verdict-name" id="verdict-name">—</div>
+          <div class="verdict-flavor" id="verdict-flavor">—</div>
+        </div>
+
+        <h2 class="doc-section">SCHEDULE C &mdash; CLERK'S NOTE</h2>
+        <div class="clerk-note" id="clerk-note"></div>
+
+        <div class="stamp-row">
+          <div class="stamp">ESTATE: SETTLED</div>
+          <div class="signature">
+            <div class="sig-line"></div>
+            <div class="sig-name">/s/ Margery Holcombe-Pitts, Clerk</div>
+          </div>
+        </div>
+
+        <div class="doc-footer">
+          <div>FILED: <span id="filed-date">—</span></div>
+          <div>O.P.T. &middot; DIVISION OF UNCLAIMED ESTATES</div>
+        </div>
+      </article>
+
+      <div id="share">
+        <button id="share-btn" onclick="share()" class="rubber-btn">SHARE THIS ESTATE</button>
+        <button id="restart-btn" type="button" class="rubber-btn ghost">FILE ANOTHER ESTATE</button>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

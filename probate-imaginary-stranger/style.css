@@ -1,0 +1,546 @@
+/* Aesthetic: mock-bureaucratic manilla folder + carbon-copy typewriter — beige paper, faded red stamps, monospace clerical type, deckle/foxed edges */
+
+:root {
+  --paper: #f0e6cc;
+  --paper-dark: #d4c4a0;
+  --paper-edge: #b8a47a;
+  --ink: #2a241b;
+  --ink-soft: #4d4234;
+  --carbon-red: #a8332a;
+  --carbon-red-faded: #b85a4a;
+  --tab: #c9a96b;
+  --tab-dark: #8e7240;
+  --rule: #6b5d44;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #2a2418;
+  font-family: "Cutive Mono", "Courier New", monospace;
+  color: var(--ink);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* subtle desk-paper texture */
+body {
+  background:
+    radial-gradient(circle at 20% 10%, #3a311f 0%, #1c1810 60%),
+    #1c1810;
+  background-attachment: fixed;
+  padding: 20px 12px 60px;
+}
+
+.hidden { display: none !important; }
+
+/* === FOLDER === */
+#folder {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--paper);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(120,90,40,0.04) 0 2px, transparent 2px 4px),
+    radial-gradient(circle at 20% 30%, rgba(150,110,60,0.10), transparent 40%),
+    radial-gradient(circle at 85% 70%, rgba(120,80,30,0.10), transparent 35%),
+    radial-gradient(circle at 60% 15%, rgba(110,70,20,0.08), transparent 30%);
+  border: 1px solid var(--paper-edge);
+  box-shadow:
+    0 2px 0 rgba(0,0,0,0.15),
+    0 8px 24px rgba(0,0,0,0.5),
+    inset 0 0 0 1px rgba(140,110,60,0.2);
+  padding: 26px 22px 30px;
+  /* deckle / torn edges */
+  clip-path: polygon(
+    0% 14px, 6px 8px, 14px 12px, 22px 6px, 32px 10px, 44px 4px, 58px 9px, 72px 5px, 88px 11px,
+    100px 6px, 116px 10px, 130px 4px, 100% 8px,
+    calc(100% - 4px) 24px, 100% 38px, calc(100% - 6px) 60px, 100% 80px,
+    100% calc(100% - 10px), calc(100% - 12px) calc(100% - 4px), calc(100% - 30px) calc(100% - 8px),
+    calc(100% - 60px) calc(100% - 2px), calc(100% - 100px) calc(100% - 6px),
+    50% 100%, 30% calc(100% - 4px), 12% calc(100% - 8px), 0% calc(100% - 6px),
+    4px calc(100% - 30px), 0% calc(100% - 60px), 6px calc(100% - 100px), 0% 60%, 4px 30%
+  );
+}
+
+#folder-tab {
+  position: absolute;
+  top: -22px;
+  right: 22px;
+  background: var(--tab);
+  color: var(--ink);
+  border: 1px solid var(--tab-dark);
+  border-bottom: none;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.16em;
+  padding: 6px 14px 8px;
+  border-radius: 4px 4px 0 0;
+  text-transform: uppercase;
+  box-shadow: 0 -2px 0 rgba(0,0,0,0.08) inset;
+}
+
+/* === SHARED === */
+.masthead {
+  text-align: center;
+  border-bottom: 2px solid var(--rule);
+  padding-bottom: 8px;
+  margin-bottom: 18px;
+}
+.masthead .dept {
+  font-family: "IM Fell English SC", "Cutive Mono", serif;
+  font-size: 16px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: var(--ink);
+}
+.masthead .dept-sub {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.title {
+  font-family: "IM Fell English SC", serif;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin: 18px 0 14px;
+  color: var(--ink);
+}
+
+.memo {
+  font-size: 14px;
+  line-height: 1.55;
+  border: 1px dashed var(--rule);
+  padding: 14px 14px 8px;
+  background: rgba(255,255,255,0.18);
+  margin: 16px 0 22px;
+}
+.memo p { margin: 0 0 10px; }
+.memo strong { letter-spacing: 0.08em; }
+
+/* RUBBER-STAMP STYLE BUTTON */
+.rubber-btn {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: var(--carbon-red);
+  border: 3px double var(--carbon-red);
+  font-family: "Special Elite", "Cutive Mono", monospace;
+  font-size: 17px;
+  letter-spacing: 0.18em;
+  padding: 14px 18px;
+  margin: 16px 0 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+  transform: rotate(-0.6deg);
+  text-shadow: 0 0 1px rgba(168,51,42,0.4);
+  transition: transform 80ms;
+}
+.rubber-btn:active { transform: rotate(-0.3deg) scale(0.98); }
+.rubber-btn:disabled {
+  color: #a09078;
+  border-color: #a09078;
+  cursor: not-allowed;
+  text-shadow: none;
+}
+.rubber-btn.ghost {
+  color: var(--ink-soft);
+  border-color: var(--ink-soft);
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+/* === APARTMENT SCREEN === */
+.picks-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.2);
+}
+.picks-label { font-weight: bold; }
+#picks-count { font-weight: bold; color: var(--carbon-red); font-size: 16px; }
+#undo-btn {
+  margin-left: auto;
+  font-family: "Cutive Mono", monospace;
+  background: transparent;
+  border: 1px solid var(--ink-soft);
+  color: var(--ink-soft);
+  padding: 4px 10px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+#undo-btn:hover { background: rgba(0,0,0,0.06); }
+
+#apartment-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 2px solid var(--rule);
+  background: #2b2418;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+#apartment {
+  position: relative;
+  width: 640px;
+  height: 480px;
+  /* checkered floor */
+  background:
+    repeating-conic-gradient(#9a8050 0% 25%, #7a6038 0% 50%) 0 0/40px 40px,
+    #6b5430;
+  image-rendering: pixelated;
+  margin: 0 auto;
+}
+
+/* rooms — drawn as boxes via JS but room labels are CSS-styled */
+.room {
+  position: absolute;
+  border: 4px solid #4a3520;
+  box-shadow: inset 0 0 0 2px #2a1d10;
+  background:
+    repeating-conic-gradient(var(--room-a, #b8a070) 0% 25%, var(--room-b, #a08858) 0% 50%) 0 0/32px 32px;
+}
+.room-label {
+  position: absolute;
+  background: rgba(20,15,8,0.8);
+  color: #f0d9a8;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  padding: 2px 6px;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: 5;
+}
+
+/* items */
+.item {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  cursor: pointer;
+  transition: transform 100ms;
+  user-select: none;
+  -webkit-user-select: none;
+  text-align: center;
+  line-height: 1;
+  filter: drop-shadow(1px 1px 0 #2a1d10);
+  z-index: 10;
+}
+.item:hover { transform: scale(1.15); }
+.item:active { transform: scale(0.95); }
+.item.picked {
+  outline: 3px solid var(--carbon-red);
+  outline-offset: -2px;
+  background: rgba(168,51,42,0.18);
+  border-radius: 2px;
+}
+.item .num-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--carbon-red);
+  color: #fff;
+  font-family: "Cutive Mono", monospace;
+  font-size: 10px;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: none;
+}
+
+.picks-list-wrap {
+  margin-top: 12px;
+  font-size: 12px;
+}
+.picks-list-label {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+#picks-list {
+  margin: 0;
+  padding-left: 24px;
+  min-height: 80px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+#picks-list li {
+  cursor: pointer;
+  padding: 1px 4px;
+}
+#picks-list li:hover {
+  background: rgba(168,51,42,0.12);
+  text-decoration: line-through;
+}
+#picks-list:empty::before {
+  content: "(no items selected — tap items in the apartment above)";
+  color: var(--ink-soft);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* === FILING SCREEN === */
+.filing-stack {
+  text-align: center;
+  padding: 60px 20px;
+}
+.filing-line {
+  font-family: "Special Elite", monospace;
+  font-size: 16px;
+  color: var(--ink);
+  letter-spacing: 0.08em;
+  min-height: 1.4em;
+  margin-bottom: 24px;
+}
+.filing-bar {
+  height: 8px;
+  background: rgba(0,0,0,0.1);
+  border: 1px solid var(--rule);
+  overflow: hidden;
+}
+.filing-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--carbon-red);
+  animation: fill 2.4s ease-out forwards;
+}
+@keyframes fill { to { width: 100%; } }
+
+/* === RESULT DOCUMENT === */
+#document {
+  position: relative;
+  background: #f5ecd2;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(120,90,40,0.04) 0 2px, transparent 2px 4px),
+    radial-gradient(circle at 30% 20%, rgba(150,110,60,0.12), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(180,140,90,0.10), transparent 40%);
+  padding: 24px 22px;
+  border: 1px solid var(--paper-edge);
+  box-shadow:
+    inset 0 0 0 1px rgba(140,110,60,0.25),
+    0 4px 12px rgba(0,0,0,0.3);
+  margin-top: 4px;
+}
+.fold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(80,60,30,0.25);
+  pointer-events: none;
+  box-shadow: 0 1px 0 rgba(255,240,200,0.4);
+}
+.fold-top { top: 33%; }
+.fold-bottom { top: 66%; }
+
+.doc-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 3px double var(--rule);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+.doc-seal {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--carbon-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "IM Fell English SC", serif;
+  font-weight: bold;
+  color: var(--carbon-red);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  transform: rotate(-6deg);
+  background: rgba(168,51,42,0.04);
+  text-shadow: 0 0 1px rgba(168,51,42,0.3);
+}
+.doc-titles { flex: 1; }
+.doc-dept {
+  font-family: "IM Fell English SC", serif;
+  font-size: 17px;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+}
+.doc-form {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.doc-case {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.doc-section {
+  font-family: "IM Fell English SC", serif;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 4px;
+  margin: 22px 0 12px;
+  color: var(--ink);
+}
+
+.lots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.lots li {
+  padding: 7px 0;
+  border-bottom: 1px dotted rgba(80,60,30,0.4);
+  display: flex;
+  gap: 8px;
+}
+.lots .lot-no {
+  flex-shrink: 0;
+  color: var(--carbon-red);
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+.lots .lot-text { flex: 1; }
+.lots .lot-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  filter: grayscale(0.3);
+}
+
+.verdict-block {
+  text-align: center;
+  padding: 14px 6px;
+  border: 1px solid var(--rule);
+  background: rgba(255,255,255,0.15);
+}
+.verdict-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.verdict-name {
+  font-family: "IM Fell English SC", serif;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  font-weight: bold;
+}
+.verdict-flavor {
+  font-size: 12px;
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.clerk-note {
+  font-family: "Special Elite", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  border-left: 3px solid var(--rule);
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.18);
+  white-space: pre-wrap;
+}
+
+.stamp-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 26px 0 14px;
+  flex-wrap: wrap;
+}
+.stamp {
+  font-family: "Special Elite", monospace;
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--carbon-red);
+  letter-spacing: 0.12em;
+  border: 4px double var(--carbon-red);
+  padding: 6px 14px;
+  transform: rotate(-7deg);
+  text-shadow: 0 0 1px rgba(168,51,42,0.3);
+  background: rgba(168,51,42,0.06);
+  flex-shrink: 0;
+}
+.signature {
+  flex: 1;
+  min-width: 160px;
+}
+.sig-line {
+  height: 1px;
+  background: var(--ink);
+  margin-bottom: 4px;
+}
+.sig-name {
+  font-family: "Special Elite", monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  transform: rotate(-1.5deg);
+  display: inline-block;
+}
+
+.doc-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  border-top: 1px solid var(--rule);
+  padding-top: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#share { margin-top: 18px; }
+
+/* MOBILE */
+@media (max-width: 540px) {
+  body { padding: 16px 6px 60px; }
+  #folder { padding: 22px 14px 24px; }
+  .title { font-size: 22px; }
+  .masthead .dept { font-size: 13px; letter-spacing: 0.12em; }
+  .masthead .dept-sub { font-size: 9px; }
+  .memo { font-size: 13px; }
+  .doc-header { flex-direction: column; align-items: flex-start; }
+  .doc-seal { transform: rotate(-6deg); }
+  .doc-dept { font-size: 14px; }
+  .verdict-name { font-size: 19px; }
+  .stamp { font-size: 18px; }
+  .rubber-btn { font-size: 14px; letter-spacing: 0.12em; }
+  /* keep apartment readable on phone — horizontal scroll */
+}
