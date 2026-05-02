@@ -1,27 +1,34 @@
-// Decision Arcade — 3 picture rounds. Pick whichever picture hits.
+// Decision Arcade — 5 picture rounds. Pick whichever picture hits.
 // The clock keeps you honest. Picks aggregate into 3 personality axes.
 //
 // Each round: 2 image options, no text. Pictures are intentionally abstract
-// and aesthetic — vibe-picks rather than morality prompts. The axis loading
-// is gentle, not telegraphed.
+// and aesthetic — vibe-picks rather than morality prompts.
 //
-// Axes:
-//   0  Practical  ←→  Adventurous   (R1: candle flame vs shooting star)
-//   1  Logic      ←→  Feeling       (R2: ice cube vs ink in water)
-//   2  Solitary   ←→  Connected     (R3: lone tree vs campfire)
+// Axes (each gets multiple rounds for finer scoring):
+//   0  Practical  ←→  Adventurous   (candle/meteor, papermap/paperplane)
+//   1  Logic      ←→  Feeling       (icecube/inkdrop, cairn/redthread)
+//   2  Solitary   ←→  Connected     (lonetree/campfire)
 
 const ROUNDS = [
   { axis: 0, options: [
-    { img: 'images/candle.png',   alt: 'a single candle flame in the dark', shareEmoji: '🕯️', v: 0.05 },
-    { img: 'images/meteor.png',   alt: 'a shooting star across the night sky', shareEmoji: '☄️', v: 0.95 },
+    { img: 'images/candle.png',     alt: 'a single candle flame in the dark', v: 0.05 },
+    { img: 'images/meteor.png',     alt: 'a shooting star across the night sky', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/icecube.png',  alt: 'a clear ice cube on a dark surface', shareEmoji: '🧊', v: 0.05 },
-    { img: 'images/inkdrop.png',  alt: 'a drop of ink blooming in water', shareEmoji: '💧', v: 0.95 },
+    { img: 'images/icecube.png',    alt: 'a clear ice cube on a dark surface', v: 0.05 },
+    { img: 'images/inkdrop.png',    alt: 'a drop of ink blooming in water', v: 0.95 },
   ]},
   { axis: 2, options: [
-    { img: 'images/lonetree.png', alt: 'a single tree on a hill at twilight', shareEmoji: '🌳', v: 0.05 },
-    { img: 'images/campfire.png', alt: 'a small campfire with rising sparks', shareEmoji: '🔥', v: 0.95 },
+    { img: 'images/lonetree.png',   alt: 'a single tree on a hill at twilight', v: 0.05 },
+    { img: 'images/campfire.png',   alt: 'a small campfire with rising sparks', v: 0.95 },
+  ]},
+  { axis: 0, options: [
+    { img: 'images/papermap.png',   alt: 'a folded paper map on a wooden table', v: 0.05 },
+    { img: 'images/paperplane.png', alt: 'a paper airplane mid-flight at dusk', v: 0.95 },
+  ]},
+  { axis: 1, options: [
+    { img: 'images/cairn.png',      alt: 'a balanced stack of river stones', v: 0.05 },
+    { img: 'images/redthread.png',  alt: 'a tangled knot of red thread', v: 0.95 },
   ]},
 ];
 
@@ -31,9 +38,6 @@ const AXIS_LABELS = [
   ["Solitary",  "Connected"]
 ];
 
-// 8 archetypes — one per (axis0, axis1, axis2) low/high combination.
-// Picks are binary in this version, so we deterministically map every player
-// to exactly one archetype rather than searching for a fuzzy match.
 function archetypeFor(scores) {
   const a0 = scores[0] >= 0.5 ? 1 : 0;
   const a1 = scores[1] >= 0.5 ? 1 : 0;
@@ -42,8 +46,6 @@ function archetypeFor(scores) {
   return ARCHETYPES[key];
 }
 
-// Indexed by (axis0 << 2) | (axis1 << 1) | axis2 — practical/adventurous,
-// logic/feeling, solitary/connected.
 const ARCHETYPES = [
   // 000 — practical, logic, solitary
   { name: "THE QUIET ARCHITECT",
@@ -87,14 +89,10 @@ const COMPUTING_MSGS = [
   "summoning your archetype from the void..."
 ];
 
-// ── Adaptive timer config ──────────────────────────────────────────────
-// Picture rounds are slightly slower than emoji rounds — give the eye time
-// to scan two big pictures. Fixed pace per round (3 rounds is too few for
-// meaningful recalibration).
-const TIMER_BASE_MS    = 3500;
+const TIMER_BASE_MS = 3500;
 
 let currentQ = 0;
-let picks = []; // {axis, value, hesitated, shareEmoji, responseMs}
+let picks = []; // {axis, value, hesitated, img, responseMs}
 let axisSums = [0, 0, 0];
 let axisCounts = [0, 0, 0];
 let timerInterval = null;
@@ -113,6 +111,7 @@ function startGame() {
   axisCounts = [0, 0, 0];
   preloadAllImages();
   showScreen('screen-game');
+  document.getElementById('q-total').textContent = ROUNDS.length;
   loadRound(0);
 }
 
@@ -183,7 +182,8 @@ function choose(idx) {
     axis: r.axis,
     value: item.v,
     hesitated: false,
-    shareEmoji: item.shareEmoji,
+    img: item.img,
+    alt: item.alt,
     responseMs
   });
   axisSums[r.axis] += item.v;
@@ -205,7 +205,8 @@ function hesitate() {
     axis: r.axis,
     value: 0.5,
     hesitated: true,
-    shareEmoji: '⏳',
+    img: null,
+    alt: 'no pick',
     responseMs: TIMER_BASE_MS
   });
   axisSums[r.axis] += 0.5;
@@ -230,41 +231,40 @@ function advance() {
 }
 
 function showResult() {
-  // Hesitations land at 0.5 (mid-axis); decisive picks pin to ~0.05 or ~0.95.
+  // Hesitations land at 0.5; decisive picks pin to 0.05 or 0.95.
   const normalized = axisSums.map((sum, i) =>
     axisCounts[i] > 0 ? sum / axisCounts[i] : 0.5
   );
 
   const archetype = archetypeFor(normalized);
 
-  // Picked strip — 3 emoji-fallbacks below the archetype line
+  // Filmstrip: actual chosen images, in order. Hesitations render as a blank cell.
   const stripEl = document.getElementById('picked-strip');
   stripEl.innerHTML = '';
-  picks.forEach(p => {
-    const span = document.createElement('span');
-    span.className = 'picked-cell' + (p.hesitated ? ' hesitated' : '');
-    span.textContent = p.shareEmoji;
-    stripEl.appendChild(span);
+  picks.forEach((p, idx) => {
+    const cell = document.createElement('div');
+    cell.className = 'film-cell' + (p.hesitated ? ' hesitated' : '');
+    if (p.img) {
+      cell.innerHTML = '<img class="film-img" src="' + p.img + '" alt="' + p.alt + '" draggable="false">';
+    } else {
+      cell.innerHTML = '<span class="film-skip">—</span>';
+    }
+    const num = document.createElement('span');
+    num.className = 'film-num';
+    num.textContent = String(idx + 1);
+    cell.appendChild(num);
+    stripEl.appendChild(cell);
   });
 
-  const stripStr = picks.map(p => p.shareEmoji).join(' ');
-  window._shareEmoji =
-    `🎮 Decision Arcade — ${archetype.name}\n\n${stripStr}\n\nfind yours → ${location.href}`;
-
-  const chartEl = document.getElementById('axis-chart');
-  chartEl.innerHTML = '';
+  // Per-axis verdict lines — replaces the old bar chart with vibe-language.
+  const leansEl = document.getElementById('leans');
+  leansEl.innerHTML = '';
   normalized.forEach((val, i) => {
-    const pct = Math.round(val * 100);
+    const verdict = leanVerdict(val, AXIS_LABELS[i]);
     const row = document.createElement('div');
-    row.className = 'axis-row';
-    row.innerHTML = `
-      <span class="axis-row-label-left">${AXIS_LABELS[i][0]}</span>
-      <div class="axis-track">
-        <div class="axis-fill" style="width:${pct}%"></div>
-      </div>
-      <span class="axis-row-label-right">${AXIS_LABELS[i][1]}</span>
-    `;
-    chartEl.appendChild(row);
+    row.className = 'lean-row';
+    row.innerHTML = `<span class="lean-axis">Axis ${i+1}</span><span class="lean-verdict">${verdict}</span>`;
+    leansEl.appendChild(row);
   });
 
   document.getElementById('archetype-name').textContent = archetype.name;
@@ -288,6 +288,10 @@ function showResult() {
   if (tail.length) flavor += ' (' + tail.join(' · ') + ')';
   document.getElementById('result-flavor').textContent = flavor;
 
+  // Share text — no emoji strip; the archetype name and link carry it.
+  window._shareText =
+    `Decision Arcade — ${archetype.name}\n\nfind yours → ${location.href}`;
+
   const msg = COMPUTING_MSGS[Math.floor(Math.random() * COMPUTING_MSGS.length)];
   document.getElementById('computing-msg').textContent = msg;
   showScreen('screen-computing');
@@ -298,12 +302,22 @@ function showResult() {
   }, 1600);
 }
 
+// Map a 0..1 axis score to a single-line vibe verdict instead of a bar.
+function leanVerdict(val, labels) {
+  const [low, high] = labels;
+  if (val >= 0.85) return `strongly ${high.toLowerCase()}`;
+  if (val >= 0.6)  return `leans ${high.toLowerCase()}`;
+  if (val > 0.4)   return `right between ${low.toLowerCase()} & ${high.toLowerCase()}`;
+  if (val > 0.15)  return `leans ${low.toLowerCase()}`;
+  return `strongly ${low.toLowerCase()}`;
+}
+
 function restartGame() {
   showScreen('screen-intro');
 }
 
 function share() {
-  const text = window._shareEmoji || document.title;
+  const text = window._shareText || document.title;
   if (navigator.share) {
     navigator.share({ title: document.title, text, url: location.href }).catch(() => {});
   } else if (navigator.clipboard) {

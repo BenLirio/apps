@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Decision Arcade</title>
   <meta property="og:title" content="Decision Arcade">
-  <meta property="og:description" content="3 rounds. 2 pictures. Pick the one that hits. Find your archetype.">
+  <meta property="og:description" content="5 rounds. 2 pictures. Pick the one that hits. Find your archetype.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/decision-arcade/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,12 +23,12 @@
       <div class="arcade-header">
         <div class="coin-slot">INSERT COIN</div>
         <h1>DECISION<br>ARCADE</h1>
-        <p class="tagline">3 rounds. 2 pictures. Tap the one that hits.<br>The clock keeps you honest.</p>
+        <p class="tagline">5 rounds. 2 pictures. Tap the one that hits.<br>The clock keeps you honest.</p>
       </div>
       <div class="intro-rules">
-        <div class="rule"><span class="rule-key">👆</span> tap a picture</div>
-        <div class="rule"><span class="rule-key">⚡</span> no overthinking</div>
-        <div class="rule"><span class="rule-key">⏱</span> 3.5s on the clock</div>
+        <div class="rule"><span class="rule-key">▸</span> tap a picture</div>
+        <div class="rule"><span class="rule-key">▸</span> no overthinking</div>
+        <div class="rule"><span class="rule-key">▸</span> 3.5s on the clock</div>
       </div>
       <button id="start-btn" class="arcade-btn" onclick="startGame()">START GAME</button>
       <div class="credit-count">CREDITS: 1</div>
@@ -39,9 +39,9 @@
       <div class="hud">
         <div class="hud-row">
           <div class="question-counter">
-            <span id="q-current">1</span><span class="q-sep">of</span><span>3</span>
+            <span id="q-current">1</span><span class="q-sep">of</span><span id="q-total">5</span>
           </div>
-          <div class="timer-seconds" id="timer-seconds">2.5s</div>
+          <div class="timer-seconds" id="timer-seconds">3.5s</div>
         </div>
         <div class="timer-bar-wrap">
           <div class="timer-bar" id="timer-bar"></div>
@@ -51,7 +51,7 @@
         <!-- 2 picture buttons injected at runtime -->
       </div>
       <div class="game-foot">
-        <div id="hesitate-flash" class="hesitate-flash" aria-hidden="true">⏳</div>
+        <div id="hesitate-flash" class="hesitate-flash" aria-hidden="true">SKIPPED</div>
       </div>
     </div>
 
@@ -67,18 +67,26 @@
 
     <!-- Result Screen -->
     <div id="screen-result" class="screen">
-      <div class="result-card">
-        <div class="result-rank">YOUR ARCHETYPE</div>
-        <h2 class="archetype-name" id="archetype-name">THE CALCULATED HEDONIST</h2>
-        <p class="archetype-desc" id="archetype-desc">You optimize for pleasure but always read the fine print first.</p>
-        <div class="picked-strip" id="picked-strip" aria-hidden="true"></div>
-        <div class="axis-chart" id="axis-chart"></div>
+      <div class="result-stack">
+
+        <div class="result-eyebrow">— VERDICT —</div>
+        <h2 class="archetype-name" id="archetype-name">THE QUIET ARCHITECT</h2>
+        <p class="archetype-desc" id="archetype-desc">You move through life efficiently.</p>
+
+        <div class="result-divider"><span>THE EVIDENCE</span></div>
+        <div class="picked-strip" id="picked-strip" aria-label="Your picks"></div>
+
+        <div class="result-divider"><span>READOUT</span></div>
+        <div class="leans" id="leans"></div>
+
         <p class="result-flavor" id="result-flavor"></p>
       </div>
-      <div id="share" style="display:none">
-        <button class="arcade-btn share-btn" onclick="share()">SHARE YOUR RESULT</button>
+      <div class="result-actions">
+        <div id="share" style="display:none">
+          <button class="arcade-btn share-btn" onclick="share()">SHARE YOUR RESULT</button>
+        </div>
+        <button class="arcade-btn replay-btn" onclick="restartGame()">PLAY AGAIN</button>
       </div>
-      <button class="arcade-btn replay-btn" onclick="restartGame()">PLAY AGAIN</button>
     </div>
 
   </div>
