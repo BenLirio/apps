@@ -1,33 +1,34 @@
-// Decision Arcade — 3 picture rounds. Pick the picture that hits.
-// The clock learns your pace. Picks aggregate into 3 axes.
+// Decision Arcade — 3 picture rounds. Pick whichever picture hits.
+// The clock keeps you honest. Picks aggregate into 3 personality axes.
 //
-// Each round: 2 image options, no text. Each option has axis (0..2) + value [0,1]
-// where 0 = left pole of the axis, 1 = right pole. Each axis appears once.
+// Each round: 2 image options, no text. Pictures are intentionally abstract
+// and aesthetic — vibe-picks rather than morality prompts. The axis loading
+// is gentle, not telegraphed.
 //
 // Axes:
-//   0  Practical  ←→  Adventurous   (R1: morning vibe — bed vs plane)
-//   1  Logic      ←→  Feeling       (R2: how you decide — spreadsheet vs heart)
-//   2  Selfish    ←→  Altruist      (R3: found cash — wallet vs give it away)
+//   0  Practical  ←→  Adventurous   (R1: candle flame vs shooting star)
+//   1  Logic      ←→  Feeling       (R2: ice cube vs ink in water)
+//   2  Solitary   ←→  Connected     (R3: lone tree vs campfire)
 
 const ROUNDS = [
   { axis: 0, options: [
-    { img: 'images/bed.jpg',         alt: 'cozy bed in morning light',   shareEmoji: '🛏️', v: 0.05 },
-    { img: 'images/plane.jpg',       alt: 'passport and plane ticket',   shareEmoji: '✈️', v: 0.95 },
+    { img: 'images/candle.png',   alt: 'a single candle flame in the dark', shareEmoji: '🕯️', v: 0.05 },
+    { img: 'images/meteor.png',   alt: 'a shooting star across the night sky', shareEmoji: '☄️', v: 0.95 },
   ]},
   { axis: 1, options: [
-    { img: 'images/spreadsheet.jpg', alt: 'organized spreadsheet',       shareEmoji: '📊', v: 0.05 },
-    { img: 'images/heart.jpg',       alt: 'glowing heart on a pillow',   shareEmoji: '🫀', v: 0.95 },
+    { img: 'images/icecube.png',  alt: 'a clear ice cube on a dark surface', shareEmoji: '🧊', v: 0.05 },
+    { img: 'images/inkdrop.png',  alt: 'a drop of ink blooming in water', shareEmoji: '💧', v: 0.95 },
   ]},
   { axis: 2, options: [
-    { img: 'images/wallet.jpg',      alt: 'wallet stuffed with cash',    shareEmoji: '💰', v: 0.05 },
-    { img: 'images/give.jpg',        alt: 'hands giving cash away',      shareEmoji: '🤝', v: 0.95 },
+    { img: 'images/lonetree.png', alt: 'a single tree on a hill at twilight', shareEmoji: '🌳', v: 0.05 },
+    { img: 'images/campfire.png', alt: 'a small campfire with rising sparks', shareEmoji: '🔥', v: 0.95 },
   ]},
 ];
 
 const AXIS_LABELS = [
   ["Practical", "Adventurous"],
   ["Logic",     "Feeling"],
-  ["Selfish",   "Altruist"]
+  ["Solitary",  "Connected"]
 ];
 
 // 8 archetypes — one per (axis0, axis1, axis2) low/high combination.
@@ -42,40 +43,40 @@ function archetypeFor(scores) {
 }
 
 // Indexed by (axis0 << 2) | (axis1 << 1) | axis2 — practical/adventurous,
-// logic/feeling, selfish/altruist.
+// logic/feeling, solitary/connected.
 const ARCHETYPES = [
-  // 000 — practical, logic, selfish
-  { name: "THE QUIET HOARDER",
-    desc: "You move through life efficiently, decide with data, and your name is on every lease.",
-    flavor: "You have a colour-coded spreadsheet for what you'd do with a windfall." },
-  // 001 — practical, logic, altruist
-  { name: "THE RATIONAL ALTRUIST",
-    desc: "You want to help — and you have a 5-step plan to do it efficiently.",
-    flavor: "Your donations are optimized. Your empathy is scheduled." },
-  // 010 — practical, feeling, selfish
-  { name: "THE SOFT INDOORSMAN",
-    desc: "You feel deeply, mostly about your own home and the warm bowl in front of you.",
-    flavor: "You've cried at a candle commercial and then tucked yourself in." },
-  // 011 — practical, feeling, altruist
+  // 000 — practical, logic, solitary
+  { name: "THE QUIET ARCHITECT",
+    desc: "You move through life efficiently, decide with data, and you build mostly in private.",
+    flavor: "You have a colour-coded spreadsheet for things you've never told anyone about." },
+  // 001 — practical, logic, connected
+  { name: "THE STEADY ANCHOR",
+    desc: "You're the measured one — calm under pressure, and the friend everyone calls when something breaks.",
+    flavor: "Your group chat ranks you the steadiest hand in a crisis." },
+  // 010 — practical, feeling, solitary
+  { name: "THE SOFT HERMIT",
+    desc: "You feel deeply, mostly inside the safety of your own four walls.",
+    flavor: "You've cried at a candle commercial and then made yourself a small dinner." },
+  // 011 — practical, feeling, connected
   { name: "THE WARM HEARTH",
     desc: "Your home is the safe place where everyone ends up — and you keep it that way on purpose.",
     flavor: "You've talked three friends through a crisis without leaving your couch." },
-  // 100 — adventurous, logic, selfish
-  { name: "THE STRATEGIST",
-    desc: "You take big swings — but only after you've run the numbers and the numbers are for you.",
-    flavor: "You called it a calculated risk. You'd seen the spreadsheet weeks ago." },
-  // 101 — adventurous, logic, altruist
-  { name: "THE OPTIMIZED EXPLORER",
-    desc: "You go far on purpose, and somehow the trip ends up helping someone other than you.",
-    flavor: "You've turned a vacation into a fundraiser and a flight delay into a useful contact." },
-  // 110 — adventurous, feeling, selfish
+  // 100 — adventurous, logic, solitary
+  { name: "THE LONE STRATEGIST",
+    desc: "You take big swings — but only after you've run the numbers, and you take them alone.",
+    flavor: "You called it a calculated risk. You'd seen the spreadsheet weeks ago — you didn't tell anyone." },
+  // 101 — adventurous, logic, connected
+  { name: "THE EXPEDITION LEADER",
+    desc: "You take the group somewhere far on purpose, with a plan and a packing list.",
+    flavor: "You've turned a vacation into a logistical operation and everyone thanked you for it." },
+  // 110 — adventurous, feeling, solitary
   { name: "THE WANDERING ROMANTIC",
-    desc: "You chase the next intense moment, and the moment is almost always about you in it.",
+    desc: "You chase the next intense moment — and the moment is almost always about you in it.",
     flavor: "You've impulse-booked a flight to recover from a feeling. It worked." },
-  // 111 — adventurous, feeling, altruist
+  // 111 — adventurous, feeling, connected
   { name: "THE PASSIONATE PILGRIM",
-    desc: "Big heart, big map — you go far for the people you love and a few you've never met.",
-    flavor: "You've given your seat away and then kept walking another six miles." },
+    desc: "Big heart, big map — and you take the people you love along for the ride.",
+    flavor: "You've thrown a party that became a road trip that became a story everyone retells." },
 ];
 
 const COMPUTING_MSGS = [
@@ -110,8 +111,18 @@ function startGame() {
   picks = [];
   axisSums = [0, 0, 0];
   axisCounts = [0, 0, 0];
+  preloadAllImages();
   showScreen('screen-game');
   loadRound(0);
+}
+
+// Pictures are ~1MB each; without this the browser only fetches when a round
+// renders and the 3.5s timer can fire before the image paints on slow mobile.
+let _preloaded = false;
+function preloadAllImages() {
+  if (_preloaded) return;
+  ROUNDS.forEach(r => r.options.forEach(o => { (new Image()).src = o.img; }));
+  _preloaded = true;
 }
 
 function loadRound(idx) {
