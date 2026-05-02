@@ -75,13 +75,31 @@
 
   const SAND_PALETTE = ['#e8a030', '#d89028', '#f0b848', '#e8a838'];
 
+  // Trait scale convention (all 0..255 for cheap shader packing later):
+  //   emitTemp:      ambient temperature this element radiates. 0=ambient (~30),
+  //                  fire/lava ~220, ice/snow ~10. Drives heat propagation.
+  //   ignitionPoint: temperature above which the element catches fire. 0..255.
+  //   flammability:  per-frame chance × 255 of igniting once above ignitionPoint.
+  //   conductivity:  how fast heat diffuses to neighbors (0=insulator, 255=metal).
+  //   corrosivity:   strength as a corrosive agent (acid 200, water 0).
+  //   hardness:      resistance to corrosion / eating (wall 200, sand 60).
+  // The current physics engine still uses explicit reactions, but registering
+  // these traits puts the data in place and gives the AI a richer vocabulary.
+  // A future commit will replace the reaction lookup with a trait-driven
+  // pass (heat diffusion → ignition → corrosion → phase change).
   function initBuiltIns() {
-    registry[WALL_ID]      = { id: WALL_ID,      key: 'wall',      displayName: 'wall',      kind: 'static', density: 10, colors: ['#d8c8a0', '#c8b890', '#b8a880', '#c0c090'], isBuiltIn: true, reactions: [] };
-    registry[SAND_ID]      = { id: SAND_ID,      key: 'sand',      displayName: 'sand',      kind: 'powder', density: 5, flow: 0.55, stickiness: 0, colors: SAND_PALETTE, isBuiltIn: true, reactions: [] };
-    registry[WATER_ID]     = { id: WATER_ID,     key: 'water',     displayName: 'water',     kind: 'liquid', density: 5, viscosity: 0, stickiness: 0, colors: ['#4aa8d8', '#3e9ac8', '#62b8e0', '#2e84b8'], isBuiltIn: true, reactions: [] };
-    registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#e02020', '#ff3030', '#c01010', '#ff5040'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [] };
-    registry[SMOKE_ID]     = { id: SMOKE_ID,     key: 'smoke',     displayName: 'smoke',     kind: 'gas',    density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb'], isBuiltIn: true, reactions: [] };
-    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'cellular', density: 3, born: [2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.10, surviveChance: 1, birthFrom: ['wall'], colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [] };
+    registry[WALL_ID]      = { id: WALL_ID,      key: 'wall',      displayName: 'wall',      kind: 'static', density: 10, colors: ['#d8c8a0', '#c8b890', '#b8a880', '#c0c090'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 60,  corrosivity: 0,   hardness: 200 };
+    registry[SAND_ID]      = { id: SAND_ID,      key: 'sand',      displayName: 'sand',      kind: 'powder', density: 5, flow: 0.55, stickiness: 0, colors: SAND_PALETTE, isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 80,  corrosivity: 0,   hardness: 60 };
+    registry[WATER_ID]     = { id: WATER_ID,     key: 'water',     displayName: 'water',     kind: 'liquid', density: 5, viscosity: 0, stickiness: 0, colors: ['#4aa8d8', '#3e9ac8', '#62b8e0', '#2e84b8'], isBuiltIn: true, reactions: [],
+      emitTemp: 25, ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0 };
+    registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#e02020', '#ff3030', '#c01010', '#ff5040'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [],
+      emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
+    registry[SMOKE_ID]     = { id: SMOKE_ID,     key: 'smoke',     displayName: 'smoke',     kind: 'gas',    density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb'], isBuiltIn: true, reactions: [],
+      emitTemp: 70, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
+    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'cellular', density: 3, born: [2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.10, surviveChance: 1, birthFrom: ['wall'], colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [],
+      emitTemp: 30, ignitionPoint: 120, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 40 };
     keyToId.wall = WALL_ID;
     keyToId.sand = SAND_ID;
     keyToId.water = WATER_ID;
@@ -1411,6 +1429,9 @@
         flow: spec.flow, stickiness: spec.stickiness, buoyancy: spec.buoyancy,
         lifeMin: spec.lifeMin, lifeMax: spec.lifeMax, colors: spec.colors,
         reactions: spec.reactions,
+        emitTemp: spec.emitTemp, ignitionPoint: spec.ignitionPoint,
+        flammability: spec.flammability, conductivity: spec.conductivity,
+        corrosivity: spec.corrosivity, hardness: spec.hardness,
       },
       reasons, note,
     };
@@ -1498,6 +1519,15 @@
       'Match common intuition: fire MUST rise (gas, buoyancy>=0.9), water flows (liquid visc 0), honey is thick (liquid visc 0.9), tnt explodes on fire.',
       'Colors: 3-6 hex strings that read on near-black. Avoid pure black. Coherent palette per element.',
       'Reactions are optional but strongly recommended for reactive elements (fire burns plant/oil, acid eats wall/sand, lava cools on water).',
+      '',
+      'TRAITS — additionally include this OPTIONAL block to describe the material physically. The engine will use these to derive emergent behaviour (heat propagation, ignition, corrosion). All values 0-255 unless noted; safe to omit.',
+      'Trait fields: { "emitTemp":0-255 (the ambient temperature this material radiates: ice=10, room=30, hot lava=210, fire=240),',
+      '  "ignitionPoint":0-255 (temperature above which it catches fire: oil=100, wood=140, paper=110, water=255 (never), explosives=80),',
+      '  "flammability":0-1 (per-frame chance of igniting once over ignitionPoint: paper=0.25, oil=0.20, wood=0.04, plant=0.05, tnt=0.30),',
+      '  "conductivity":0-255 (heat diffusion rate: insulator wood=40, water=140, metal=240, plasma=255),',
+      '  "corrosivity":0-255 (how aggressively this material eats less-hard neighbors: water=0, acid=200, lava=80),',
+      '  "hardness":0-255 (resistance to corrosion: sand=60, plant=40, wall=200, metal=240, diamond=255) }',
+      'Use traits whenever they make the element\'s physical identity clearer; they are forward-compatible with the upcoming trait-driven physics.',
       'Output JSON only.',
     ].join('\n');
     const userPrompt = desc ? `Name: ${name}\nDescription: ${desc}` : `Name: ${name}`;
@@ -1700,7 +1730,93 @@
       }
     }
 
+    applyTraits(out, raw, key, userDesc);
     return out;
+  }
+
+  // Trait normalization. Each trait field is optional in the AI's response;
+  // when absent we fill in a name-based default so the data is always present.
+  // The current physics engine doesn't read these yet, but the AI prompt now
+  // mentions them and the element-feedback modal serializes them, so the next
+  // iteration cycle has structured signal to work with.
+  function applyTraits(out, raw, key, userDesc) {
+    const defaults = traitDefaultsForName(key, out.kind);
+    const raw255 = (v, d) => {
+      const n = Number(v);
+      if (!isFinite(n)) return d;
+      return Math.max(0, Math.min(255, Math.round(n)));
+    };
+    const raw01 = (v, d) => {
+      const n = Number(v);
+      if (!isFinite(n)) return d;
+      return Math.max(0, Math.min(1, n));
+    };
+    out.emitTemp      = raw255(raw && raw.emitTemp,      defaults.emitTemp);
+    out.ignitionPoint = raw255(raw && raw.ignitionPoint, defaults.ignitionPoint);
+    out.flammability  = raw01 (raw && raw.flammability,  defaults.flammability);
+    out.conductivity  = raw255(raw && raw.conductivity,  defaults.conductivity);
+    out.corrosivity   = raw255(raw && raw.corrosivity,   defaults.corrosivity);
+    out.hardness      = raw255(raw && raw.hardness,      defaults.hardness);
+  }
+
+  // Default trait values derived from element name + kind. Picks sensible
+  // physical analogs so users get plausible behavior even when the AI omits
+  // the trait block entirely. Falls through to kind-only defaults at the end.
+  function traitDefaultsForName(key, kind) {
+    const n = (key || '').toLowerCase();
+    const has = (...words) => words.some(w => n.indexOf(w) >= 0);
+    if (has('fire','flame','inferno','ember','plasma','spark','lightning'))
+      return { emitTemp: 240, ignitionPoint: 255, flammability: 0,    conductivity: 220, corrosivity: 40,  hardness: 0 };
+    if (has('lava','magma'))
+      return { emitTemp: 210, ignitionPoint: 255, flammability: 0,    conductivity: 180, corrosivity: 80,  hardness: 30 };
+    if (has('steam'))
+      return { emitTemp: 130, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
+    if (has('smoke','fog','mist','vapor','cloud','haze'))
+      return { emitTemp: 70,  ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
+    if (has('ice','icicle','glacier','snow'))
+      return { emitTemp: 10,  ignitionPoint: 255, flammability: 0,    conductivity: 160, corrosivity: 0,   hardness: 60 };
+    if (has('water','juice','milk','wine','soda'))
+      return { emitTemp: 25,  ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0 };
+    if (has('oil','gasoline','petrol','fuel'))
+      return { emitTemp: 30,  ignitionPoint: 100, flammability: 0.20, conductivity: 90,  corrosivity: 0,   hardness: 0 };
+    if (has('acid'))
+      return { emitTemp: 30,  ignitionPoint: 200, flammability: 0,    conductivity: 110, corrosivity: 200, hardness: 0 };
+    if (has('honey','syrup','molasses','caramel'))
+      return { emitTemp: 30,  ignitionPoint: 180, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 0 };
+    if (has('tar','pitch','glue','resin'))
+      return { emitTemp: 30,  ignitionPoint: 130, flammability: 0.10, conductivity: 60,  corrosivity: 0,   hardness: 0 };
+    if (has('blood'))
+      return { emitTemp: 38,  ignitionPoint: 200, flammability: 0,    conductivity: 130, corrosivity: 0,   hardness: 0 };
+    if (has('slime','goo','ooze'))
+      return { emitTemp: 30,  ignitionPoint: 220, flammability: 0,    conductivity: 90,  corrosivity: 0,   hardness: 0 };
+    if (has('plant','leaf','vine','tree','grass','moss'))
+      return { emitTemp: 30,  ignitionPoint: 120, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 40 };
+    if (has('wood','timber','log','bark','twig'))
+      return { emitTemp: 30,  ignitionPoint: 140, flammability: 0.04, conductivity: 40,  corrosivity: 0,   hardness: 100 };
+    if (has('paper','cardboard','parchment'))
+      return { emitTemp: 30,  ignitionPoint: 110, flammability: 0.25, conductivity: 50,  corrosivity: 0,   hardness: 20 };
+    if (has('metal','iron','steel','copper','brass','gold','silver'))
+      return { emitTemp: 30,  ignitionPoint: 220, flammability: 0,    conductivity: 240, corrosivity: 0,   hardness: 240 };
+    if (has('diamond','gem'))
+      return { emitTemp: 30,  ignitionPoint: 250, flammability: 0,    conductivity: 220, corrosivity: 0,   hardness: 255 };
+    if (has('crystal','glass'))
+      return { emitTemp: 30,  ignitionPoint: 240, flammability: 0,    conductivity: 120, corrosivity: 0,   hardness: 180 };
+    if (has('rock','stone','brick','concrete','bedrock'))
+      return { emitTemp: 30,  ignitionPoint: 240, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 200 };
+    if (has('tnt','bomb','dynamite','explosive','c4','grenade','blastite','landmine'))
+      return { emitTemp: 30,  ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
+    if (has('gunpowder')||has('gun-powder'))
+      return { emitTemp: 30,  ignitionPoint: 90,  flammability: 0.50, conductivity: 80,  corrosivity: 0,   hardness: 20 };
+    if (has('ash','soot','cinder'))
+      return { emitTemp: 50,  ignitionPoint: 255, flammability: 0,    conductivity: 60,  corrosivity: 0,   hardness: 30 };
+    if (has('mold','fungus','mycelium','lichen','coral','slime-mold'))
+      return { emitTemp: 30,  ignitionPoint: 150, flammability: 0.06, conductivity: 70,  corrosivity: 0,   hardness: 50 };
+    // Kind-based final fallback.
+    if (kind === 'gas')      return { emitTemp: 60,  ignitionPoint: 255, flammability: 0,    conductivity: 180, corrosivity: 0,   hardness: 0 };
+    if (kind === 'liquid')   return { emitTemp: 30,  ignitionPoint: 200, flammability: 0,    conductivity: 130, corrosivity: 0,   hardness: 0 };
+    if (kind === 'powder')   return { emitTemp: 30,  ignitionPoint: 200, flammability: 0,    conductivity: 90,  corrosivity: 0,   hardness: 60 };
+    if (kind === 'cellular') return { emitTemp: 30,  ignitionPoint: 160, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 50 };
+    /* static */              return { emitTemp: 30,  ignitionPoint: 220, flammability: 0,    conductivity: 100, corrosivity: 0,   hardness: 180 };
   }
 
   function isHex(s) { return typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s); }
@@ -1805,6 +1921,7 @@
       out.born = born; out.survive = survive;
       out.cellularTick = 6; out.growChance = 0.4; out.surviveChance = 0.94;
     }
+    applyTraits(out, null, key, desc);
     return out;
   }
 })();
