@@ -97,11 +97,11 @@
       emitTemp: 30, ignitionPoint: 255, flammability: 0,    conductivity: 80,  corrosivity: 0,   hardness: 60 };
     registry[WATER_ID]     = { id: WATER_ID,     key: 'water',     displayName: 'water',     kind: 'liquid', density: 5, viscosity: 0, stickiness: 0, colors: ['#4aa8d8', '#3e9ac8', '#62b8e0', '#2e84b8'], isBuiltIn: true, reactions: [],
       emitTemp: 25, ignitionPoint: 255, flammability: 0,    conductivity: 140, corrosivity: 0,   hardness: 0 };
-    registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#e02020', '#ff3030', '#c01010', '#ff5040'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [],
+    registry[EXPLOSIVE_ID] = { id: EXPLOSIVE_ID, key: 'explosive', displayName: 'explosive', kind: 'powder', density: 4, flow: 0.45, stickiness: 0, colors: ['#d01818', '#ff4030', '#ffae40', '#ffd060'], isBuiltIn: true, isExplosive: true, explosionRadius: 5, explosionPower: 0.9, reactions: [],
       emitTemp: 30, ignitionPoint: 100, flammability: 0.30, conductivity: 90,  corrosivity: 0,   hardness: 30 };
     registry[SMOKE_ID]     = { id: SMOKE_ID,     key: 'smoke',     displayName: 'smoke',     kind: 'gas',    density: 2, buoyancy: 0.6, lifeMin: 90, lifeMax: 180, colors: ['#9a9a9a', '#aaaaaa', '#888888', '#bbbbbb'], isBuiltIn: true, reactions: [],
       emitTemp: 70, ignitionPoint: 255, flammability: 0,    conductivity: 200, corrosivity: 0,   hardness: 0 };
-    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'cellular', density: 3, born: [2,3], survive: [0,1,2,3,4,5,6,7,8], cellularTick: 14, growChance: 0.10, surviveChance: 1, colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [],
+    registry[PLANT_ID]     = { id: PLANT_ID,     key: 'plant',     displayName: 'plant',     kind: 'static', density: 3, colors: ['#3aa040', '#2c8c34', '#4cb854', '#226c2a'], isBuiltIn: true, reactions: [],
       emitTemp: 30, ignitionPoint: 120, flammability: 0.05, conductivity: 70,  corrosivity: 0,   hardness: 40 };
     // Sparks are spawned by explosions, not painted. Hidden from the palette UI
     // but registered like any other element so the GPU data textures pick them
@@ -584,7 +584,9 @@
 
     uniform highp usampler2D uState;
     uniform sampler2D uPalette;   // 256x4 RGBA8, srgb-ish
+    uniform highp usampler2D uElemData; // 256x1 RGBA8UI: kind, density, paramA, paramB
     uniform ivec2 uSize;
+    uniform int uFrame;
 
     void main() {
       ivec2 px = ivec2(vUv * vec2(uSize));
@@ -594,7 +596,18 @@
         outColor = vec4(0.059, 0.055, 0.047, 1.0); // app bg #0f0e0c
         return;
       }
-      vec3 rgb = texelFetch(uPalette, ivec2(int(c.r), int(c.g & 3u)), 0).rgb;
+      // Explosives shimmer: pick the palette variant from a time-modulated hash
+      // so each cell rotates through its 4 colors at ~15Hz, giving a fizzing
+      // fuse look. Non-explosive cells use the stable per-cell variant.
+      uvec4 e = texelFetch(uElemData, ivec2(int(c.r), 0), 0);
+      uint variant;
+      if ((e.a & 0x80u) != 0u) {
+        uint h = uint(px.x) * 73856093u ^ uint(px.y) * 19349663u ^ uint(uFrame >> 2) * 83492791u;
+        variant = h & 3u;
+      } else {
+        variant = c.g & 3u;
+      }
+      vec3 rgb = texelFetch(uPalette, ivec2(int(c.r), int(variant)), 0).rgb;
       outColor = vec4(rgb, 1.0);
     }
   `;
@@ -1731,7 +1744,11 @@
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, paletteTex);
     gl.uniform1i(gl.getUniformLocation(progRender, 'uPalette'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, elementDataTex);
+    gl.uniform1i(gl.getUniformLocation(progRender, 'uElemData'), 2);
     gl.uniform2i(gl.getUniformLocation(progRender, 'uSize'), COLS, ROWS);
+    gl.uniform1i(gl.getUniformLocation(progRender, 'uFrame'), frameCounter);
     gl.bindVertexArray(quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
