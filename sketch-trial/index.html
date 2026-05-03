@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Sketch Trial — Bureau of Forensic Sketch Evaluation</title>
+  <meta name="description" content="Draw the criminal you imagine. The Bureau issues a wanted-poster verdict.">
+  <meta property="og:title" content="Sketch Trial — Bureau of Forensic Sketch Evaluation">
+  <meta property="og:description" content="Draw the criminal you imagine. The Bureau issues a wanted-poster verdict.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/sketch-trial/">
+  <meta property="og:image" content="https://benlirio.com/apps/sketch-trial/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Sketch Trial — Bureau of Forensic Sketch Evaluation">
+  <meta name="twitter:description" content="Draw the criminal you imagine. The Bureau issues a wanted-poster verdict.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/sketch-trial/og.jpg">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Stage 1: Crime brief + drawing surface -->
+    <section id="brief-stage">
+      <header class="bureau-head">
+        <div class="seal">B / F / S / E</div>
+        <h1>BUREAU OF FORENSIC SKETCH EVALUATION</h1>
+        <div class="case-no" id="case-no">CASE NO. ——————</div>
+      </header>
+
+      <div class="brief">
+        <div class="brief-label">// CRIME UNDER INVESTIGATION</div>
+        <div class="brief-crime" id="crime-text">loading dossier…</div>
+        <button id="reroll-crime" class="reroll" type="button">↻ different crime</button>
+      </div>
+
+      <div class="instructions">
+        Draw the suspect you imagine. Face only. The geometry of your stroke
+        will be entered as evidence.
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="sketch" width="600" height="600" aria-label="Drawing surface"></canvas>
+        <div class="canvas-overlay" id="canvas-overlay">
+          <span>tap &amp; drag to sketch</span>
+        </div>
+      </div>
+
+      <div class="tools">
+        <button id="undo" class="tool" type="button" aria-label="Undo last stroke">undo</button>
+        <button id="clear" class="tool" type="button" aria-label="Clear sketch">clear</button>
+        <span class="stroke-count" id="stroke-count">0 strokes</span>
+      </div>
+
+      <button id="submit" class="primary" type="button">SUBMIT TO THE BUREAU</button>
+    </section>
+
+    <!-- Stage 2: Loading -->
+    <section id="loading-stage" hidden>
+      <div class="loading-card">
+        <div class="seal big">B / F / S / E</div>
+        <div class="loading-line" id="loading-line">measuring eyebrow severity…</div>
+        <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      </div>
+    </section>
+
+    <!-- Stage 3: Wanted poster -->
+    <section id="poster-stage" hidden>
+      <article class="poster" id="poster">
+        <div class="poster-stamp">CONFIDENTIAL</div>
+        <div class="poster-top">
+          <div class="poster-title">WANTED</div>
+          <div class="poster-subtitle">by the Bureau of Forensic Sketch Evaluation</div>
+        </div>
+
+        <div class="poster-exhibit">
+          <div class="exhibit-label">EXHIBIT A &nbsp;·&nbsp; suspect sketch as submitted</div>
+          <img id="poster-sketch" alt="Suspect sketch (Exhibit A)">
+        </div>
+
+        <div class="poster-id">
+          <div class="poster-name" id="poster-name">—</div>
+          <div class="poster-meta" id="poster-meta">— · — · —</div>
+          <div class="poster-charge" id="poster-charge">CHARGE: —</div>
+        </div>
+
+        <div class="poster-section">
+          <div class="poster-section-head">// LAST SEEN</div>
+          <div id="poster-lastseen">—</div>
+        </div>
+
+        <div class="poster-section">
+          <div class="poster-section-head">// GEOMETRIC EXHIBITS</div>
+          <ul class="exhibit-list" id="poster-exhibits"></ul>
+        </div>
+
+        <div class="poster-bottom">
+          <div class="bottom-row">
+            <span>FILE #<span id="poster-file">—</span></span>
+            <span>ISSUED <span id="poster-date">—</span></span>
+          </div>
+          <div class="bureau-line">BUREAU OF FORENSIC SKETCH EVALUATION · DIV. ARCHETYPES</div>
+        </div>
+      </article>
+
+      <div id="share">
+        <button onclick="share()" class="primary" type="button">Share your verdict</button>
+        <button id="retry" class="tool" type="button">try another crime</button>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
