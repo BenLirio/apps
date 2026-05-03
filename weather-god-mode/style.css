@@ -127,6 +127,8 @@ body {
   backdrop-filter: none;
 }
 
+.overlay[hidden] { display: none; }
+
 /* Splash */
 .splash-card {
   width: 100%;
