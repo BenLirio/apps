@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Eavesdropper — pick a seat, listen in</title>
+<meta name="description" content="Drop into a fictional cafe. Listen to five passing conversations. Whichever stranger you lingered on writes you a letter.">
+
+<!-- Share-preview meta -->
+<meta property="og:title" content="The Eavesdropper">
+<meta property="og:description" content="Pick a seat in a fictional cafe. Listen in on five strangers. The one you lingered on writes you a letter.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/the-eavesdropper/">
+<meta property="og:image" content="https://benlirio.com/apps/the-eavesdropper/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="675">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Eavesdropper">
+<meta name="twitter:description" content="Pick a seat. Listen in on five strangers. One of them writes you a letter.">
+<meta name="twitter:image" content="https://benlirio.com/apps/the-eavesdropper/og.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ====== Screen: intro / seat-pick ====== -->
+  <section id="screen-seat" class="screen">
+    <header class="cafe-head">
+      <div class="cafe-mark">CAFE&nbsp;HALCYON</div>
+      <div class="cafe-sub">a fictional Tuesday afternoon · pick where to sit</div>
+    </header>
+
+    <p class="intro-copy">
+      The bell rings as you push the door. Five conversations are already happening.
+      Choose your seat — what you overhear depends on who you sit near.
+    </p>
+
+    <div class="floorplan" aria-label="Cafe floor plan">
+      <div class="floorplan-grid" id="seatGrid"></div>
+      <div class="floorplan-legend">
+        <span class="legend-dot legend-table">●</span> table
+        <span class="legend-dot legend-chair">○</span> open chair (tap to sit)
+        <span class="legend-dot legend-bar">▭</span> bar
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== Screen: listening (90s ambient) ====== -->
+  <section id="screen-listen" class="screen" hidden>
+    <header class="cafe-head listening-head">
+      <div class="cafe-mark">CAFE&nbsp;HALCYON</div>
+      <div class="now-listening">
+        <span class="now-label">currently listening to:</span>
+        <span class="now-target" id="nowTarget">—</span>
+        <span class="now-dwell" id="nowDwell"></span>
+      </div>
+    </header>
+
+    <div class="ambient-stage">
+      <div class="ambient-time">
+        <div class="ambient-time-fill" id="timeFill"></div>
+        <div class="ambient-time-label" id="timeLabel">90s left</div>
+      </div>
+
+      <div class="fragment-stack" id="fragmentStack" aria-live="polite"></div>
+
+      <div class="attention-bar" aria-label="your attention so far">
+        <div class="attention-bar-label">your attention so far</div>
+        <div class="attention-bar-rows" id="attentionRows"></div>
+      </div>
+
+      <div class="hint">tap any conversation to lean in. lingering changes the letter.</div>
+    </div>
+  </section>
+
+  <!-- ====== Screen: letter reveal ====== -->
+  <section id="screen-letter" class="screen" hidden>
+    <div class="loading-strip" id="loadingStrip" hidden>
+      <span id="loadingText">a stranger is typing you a letter…</span>
+    </div>
+
+    <article class="letter" id="letterCard" hidden>
+      <div class="letter-paper">
+        <div class="letter-meta" id="letterMeta"></div>
+        <h1 class="letter-greeting" id="letterGreeting">to you,</h1>
+        <div class="letter-body" id="letterBody"></div>
+        <div class="letter-sign-off">
+          <div class="letter-sign-line">—</div>
+          <div class="letter-sign-name" id="letterSign"></div>
+          <div class="letter-sign-table" id="letterTable"></div>
+        </div>
+      </div>
+    </article>
+
+    <div class="share-row" id="shareRow" hidden>
+      <button class="btn-primary" onclick="share()">share this letter</button>
+      <button class="btn-secondary" onclick="restart()">sit at a different seat</button>
+    </div>
+  </section>
+
+</div>
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</body>
+</html>
