@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Reality TV Reaction Engine</title>
+  <meta name="description" content="Slap a reaction chip on ten mundane moments. The Bureau of Casting decides what role you're playing on this season.">
+  <meta property="og:title" content="Reality TV Reaction Engine">
+  <meta property="og:description" content="Slap a reaction chip on ten mundane moments. The Bureau of Casting decides what role you're playing on this season.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/reality-tv-reaction-engine/">
+  <meta property="og:image" content="https://benlirio.com/apps/reality-tv-reaction-engine/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Reality TV Reaction Engine">
+  <meta name="twitter:description" content="Slap a reaction chip on ten mundane moments. The Bureau of Casting decides what role you're playing on this season.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/reality-tv-reaction-engine/og.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+
+    <header id="hdr">
+      <div class="stamp">// CASTING DEPT · INTAKE</div>
+      <h1>REALITY TV<br><span class="amp">REACTION</span> ENGINE</h1>
+      <p class="lede">Ten mundane moments scroll by. You stamp one of four reaction chips on each. The Bureau of Casting decides what role you'll be playing this season.</p>
+    </header>
+
+    <section id="intro">
+      <ul class="rules">
+        <li>10 clips. 1.5 seconds each.</li>
+        <li>Tap a chip <em>any time</em> during a clip.</li>
+        <li>No tap = "no reaction" gets logged. The casting director sees this.</li>
+      </ul>
+      <button id="startBtn" class="big-btn">PRESS RECORD</button>
+      <div class="finepic">// session_id loaded from camera-A · gate-recorder armed</div>
+    </section>
+
+    <section id="play" hidden>
+      <div class="hud">
+        <span class="clip-counter">CLIP <span id="clipNum">1</span>/10</span>
+        <span class="timer-bar"><span id="timerFill"></span></span>
+      </div>
+      <div class="stage">
+        <canvas id="stage" width="320" height="200" aria-label="pixel-art clip"></canvas>
+        <div id="captionPlate"><span id="caption"></span></div>
+        <div id="stamp" class="stamp-flash" hidden></div>
+      </div>
+      <div class="chips">
+        <button class="chip" data-chip="POLITE_GASP">POLITE<br>GASP</button>
+        <button class="chip" data-chip="DRAMATIC_PAUSE">DRAMATIC<br>PAUSE</button>
+        <button class="chip" data-chip="CONFESSIONAL_BOOTH">CONFESSIONAL<br>BOOTH</button>
+        <button class="chip" data-chip="VILLAIN_EDIT">VILLAIN<br>EDIT</button>
+      </div>
+      <div class="trail" id="trail"></div>
+    </section>
+
+    <section id="result" hidden>
+      <div class="memo-head">
+        <div class="memo-title">// CASTING DIRECTOR'S MEMO</div>
+        <div class="memo-sub">re: your tape</div>
+      </div>
+      <div class="cast-as">CAST AS</div>
+      <h2 id="archetype"></h2>
+      <blockquote id="quote"></blockquote>
+      <div class="axes" id="axes"></div>
+
+      <div class="clipboard" id="clipboard">
+        <div class="cb-clip">// CLIPS REVIEWED · 2x5</div>
+        <div class="cb-grid" id="cbGrid"></div>
+        <div class="cb-foot" id="cbFoot"></div>
+      </div>
+
+      <div id="share">
+        <button onclick="share()" class="big-btn share-btn">SHARE THE TAPE</button>
+        <button id="replayBtn" class="ghost-btn">RECAST · NEW TAKE</button>
+      </div>
+      <div class="finepic" id="permalinkLine"></div>
+    </section>
+
+  </div>
+</body>
+</html>
