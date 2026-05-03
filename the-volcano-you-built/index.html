@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>The Volcano You Built — GEO/SAT Lab</title>
+
+<meta name="description" content="Tap a flat island. Heat propagates. Plates buckle. Sixty seconds later, satellite imagery names YOUR volcano.">
+
+<!-- share-preview meta block -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="The Volcano You Built">
+<meta property="og:description" content="Tap an island. Heat spreads. Plates buckle. In 60 seconds, you get a satellite portrait of your volcano with its derived name.">
+<meta property="og:url" content="https://benlirio.com/apps/the-volcano-you-built/">
+<meta property="og:image" content="https://benlirio.com/apps/the-volcano-you-built/og.jpg">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="900">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Volcano You Built">
+<meta name="twitter:description" content="Tap an island. Heat spreads. Plates buckle. In 60 seconds, you get a satellite portrait of your volcano with its derived name.">
+<meta name="twitter:image" content="https://benlirio.com/apps/the-volcano-you-built/og.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</head>
+<body>
+<div class="app">
+
+  <header class="hud">
+    <div class="hud-line">
+      <span class="pill" id="hud-mission">// MISSION: GEO-SAT-7 · CALDERA OBSERVATORY</span>
+    </div>
+    <h1 class="title">The Volcano You Built</h1>
+    <p class="subtitle">// tap the island. heat spreads. plates buckle. <span class="accent">60s</span> until satellite imagery resolves.</p>
+  </header>
+
+  <section class="stage" id="stage-pre">
+    <div class="stage-meta">
+      <span class="chip">STATUS: STANDBY</span>
+      <span class="chip">SEED: <span id="seed-display">—</span></span>
+    </div>
+    <div class="stage-card">
+      <p class="stage-line">// PROTOCOL</p>
+      <p class="stage-body">Place heat anywhere on the flat island below. Each tap drops thermal energy into the crust. Above threshold, neighboring cells ignite. Magma rises. A ridge grows from your tap pattern.</p>
+      <p class="stage-line">// SESSION CEILING</p>
+      <p class="stage-body">60 seconds. The camera then pulls to satellite altitude and names what you built.</p>
+      <button id="begin-btn" class="primary-btn" type="button">BEGIN OBSERVATION</button>
+    </div>
+  </section>
+
+  <section class="stage" id="stage-play" hidden>
+    <div class="hud-row">
+      <span class="chip" id="time-chip">T-MINUS 60s</span>
+      <span class="chip" id="taps-chip">TAPS: 0</span>
+      <span class="chip" id="heat-chip">PEAK HEAT: 0%</span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="island" width="600" height="600" aria-label="Volcanic island simulation. Tap to drop heat."></canvas>
+      <div class="canvas-caption">// CALDERA-OBSERVATORY · LAYER: thermal · scale: 1px = 12m</div>
+    </div>
+  </section>
+
+  <section class="stage result-card" id="stage-result" hidden>
+    <div class="hud-row">
+      <span class="chip">STATUS: <span class="accent">RESOLVED</span></span>
+      <span class="chip" id="result-seed-chip">SEED: —</span>
+    </div>
+    <div class="result-grid">
+      <div class="sat-frame">
+        <canvas id="sat" width="600" height="600" aria-label="Satellite imagery of the volcano you built"></canvas>
+        <div class="sat-overlay">
+          <div class="sat-overlay-line"><span>// LAT</span><span id="sat-lat">—</span></div>
+          <div class="sat-overlay-line"><span>// LON</span><span id="sat-lon">—</span></div>
+          <div class="sat-overlay-line"><span>// ELEV</span><span id="sat-elev">—</span></div>
+          <div class="sat-overlay-line"><span>// VENTS</span><span id="sat-vents">—</span></div>
+        </div>
+      </div>
+      <div class="result-info">
+        <p class="result-kicker">// CATALOGUED AS</p>
+        <h2 class="result-name" id="volcano-name">—</h2>
+        <p class="result-blurb" id="volcano-blurb">—</p>
+        <dl class="stat-list">
+          <div><dt>// CONES</dt><dd id="stat-cones">—</dd></div>
+          <div><dt>// RIDGE</dt><dd id="stat-ridge">—</dd></div>
+          <div><dt>// MAX HEAT</dt><dd id="stat-heat">—</dd></div>
+          <div><dt>// TAPS LOGGED</dt><dd id="stat-taps">—</dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="share-row">
+      <button class="primary-btn" type="button" onclick="share()">SHARE THIS VOLCANO</button>
+      <button class="ghost-btn" type="button" onclick="window.location.reload()">BUILD ANOTHER</button>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
