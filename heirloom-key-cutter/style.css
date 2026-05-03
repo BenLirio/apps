@@ -1,0 +1,485 @@
+/* Aesthetic: Locksmith's-bench mock-bureaucratic — brass + parchment + ink-stamp serifs, monospace dial labels, hand-cut pixel key */
+
+:root {
+  --parchment: #ecdcb5;
+  --parchment-dark: #d8c190;
+  --parchment-shadow: #b8a06a;
+  --ink: #2b1e10;
+  --ink-soft: #4a3520;
+  --brass-light: #f3d27a;
+  --brass: #c9963a;
+  --brass-deep: #8a6418;
+  --brass-shadow: #5a3f0a;
+  --seal-red: #8a1f1c;
+  --seal-red-dark: #5a1414;
+  --line: #6b4f2a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: 'IM Fell English', Georgia, serif;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+html { background: var(--parchment); }
+body { min-height: 100svh; }
+
+input, textarea { user-select: text; }
+
+#app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px 16px 60px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.4), transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(120,80,30,0.10), transparent 50%),
+    var(--parchment);
+  background-attachment: fixed;
+}
+
+/* Subtle parchment texture via repeating stippling */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-radial-gradient(circle at 17% 31%, rgba(60,40,15,0.025) 0 1px, transparent 1px 4px),
+    repeating-radial-gradient(circle at 73% 67%, rgba(60,40,15,0.022) 0 1px, transparent 1px 5px);
+  z-index: 0;
+}
+
+#app > * { position: relative; z-index: 1; }
+
+/* MASTHEAD */
+.masthead {
+  text-align: center;
+  border-bottom: 2px double var(--ink);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.seal-stamp {
+  display: inline-block;
+  font-family: 'IM Fell English SC', serif;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--seal-red-dark);
+  border: 1.5px solid var(--seal-red-dark);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+  transform: rotate(-2deg);
+  opacity: 0.85;
+}
+
+.masthead h1 {
+  font-family: 'IM Fell English SC', serif;
+  font-weight: normal;
+  font-size: clamp(28px, 8vw, 44px);
+  letter-spacing: 0.06em;
+  margin: 0 0 6px;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.masthead h1 span {
+  display: block;
+  font-size: 0.75em;
+  color: var(--ink-soft);
+  letter-spacing: 0.18em;
+}
+
+.subhead {
+  font-style: italic;
+  font-size: 14px;
+  max-width: 520px;
+  margin: 6px auto 0;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+
+/* BENCH */
+.bench {
+  background: linear-gradient(180deg, var(--parchment-dark), var(--parchment) 30%);
+  border: 1.5px solid var(--ink);
+  padding: 14px;
+  position: relative;
+  box-shadow:
+    0 0 0 4px var(--parchment),
+    0 0 0 5.5px var(--ink),
+    8px 8px 0 var(--parchment-shadow);
+}
+
+.key-stage {
+  background: linear-gradient(180deg, #1a1208, #2b1e10);
+  border: 1.5px solid var(--ink);
+  padding: 10px;
+  margin-bottom: 14px;
+  position: relative;
+}
+
+#keyCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #0d0904;
+}
+
+.readout {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'VT323', monospace;
+  color: var(--brass-light);
+  background: #0d0904;
+  padding: 6px 10px;
+  border-top: 1px solid var(--brass-deep);
+}
+
+.readout-label {
+  font-size: 13px;
+  color: var(--brass);
+  letter-spacing: 0.1em;
+}
+
+.readout-value {
+  font-size: 22px;
+  letter-spacing: 0.15em;
+  color: var(--brass-light);
+  text-shadow: 0 0 6px rgba(243,210,122,0.4);
+}
+
+/* DIALS */
+.dials {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 480px) {
+  .dials { grid-template-columns: repeat(2, 1fr); }
+}
+
+.dial {
+  background: linear-gradient(180deg, var(--brass-light), var(--brass) 60%, var(--brass-deep));
+  border: 1.5px solid var(--brass-shadow);
+  padding: 10px 8px 8px;
+  text-align: center;
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 0 var(--brass-shadow);
+  border-radius: 4px;
+}
+
+.dial-label {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.dial-value {
+  font-family: 'VT323', monospace;
+  font-size: 26px;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 1px solid var(--brass-shadow);
+  padding: 1px 6px;
+  display: inline-block;
+  min-width: 38px;
+  margin-bottom: 6px;
+}
+
+.dial-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.dial-btn {
+  flex: 1;
+  min-height: 44px;
+  font-size: 22px;
+  font-family: 'VT323', monospace;
+  background: var(--ink);
+  color: var(--brass-light);
+  border: 1.5px solid var(--brass-shadow);
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+  transition: transform 0.08s ease;
+}
+
+.dial-btn:active {
+  transform: translateY(1px);
+  background: var(--brass-shadow);
+}
+
+/* BENCH ACTIONS */
+.bench-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+button.primary {
+  flex: 1;
+  font-family: 'IM Fell English SC', serif;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  background: var(--seal-red);
+  color: var(--parchment);
+  border: 1.5px solid var(--seal-red-dark);
+  padding: 14px 16px;
+  cursor: pointer;
+  min-height: 52px;
+  text-transform: uppercase;
+  box-shadow: 0 3px 0 var(--seal-red-dark);
+  border-radius: 2px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+button.primary:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--seal-red-dark);
+}
+
+button.ghost {
+  flex: 0 0 auto;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink-soft);
+  padding: 10px 14px;
+  cursor: pointer;
+  min-height: 44px;
+  text-transform: uppercase;
+  border-radius: 2px;
+}
+
+button.ghost:hover { background: rgba(0,0,0,0.05); }
+
+.catalog-stamp {
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin: 8px 0 0;
+  letter-spacing: 0.05em;
+}
+
+/* RESULT */
+.result-section { margin-top: 22px; animation: fadein 0.5s ease both; }
+
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.provenance-card {
+  background:
+    linear-gradient(180deg, rgba(255,250,235,0.4), rgba(216,193,144,0.2)),
+    var(--parchment);
+  border: 2px solid var(--ink);
+  padding: 28px 22px 22px;
+  position: relative;
+  box-shadow: 6px 6px 0 var(--parchment-shadow);
+  font-family: 'IM Fell English', serif;
+}
+
+.provenance-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--ink-soft);
+  pointer-events: none;
+}
+
+/* Brass corner-seals */
+.seal {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: radial-gradient(circle at 35% 35%, var(--brass-light), var(--brass) 50%, var(--brass-deep) 100%);
+  border: 1.5px solid var(--brass-shadow);
+  border-radius: 50%;
+  box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), inset 2px 2px 3px rgba(255,255,255,0.4);
+  z-index: 2;
+}
+
+.seal::after {
+  content: "\002766";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--brass-shadow);
+}
+
+.seal-tl { top: -10px; left: -10px; }
+.seal-tr { top: -10px; right: -10px; }
+.seal-bl { bottom: -10px; left: -10px; }
+.seal-br { bottom: -10px; right: -10px; }
+
+.prov-header {
+  text-align: center;
+  border-bottom: 1px solid var(--ink-soft);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.prov-eyebrow {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  color: var(--seal-red-dark);
+}
+
+.prov-cuts {
+  font-family: 'VT323', monospace;
+  font-size: 28px;
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  margin-top: 4px;
+}
+
+.prov-date {
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  color: var(--ink-soft);
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+.prov-score {
+  text-align: center;
+  margin: 4px 0 14px;
+}
+
+.prov-score-num {
+  font-family: 'IM Fell English SC', serif;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.prov-score-num .of {
+  font-size: 28px;
+  color: var(--ink-soft);
+}
+
+.prov-score-label {
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+.opened-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  border-top: 1px dashed var(--ink-soft);
+  border-bottom: 1px dashed var(--ink-soft);
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.opened-list li {
+  padding: 8px 4px;
+  border-bottom: 1px dotted rgba(43,30,16,0.25);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.opened-list li:last-child { border-bottom: none; }
+
+.opened-list .lock-name {
+  font-family: 'IM Fell English SC', serif;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  display: block;
+  font-size: 15px;
+}
+
+.opened-list .lock-prov {
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 13px;
+  display: block;
+  margin-top: 2px;
+}
+
+.opened-list .empty-row {
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-soft);
+  padding: 16px 4px;
+}
+
+.prov-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-family: 'VT323', monospace;
+  letter-spacing: 0.08em;
+  padding-top: 6px;
+}
+
+.prov-footer .mark { color: var(--seal-red-dark); font-size: 14px; }
+
+.share-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.share-row button.primary { flex: 1 1 200px; }
+.share-row button.ghost { flex: 1 1 140px; }
+
+.footnote {
+  text-align: center;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 24px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.15);
+}
+
+/* Loading state */
+.testing #testBtn {
+  background: var(--ink);
+  color: var(--brass-light);
+  pointer-events: none;
+}
+
+.testing #testBtn::after {
+  content: " \00b7\00b7\00b7";
+  letter-spacing: 0.1em;
+}

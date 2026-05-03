@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Heirloom Key-Cutter</title>
+  <meta name="description" content="A pixel-art locksmith's bench. Carve a brass key with six dials, then test it against today's catalog of 30 fictional historic locks.">
+  <meta property="og:title" content="Heirloom Key-Cutter">
+  <meta property="og:description" content="A pixel-art locksmith's bench. Carve a brass key with six dials, then test it against today's catalog of 30 fictional historic locks.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/heirloom-key-cutter/">
+  <meta property="og:image" content="https://benlirio.com/apps/heirloom-key-cutter/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Heirloom Key-Cutter">
+  <meta name="twitter:description" content="A pixel-art locksmith's bench. Carve a brass key with six dials, then test it against today's catalog of 30 fictional historic locks.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/heirloom-key-cutter/og.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header class="masthead">
+      <div class="seal-stamp">EST. 1887</div>
+      <h1>HEIRLOOM <span>KEY&mdash;CUTTER</span></h1>
+      <p class="subhead">Carve a single brass profile. Test it against the day's catalog of thirty fictional historic locks. Whatever opens, opens.</p>
+    </header>
+
+    <section class="bench">
+      <div class="key-stage" aria-label="Brass key preview">
+        <canvas id="keyCanvas" width="640" height="200"></canvas>
+        <div class="readout">
+          <span class="readout-label">// CUT PROFILE</span>
+          <span id="readout" class="readout-value">0&middot;0&middot;0&middot;0&middot;0&middot;0</span>
+        </div>
+      </div>
+
+      <div class="dials" id="dials">
+        <!-- six dials injected by JS -->
+      </div>
+
+      <div class="bench-actions">
+        <button id="testBtn" class="primary">TEST THE KEY</button>
+        <button id="resetBtn" class="ghost" type="button">RESET DIALS</button>
+      </div>
+
+      <p class="catalog-stamp">Catalog of <span id="catalogDate">&mdash;</span> &middot; thirty locks awaiting</p>
+    </section>
+
+    <section id="resultSection" class="result-section" hidden>
+      <div class="provenance-card" id="provCard">
+        <div class="seal seal-tl"></div>
+        <div class="seal seal-tr"></div>
+        <div class="seal seal-bl"></div>
+        <div class="seal seal-br"></div>
+
+        <div class="prov-header">
+          <div class="prov-eyebrow">LOCKSMITH&apos;S PROVENANCE CARD</div>
+          <div class="prov-cuts" id="provCuts">0&middot;0&middot;0&middot;0&middot;0&middot;0</div>
+          <div class="prov-date" id="provDate">&mdash;</div>
+        </div>
+
+        <div class="prov-score">
+          <div class="prov-score-num"><span id="openedCount">0</span><span class="of">/30</span></div>
+          <div class="prov-score-label" id="scoreLabel">locks fell silent</div>
+        </div>
+
+        <ul class="opened-list" id="openedList"></ul>
+
+        <div class="prov-footer">
+          <span>Engraved at the bench &middot; <span id="provDate2">&mdash;</span></span>
+          <span class="mark">&#x2766; HKC &#x2766;</span>
+        </div>
+      </div>
+
+      <div id="share" class="share-row">
+        <button onclick="share()" class="primary">SHARE THIS KEY</button>
+        <button id="downloadBtn" class="ghost" type="button">DOWNLOAD CARD</button>
+        <button id="recutBtn" class="ghost" type="button">RECUT &amp; RETEST</button>
+      </div>
+    </section>
+
+    <footer class="footnote">
+      <span>Brass &middot; parchment &middot; ink. Tomorrow&apos;s catalog is a different thirty.</span>
+    </footer>
+  </div>
+</body>
+</html>
