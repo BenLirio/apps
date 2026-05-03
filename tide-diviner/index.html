@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tide Diviner</title>
+  <meta name="description" content="A 14-day hand-stamped almanac strip of real tides, moon phases, and coastal verdicts for any port. 12 lenses, one screenshot each.">
+  <meta property="og:title" content="Tide Diviner">
+  <meta property="og:description" content="A 14-day hand-stamped almanac strip of real tides, moon phases, and coastal verdicts for any port. 12 lenses, one screenshot each.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/tide-diviner/">
+  <meta property="og:image" content="https://benlirio.com/apps/tide-diviner/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Tide Diviner">
+  <meta name="twitter:description" content="A 14-day hand-stamped almanac strip of real tides, moon phases, and coastal verdicts for any port. 12 lenses, one screenshot each.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/tide-diviner/og.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Special+Elite&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="almanac">
+    <header class="masthead">
+      <div class="rule-top"></div>
+      <h1>TIDE DIVINER</h1>
+      <p class="subtitle">// fourteen-day coastal almanac &middot; stamped on the deck</p>
+      <div class="rule-bottom"></div>
+    </header>
+
+    <section class="port-block">
+      <label class="port-label" for="city-input"># PORT</label>
+      <div class="port-row">
+        <input id="city-input" type="text" autocomplete="off" autocapitalize="words" placeholder="lisbon. sydney. half moon bay." spellcheck="false">
+        <button id="city-search" type="button">SEARCH</button>
+      </div>
+      <ul id="city-results" class="city-results" hidden></ul>
+      <div id="port-stamp" class="port-stamp">
+        <span class="stamp-label">STATION:</span>
+        <span id="port-name" class="stamp-value">--</span>
+        <span class="stamp-sep">&middot;</span>
+        <span id="port-coord" class="stamp-mono">--&deg;, --&deg;</span>
+        <span class="stamp-sep">&middot;</span>
+        <span id="port-stamped" class="stamp-mono">stamped --</span>
+      </div>
+    </section>
+
+    <nav class="lens-bar" aria-label="Almanac lenses">
+      <span class="lens-label"># LENS &gt;</span>
+      <div id="lens-chips" class="lens-chips"></div>
+    </nav>
+
+    <section class="strip-block">
+      <div class="strip-header">
+        <span class="strip-mono">// 14-DAY STRIP</span>
+        <span id="strip-units" class="strip-mono">units: --</span>
+      </div>
+      <div id="strip" class="strip" aria-live="polite"></div>
+      <div id="strip-status" class="strip-status">consulting the almanac press&hellip;</div>
+    </section>
+
+    <section id="day-panel" class="day-panel" hidden>
+      <button class="panel-close" id="panel-close" type="button" aria-label="Close panel">[ close x ]</button>
+      <div id="day-panel-body"></div>
+    </section>
+
+    <footer class="colophon">
+      <div class="rule-top"></div>
+      <p class="colophon-line">// data: open-meteo marine + forecast (no key, no tracking)</p>
+      <p class="colophon-line">// computation: pure-client &middot; verdicts: deterministic from tide + moon + date</p>
+      <p class="colophon-line">// the page is the share. screenshot it.</p>
+      <p class="colophon-line"><a href="#" id="copy-link">[ copy permalink ]</a></p>
+    </footer>
+  </main>
+</body>
+</html>
