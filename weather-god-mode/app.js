@@ -283,8 +283,14 @@
   let townsfolk = [];
   let crops = [];
   let stars = [];
+  let tapPulses = [];   // {x, y, life, maxLife, maxR, color}
+  let floaters = [];    // {x, y, vy, life, maxLife, text, color}
   let lighthouseFlash = 0;
+  let lightningFlash = 0; // 0..1, decays fast, white screen flash on bolt
   let thunderRumble = 0; // 0..1, decays over ~0.6s, drives screen shake + dim
+  let trendTimer = 0;    // accumulator for verdict-trend recompute
+  let trendStamp = 'PENDING';
+  let hintFlags = { rainHint: false, hailHint: false };
 
   // Stats
   let stats = freshStats();
@@ -398,11 +404,22 @@
     bolts = [];
     fires = [];
     smokes = [];
+    tapPulses = [];
+    floaters = [];
     affectedTownsfolk = new Set();
     driedSecondsAccum = 0;
     pressureAccum = 0;
     lighthouseFlash = 0;
+    lightningFlash = 0;
     thunderRumble = 0;
+    trendTimer = 0;
+    trendStamp = 'PENDING';
+    hintFlags = { rainHint: false, hailHint: false };
+    const trendEl = document.getElementById('trend-value');
+    if (trendEl) {
+      trendEl.textContent = 'PENDING';
+      trendEl.classList.remove('pulse');
+    }
     stats = freshStats();
   }
 
@@ -570,6 +587,24 @@
     // Thunder rumble decay
     if (thunderRumble > 0) thunderRumble = Math.max(0, thunderRumble - dt * 1.6);
 
+    // Lightning screen-flash decay
+    if (lightningFlash > 0) lightningFlash = Math.max(0, lightningFlash - dt * 4.5);
+
+    // Tap pulses
+    for (let i = tapPulses.length - 1; i >= 0; i--) {
+      const p = tapPulses[i];
+      p.life += dt;
+      if (p.life >= p.maxLife) tapPulses.splice(i, 1);
+    }
+
+    // Floater text
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const f = floaters[i];
+      f.life += dt;
+      f.y += f.vy * dt;
+      if (f.life >= f.maxLife) floaters.splice(i, 1);
+    }
+
     // Bolts decay
     for (let i = bolts.length - 1; i >= 0; i--) {
       const b = bolts[i];
@@ -630,6 +665,72 @@
     // Picnic survival check — picnickers fled means picnic did not survive
     const picnickers = townsfolk.filter(p => p.kind === 'picnicker');
     if (picnickers.some(p => p.fled)) stats.picnic_survived = false;
+
+    // Verdict trend — recompute live every ~1.5s so the player sees their reign shape
+    trendTimer += dt;
+    if (trendTimer >= 1.5) {
+      trendTimer = 0;
+      const v = pickVerdict(stats);
+      if (v && v.stamp !== trendStamp) {
+        trendStamp = v.stamp;
+        const el = document.getElementById('trend-value');
+        if (el) {
+          el.textContent = trendStamp;
+          el.classList.remove('pulse');
+          // Force reflow so the animation re-triggers
+          void el.offsetWidth;
+          el.classList.add('pulse');
+        }
+      }
+    }
+
+    // Discoverability hints — fire once per session
+    if (!hintFlags.rainHint) {
+      for (const c of clouds) {
+        if (c.targetSize >= 1.4 && !c.stormForm) {
+          addFloater(c.x, c.y - c.r * c.size - 10, 'DBL-TAP = RAIN', PALETTE.cloudHi, 2.4);
+          hintFlags.rainHint = true;
+          break;
+        }
+      }
+    }
+    if (!hintFlags.hailHint) {
+      for (const c of clouds) {
+        if (c.stormForm) {
+          addFloater(c.x, c.y - c.r * c.size - 12, 'DBL-TAP = HAIL', PALETTE.bolt, 2.4);
+          hintFlags.hailHint = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // ---------- Feedback / juice helpers ----------
+  function addTapPulse(x, y, color, maxR) {
+    tapPulses.push({
+      x, y,
+      color: color || PALETTE.accent,
+      life: 0,
+      maxLife: 0.45,
+      maxR: maxR || 22
+    });
+  }
+
+  function addFloater(x, y, text, color, life) {
+    floaters.push({
+      x, y,
+      vy: -16,
+      life: 0,
+      maxLife: life || 1.2,
+      text,
+      color: color || '#fff'
+    });
+  }
+
+  function vibrate(p) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(p); } catch (_) {}
+    }
   }
 
   function affectByRain(x, y) {
@@ -697,6 +798,11 @@
     if (isThunder) {
       stats.thunder_pulses++;
       thunderRumble = 1.0;
+      lightningFlash = 1.0;
+      vibrate([70, 30, 90]);
+    } else {
+      lightningFlash = Math.max(lightningFlash, 0.7);
+      vibrate(50);
     }
 
     // Build jagged bolt path from cloud to ground
@@ -845,9 +951,11 @@
             size: 0.6, targetSize: 0.8,
             r: 9 + rng() * 4,
             raining: false, rainAccum: 0,
+            hailing: false, hailExpire: 0, stormForm: false,
             lifeMs: 0, seedOffset: Math.floor(rng() * 1024),
             darkening: 0, lastChargeMs: 0, lastTapMs: 0, rainExpire: 0
           });
+          addTapPulse(v.x, v.y, PALETTE.cloudHi, 14);
           stats.taps_count++;
           bumpInterventionsHud();
         }
@@ -864,11 +972,15 @@
   function growCloud(c) {
     c.targetSize = Math.min(MAX_TARGET_SIZE, c.targetSize + 0.45);
     c.r = Math.min(MAX_CLOUD_R, c.r + 0.2);
+    addTapPulse(c.x, c.y, PALETTE.accent, c.r * c.size + 10);
     if (!c.stormForm && c.targetSize >= STORM_THRESHOLD) {
       c.stormForm = true;
       stats.thunderheads_summoned++;
-      // Visual cue: a brief charged flash on transformation
-      thunderRumble = Math.max(thunderRumble, 0.4);
+      // Visual + haptic cue on transformation
+      thunderRumble = Math.max(thunderRumble, 0.55);
+      lightningFlash = Math.max(lightningFlash, 0.35);
+      addFloater(c.x, c.y - c.r * c.size - 10, 'THUNDERHEAD!', PALETTE.bolt, 1.4);
+      vibrate(60);
     }
   }
 
@@ -880,6 +992,9 @@
     c.raining = true;
     // Bigger clouds rain longer
     c.rainExpire = nowMs + 1200 + c.size * 800;
+    addTapPulse(c.x, c.y, PALETTE.rain, c.r * c.size + 14);
+    addFloater(c.x, c.y - c.r * c.size - 8, 'RAIN', PALETTE.rain, 1.0);
+    vibrate(25);
     bumpInterventionsHud();
   }
 
@@ -887,6 +1002,9 @@
     // Only thunderheads drop hail. Caller (double-tap handler) decides routing.
     c.hailing = true;
     c.hailExpire = nowMs + 1300 + c.size * 600;
+    addTapPulse(c.x, c.y, PALETTE.cloudHi, c.r * c.size + 16);
+    addFloater(c.x, c.y - c.r * c.size - 10, 'HAIL', PALETTE.cloudHi, 1.0);
+    vibrate([40, 30, 40]);
     bumpInterventionsHud();
   }
 
@@ -927,11 +1045,14 @@
     drawRain();
     drawHail();
 
-    // Clouds
+    // Clouds (and per-cloud growth gauges)
     drawClouds();
 
     // Bolts
     drawBolts();
+
+    // Tap-pulse rings (over clouds so they read as feedback)
+    drawTapPulses();
 
     // Fires & smoke
     drawFires();
@@ -949,11 +1070,20 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    // Lightning screen flash — quick white pop on bolt strike
+    if (lightningFlash > 0.05) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.45, lightningFlash * 0.5)})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
     // Lighthouse flash overlay
     if (lighthouseFlash > 0.02) {
       ctx.fillStyle = `rgba(255, 245, 184, ${lighthouseFlash * 0.18})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+
+    // Floater text on top of everything (so HINT and event labels are always legible)
+    drawFloaters();
 
     if (shakeMag) ctx.restore();
   }
@@ -1156,14 +1286,107 @@
     for (const b of blobs) {
       drawPixelCircle(cx + b.dx, cy + b.dy - 1, b.rr, baseColor);
     }
-    // Charge glow when held
+    // Charge ring when held — concentric electric ring + arc flecks
     if (activePointer && activePointer.cloud === c && !activePointer.holdActive) {
       const heldMs = performance.now() - activePointer.startMs;
       const charge = Math.min(1, heldMs / HOLD_MS);
-      ctx.fillStyle = `rgba(255, 245, 184, ${charge * 0.6})`;
-      ctx.fillRect(Math.round((cx - r) * scaleX), Math.round((cy - r) * scaleY),
-                   Math.ceil(r * 2 * scaleX), Math.ceil(r * 2 * scaleY));
+      const ringR = r + 4 + charge * 6;
+      ctx.save();
+      ctx.globalAlpha = 0.55 + charge * 0.4;
+      ctx.strokeStyle = PALETTE.bolt;
+      ctx.lineWidth = Math.max(1, scaleX * (1 + charge));
+      ctx.beginPath();
+      ctx.arc(cx * scaleX, cy * scaleY, ringR * scaleX, 0, Math.PI * 2);
+      ctx.stroke();
+      // Arc flecks at the perimeter once charge is past halfway
+      if (charge > 0.4) {
+        ctx.lineWidth = Math.max(1, scaleX);
+        const arcCount = 4 + Math.floor(charge * 3);
+        for (let i = 0; i < arcCount; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r1 = ringR;
+          const r2 = ringR + 2 + Math.random() * 2;
+          ctx.beginPath();
+          ctx.moveTo((cx + Math.cos(a) * r1) * scaleX, (cy + Math.sin(a) * r1) * scaleY);
+          ctx.lineTo((cx + Math.cos(a) * r2) * scaleX, (cy + Math.sin(a) * r2) * scaleY);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
+
+    drawCloudGauge(c);
+  }
+
+  function drawCloudGauge(c) {
+    // Small indicator above the cloud showing growth toward thunderhead.
+    // 3 pips while building; lightning-bolt glyph once stormForm.
+    const cx = c.x;
+    const cy = c.y - c.r * c.size - 5;
+    if (c.stormForm) {
+      // Mini lightning bolt
+      ctx.fillStyle = PALETTE.bolt;
+      const px = Math.round(cx * scaleX);
+      const py = Math.round(cy * scaleY);
+      // Build tiny zigzag
+      const sx = Math.max(1, Math.round(scaleX));
+      const sy = Math.max(1, Math.round(scaleY));
+      ctx.fillRect(px - sx, py - 3 * sy, sx, 2 * sy);
+      ctx.fillRect(px, py - sy, sx, 2 * sy);
+      ctx.fillRect(px - 2 * sx, py + sy, 2 * sx, sy);
+      ctx.fillRect(px + sx, py - 3 * sy, sx, sy);
+    } else {
+      const thresholds = [1.0, 1.6, 2.2];
+      for (let i = 0; i < 3; i++) {
+        const filled = c.targetSize >= thresholds[i] - 0.001;
+        const dx = (i - 1) * 4;
+        vRect(cx + dx - 1, cy - 1, 2, 2, filled ? PALETTE.cloudHi : PALETTE.cloudLo);
+      }
+    }
+  }
+
+  function drawTapPulses() {
+    if (!tapPulses.length) return;
+    ctx.save();
+    for (const p of tapPulses) {
+      const t = p.life / p.maxLife;
+      const r = p.maxR * (0.4 + t * 0.9);
+      const alpha = (1 - t) * 0.7;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = Math.max(1, scaleX * 1.4);
+      ctx.beginPath();
+      ctx.arc(p.x * scaleX, p.y * scaleY, r * scaleX, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawFloaters() {
+    if (!floaters.length) return;
+    ctx.save();
+    const fontPx = Math.max(10, Math.round(7 * scaleX));
+    ctx.font = `${fontPx}px "Press Start 2P", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const f of floaters) {
+      const t = f.life / f.maxLife;
+      const alpha = t < 0.65 ? 1 : Math.max(0, 1 - (t - 0.65) / 0.35);
+      const x = f.x * scaleX;
+      const y = f.y * scaleY;
+      // Hard-pixel outline for legibility on any background
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.fillStyle = '#0d1117';
+      const o = Math.max(1, Math.round(scaleX * 0.8));
+      ctx.fillText(f.text, x + o, y);
+      ctx.fillText(f.text, x - o, y);
+      ctx.fillText(f.text, x, y + o);
+      ctx.fillText(f.text, x, y - o);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, x, y);
+    }
+    ctx.restore();
   }
 
   function drawPixelCircle(cx, cy, r, color) {

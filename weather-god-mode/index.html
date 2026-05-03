@@ -27,9 +27,9 @@
   <main id="stage">
     <header id="hud">
       <div id="hud-row">
-        <div class="hud-block">
-          <span class="hud-label">DIVINITY MODE</span>
-          <span class="hud-value">ACTIVE</span>
+        <div class="hud-block hud-trend">
+          <span class="hud-label">VERDICT TREND</span>
+          <span class="hud-value" id="trend-value">PENDING</span>
         </div>
         <div class="hud-block hud-timer">
           <span class="hud-label">REIGN ENDS</span>
@@ -41,13 +41,11 @@
         </div>
       </div>
       <div id="hud-hint">
-        <span>tap to grow</span>
+        <span>tap = grow</span>
         <span class="dot">·</span>
-        <span>hold for lightning</span>
+        <span>hold = lightning</span>
         <span class="dot">·</span>
-        <span>double-tap = rain</span>
-        <span class="dot">·</span>
-        <span>thunderheads bring hail + thunder</span>
+        <span>dbl-tap = rain / hail</span>
       </div>
     </header>
 
@@ -59,9 +57,9 @@
         <h1>WEATHER GOD MODE</h1>
         <p class="splash-pitch">A pixel-art coast. A live sky. <strong>You're the deity on duty.</strong></p>
         <ul class="splash-rules">
-          <li><span class="g">tap a cloud</span> to grow it — keep tapping until it darkens into a <strong>thunderhead</strong></li>
-          <li><span class="g">hold</span> a cloud for lightning (thunderheads rumble louder)</li>
-          <li><span class="g">double-tap</span> a cloud for rain — or for <strong>hail</strong> on a thunderhead</li>
+          <li><span class="g">tap</span> a cloud to grow it — three pips above = <strong>thunderhead</strong></li>
+          <li><span class="g">hold</span> for a lightning bolt (thunderheads rumble louder)</li>
+          <li><span class="g">double-tap</span> for rain — or <strong>hail</strong> on a thunderhead</li>
         </ul>
         <p class="splash-warn">After 60 seconds the Meteorological Society reviews your reign and issues your <strong>Divinity Audit</strong>. The townsfolk will remember.</p>
         <button id="begin-btn" type="button">BEGIN REIGN</button>
