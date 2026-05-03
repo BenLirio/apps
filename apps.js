@@ -173,20 +173,30 @@
     return '';
   }
 
+  // Every action surfaces the same optional-feedback modal. The textarea is
+  // optional — Cancel skips the action; Confirm proceeds with whatever text
+  // (empty allowed). Whatever the user typed becomes the `feedback` field on
+  // the request and feeds the per-app learning corpus on the server side.
+  const ACTION_PROMPTS = {
+    promote: { verb: 'Promote', placeholder: 'why is this idea worth building? (optional)', kind: 'positive' },
+    publish: { verb: 'Publish', placeholder: 'what made this prototype worth keeping? (optional)', kind: 'positive' },
+    restore: { verb: 'Restore', placeholder: 'why bring this back? (optional)', kind: 'positive' },
+    archive: { verb: 'Archive', placeholder: 'why are you archiving this app? (optional)', kind: 'destructive' },
+    reject:  { verb: 'Reject',  placeholder: 'why are you rejecting this idea? (optional)', kind: 'destructive' },
+  };
+
   async function onAction(card, a, action) {
     const slug = a.slug;
-    let reason = '';
-    if (action === 'reject' || action === 'archive') {
-      const verb = action.charAt(0).toUpperCase() + action.slice(1);
-      const result = await openTextModal({
-        title: `${verb} “${a.name}”?`,
-        label: 'Reason (optional)',
-        placeholder: `why are you ${action}ing this app?`,
-        confirmLabel: verb,
-      });
-      if (!result.confirmed) return;
-      reason = result.text;
-    }
+    const prompt = ACTION_PROMPTS[action] || { verb: action, placeholder: '', kind: 'positive' };
+    const result = await openTextModal({
+      title: `${prompt.verb} “${a.name}”?`,
+      label: 'Feedback (optional)',
+      placeholder: prompt.placeholder,
+      confirmLabel: prompt.verb,
+      confirmKind: prompt.kind === 'positive' ? 'positive' : undefined,
+    });
+    if (!result.confirmed) return;
+    const feedback = result.text || '';
 
     setStatus(card, msgFor(action) + '…');
     card.querySelectorAll('button').forEach(b => { b.disabled = true; });
@@ -194,7 +204,7 @@
       const resp = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, action, reason })
+        body: JSON.stringify({ slug, action, feedback })
       });
       if (!resp.ok) throw new Error('http ' + resp.status);
       setStatus(card, doneMsg(action));
