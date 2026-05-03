@@ -1,13 +1,14 @@
-// mechanic.js — pure logic for Ghost Receipt
+// mechanic.js — pure logic for Ghost Receipt.
 // Owns: seeded RNG, the curated line-item banks (CHARGES, ITEMS, REGRETS,
-// GHOSTS, MISC), the bank-rotation across taps, the totals math, and the
-// stamp/footer text. No DOM. journey.js / app.js consume these.
+// GHOSTS, MISC), the totals math (subtotal floor + captionable ending),
+// price formatting, and `buildReceiptFromSeed(seed)` — the deterministic
+// fallback used when AI generation fails or when a legacy `#seed=N` link is
+// loaded. The AI-driven primary path lives in ai.js. No DOM here.
 //
 // Stance: mock-bureaucratic + petty. Voice: dry, deadpan, indie-sleaze 1:47am.
 // NEVER cute. NEVER zoomer slang. Think: ledger of a night that got away.
 
 // ----------------------- seeded RNG -----------------------
-// FNV-1a-ish 32-bit hash for string -> seed
 export function hashStr(s) {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < s.length; i++) {
@@ -17,7 +18,6 @@ export function hashStr(s) {
   return h >>> 0;
 }
 
-// mulberry32 — tiny seeded PRNG, returns [0,1)
 export function mulberry32(seed) {
   let s = seed >>> 0;
   return function () {
@@ -29,9 +29,7 @@ export function mulberry32(seed) {
   };
 }
 
-// pull from array w/o repetition within a single receipt
 function pickUnique(rng, arr, used) {
-  // Try up to N times to find an unused entry; fall back to allowing repeats.
   for (let i = 0; i < 32; i++) {
     const x = arr[Math.floor(rng() * arr.length)];
     if (!used.has(x)) {
@@ -49,7 +47,6 @@ function pickUnique(rng, arr, used) {
 //   "see attached" filed under another section, doesn't sum
 //   "cheap"       symbolic, doesn't sum
 //   "gone"        symbolic, doesn't sum
-//   "$0.00"       literal zero (sums as 0)
 
 function fmtUSD(cents) {
   const sign = cents < 0 ? "-" : "";
@@ -68,15 +65,9 @@ function priceContributesNumeric(p) {
   return typeof p === "number";
 }
 
-// ----------------------- line-item BANKS -----------------------
-// Each bank is a list of [text, price]. price can be number (cents) or string.
-// ~80–120 items total across all banks (saturation rule from input-design).
-//
-// CHARGES = bureaucratic-feeling itemized "fees"
-// ITEMS   = physical-ish props of the night
-// REGRETS = inner-life line items, mostly em-dashed
-// GHOSTS  = people / unsent texts / not-met
-// MISC    = the offbeat / edge-case ones, including "$∞" / "see attached"
+export { fmtUSD, priceToken, priceContributesNumeric };
+
+// ----------------------- line-item BANKS (deterministic fallback) -----------------------
 
 const BANK_CHARGES = [
   ["1x cover charge to a venue that wasn't checking", 800],
@@ -180,34 +171,24 @@ const BANK_MISC = [
   ["1x weather event, briefly fashionable", "—"],
 ];
 
-// Ordered list of which bank each tap pulls from, by tap index 0..11.
-// Designed so the receipt feels like it has rhythm, not a category dump.
+// Bank rotation across the 12 taps — opens with a charge so it reads like a
+// receipt, closes with a regret so the totals stamp lands hard.
 const BANK_ROTATION = [
-  BANK_CHARGES, // 1: open with a charge so it reads like a receipt
-  BANK_ITEMS,
-  BANK_REGRETS,
-  BANK_CHARGES,
-  BANK_GHOSTS,
-  BANK_REGRETS,
-  BANK_MISC,
-  BANK_ITEMS,
-  BANK_REGRETS,
-  BANK_GHOSTS,
-  BANK_MISC,
-  BANK_REGRETS, // close on a regret so the totals land hard
+  BANK_CHARGES, BANK_ITEMS, BANK_REGRETS, BANK_CHARGES,
+  BANK_GHOSTS,  BANK_REGRETS, BANK_MISC,    BANK_ITEMS,
+  BANK_REGRETS, BANK_GHOSTS,  BANK_MISC,    BANK_REGRETS,
 ];
 
 export const TOTAL_TAPS = BANK_ROTATION.length; // 12
 
-// ----------------------- absurd extras (printed at TOTAL time) -----------------------
 const EXTRA_CHARGES = [
-  { text: "tax of regret (8.875%)", kind: "tax", rate: 0.08875 },
-  { text: "service charge for being there", kind: "pct", rate: 0.18 },
-  { text: "gratuity (mandatory)", kind: "pct", rate: 0.20 },
-  { text: "cover charge (retroactive)", kind: "flat", min: 800, max: 2200 },
-  { text: "convenience fee for the night itself", kind: "flat", min: 250, max: 950 },
-  { text: "subtotal of small lies", kind: "lies", min: 1100, max: 4400 },
-  { text: "former-self surcharge", kind: "pct", rate: 0.075 },
+  { text: "tax of regret (8.875%)",                kind: "tax",  rate: 0.08875 },
+  { text: "service charge for being there",        kind: "pct",  rate: 0.18 },
+  { text: "gratuity (mandatory)",                  kind: "pct",  rate: 0.20 },
+  { text: "cover charge (retroactive)",            kind: "flat", min: 800,  max: 2200 },
+  { text: "convenience fee for the night itself",  kind: "flat", min: 250,  max: 950 },
+  { text: "subtotal of small lies",                kind: "lies", min: 1100, max: 4400 },
+  { text: "former-self surcharge",                 kind: "pct",  rate: 0.075 },
   { text: "house pour for a stranger you nodded at", kind: "flat", min: 700, max: 1400 },
 ];
 
@@ -237,59 +218,58 @@ const STAMPS_META = [
   "1:18 AM · COUNTER · srv: NEW PERSON",
 ];
 
-// ----------------------- buildReceipt -----------------------
-// Returns the entire receipt for a seed, deterministic. The UI reveals it
-// tap-by-tap; logic is fully precomputed so undo/replay is trivial.
-//
-// shape:
-//   {
-//     seed: number,
-//     stampMeta: string,
-//     lines:   [{ text, price, contributes, misprint }] x TOTAL_TAPS,
-//     extras:  [{ text, amount }],
-//     subtotal: number,                 // cents
-//     total:    number,                 // cents
-//     totalStr: string,                 // "$XXX.XX"
-//     fine:    string,
-//     stamp:   string,
-//   }
+// ----------------------- totals computation -----------------------
+// Two callers: buildReceiptFromSeed (banks-only) and ai.js (after AI lines
+// land). Centralizing keeps the captionable-ending discipline in one place.
+export function computeTotals(rng, lines, extras) {
+  let subtotal = 0;
+  for (const l of lines) {
+    if (priceContributesNumeric(l.price)) subtotal += l.price;
+  }
+  // Floor: never read suspiciously cheap.
+  if (subtotal < 4000) subtotal += 4200;
 
-export function buildReceipt(seed) {
+  const extrasTotal = extras.reduce((s, e) => s + (typeof e.amount === "number" ? e.amount : 0), 0);
+
+  const captionableEndings = [47, 69, 88, 13, 22, 7];
+  const ending = captionableEndings[Math.floor(rng() * captionableEndings.length)];
+  let total = subtotal + extrasTotal;
+  total = Math.floor(total / 100) * 100 + ending;
+  if (total < subtotal + 50) total += 100;
+
+  return { subtotal, total };
+}
+
+export function pickFineStampMeta(rng) {
+  return {
+    fine: FINE_PRINT[Math.floor(rng() * FINE_PRINT.length)],
+    stamp: STAMP_FOOTERS[Math.floor(rng() * STAMP_FOOTERS.length)],
+    stampMeta: STAMPS_META[Math.floor(rng() * STAMPS_META.length)],
+  };
+}
+
+// ----------------------- buildReceiptFromSeed (banks-only fallback) -----------------------
+// Used for: (a) AI failure on a fresh prompt, (b) old `#seed=N` legacy share
+// links — those URLs are still in the wild and must hydrate to the same
+// receipt they originally produced.
+export function buildReceiptFromSeed(seed) {
   const rng = mulberry32(seed >>> 0);
   const used = new Set();
 
-  // 1. accreting line items
   const lines = [];
-  let subtotal = 0;
-  let priced = 0;
-  let unpriced = 0;
-
   for (let i = 0; i < TOTAL_TAPS; i++) {
     const bank = BANK_ROTATION[i];
     const [text, price] = pickUnique(rng, bank, used);
-    const contributes = priceContributesNumeric(price);
-    if (contributes) {
-      subtotal += price;
-      priced++;
-    } else {
-      unpriced++;
-    }
-    // ~1 in 9 lines gets a misprint flicker on the price/text
-    const misprint = rng() < 0.11;
     lines.push({
       text,
       price,
       priceStr: priceToken(price),
-      contributes,
-      misprint,
+      contributes: priceContributesNumeric(price),
+      misprint: rng() < 0.11,
     });
   }
 
-  // Floor the subtotal so it never reads as suspiciously cheap. If the
-  // numeric items happened to be light, sneak in a quiet base of $42.00 .
-  if (subtotal < 4000) subtotal += 4200;
-
-  // 2. extras at total time. Pick 3 of the absurd extras, deterministic.
+  // Pick 3 extras
   const extrasPicked = [];
   const extraIdx = new Set();
   while (extrasPicked.length < 3) {
@@ -299,81 +279,71 @@ export function buildReceipt(seed) {
     extrasPicked.push(EXTRA_CHARGES[i]);
   }
 
+  const subtotalNumeric = lines.reduce((s, l) => s + (l.contributes ? l.price : 0), 0);
+  const unpriced = lines.filter((l) => !l.contributes).length;
+
   const extras = [];
-  let extrasTotal = 0;
   for (const e of extrasPicked) {
     let amount = 0;
     if (e.kind === "tax" || e.kind === "pct") {
-      amount = Math.round(subtotal * e.rate);
+      amount = Math.round(Math.max(subtotalNumeric, 4200) * e.rate);
     } else if (e.kind === "flat") {
       amount = Math.round(e.min + rng() * (e.max - e.min));
-      // round to nearest 5 cents for receipt-feel
       amount = Math.round(amount / 5) * 5;
     } else if (e.kind === "lies") {
-      // scaled by how many unpriced regrets the receipt has
       const base = e.min + (unpriced * 200);
       amount = Math.min(e.max, Math.round(base + rng() * 800));
     }
     extras.push({ text: e.text, amount, amountStr: fmtUSD(amount) });
-    extrasTotal += amount;
   }
 
-  // 3. final number — round into a captionable shape (ends in .47 / .69 / .88 / .13)
-  const captionableEndings = [47, 69, 88, 13, 22, 7];
-  const ending = captionableEndings[Math.floor(rng() * captionableEndings.length)];
-  let total = subtotal + extrasTotal;
-  // round to the dollar, then add the ending
-  total = Math.floor(total / 100) * 100 + ending;
-  // ensure total stays >= subtotal
-  if (total < subtotal + 50) total += 100;
-
-  const fine = FINE_PRINT[Math.floor(rng() * FINE_PRINT.length)];
-  const stamp = STAMP_FOOTERS[Math.floor(rng() * STAMP_FOOTERS.length)];
-  const stampMeta = STAMPS_META[Math.floor(rng() * STAMPS_META.length)];
+  const { subtotal, total } = computeTotals(rng, lines, extras);
+  const meta = pickFineStampMeta(rng);
 
   return {
     seed,
-    stampMeta,
+    source: "banks",
+    stampMeta: meta.stampMeta,
     lines,
     extras,
     subtotal,
     total,
     totalStr: fmtUSD(total),
-    fine,
-    stamp,
-    pricedCount: priced,
-    unpricedCount: unpriced,
+    fine: meta.fine,
+    stamp: meta.stamp,
   };
 }
 
-// ----------------------- seed helpers -----------------------
+// ----------------------- normalization helpers (used by ai.js) -----------------------
+// Allowed price tokens (post-normalization). Anything else collapses to "—".
+const ALLOWED_PRICE_TOKENS = new Set(["—", "$∞", "see attached", "cheap", "gone"]);
 
-// Generate a fresh seed (a single 32-bit unsigned int).
-export function freshSeed() {
-  // crypto.getRandomValues if available, else Math.random fallback
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    const buf = new Uint32Array(1);
-    crypto.getRandomValues(buf);
-    return buf[0] >>> 0;
+export function normalizePrice(p) {
+  if (typeof p === "number" && Number.isFinite(p)) {
+    return Math.max(0, Math.min(99999, Math.round(p)));
   }
-  return (Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
+  if (typeof p === "string") {
+    const t = p.trim();
+    if (ALLOWED_PRICE_TOKENS.has(t)) return t;
+    if (t === "-" || t === "--" || t === "—") return "—";
+    // Try "$8.00" / "$12" / "8.00" forms
+    const m = t.match(/^\$?(\d+)(?:\.(\d{1,2}))?$/);
+    if (m) {
+      const dollars = parseInt(m[1], 10);
+      const cents = m[2] ? parseInt(m[2].padEnd(2, "0"), 10) : 0;
+      return Math.max(0, Math.min(99999, dollars * 100 + cents));
+    }
+    return "—";
+  }
+  return "—";
 }
 
-// Read seed from the URL hash. Supports `#seed=<number>` or `#<number>`.
-export function readSeedFromHash() {
-  const h = (location.hash || "").replace(/^#/, "");
-  if (!h) return null;
-  const m1 = h.match(/^seed=(\d+)$/);
-  if (m1) return parseInt(m1[1], 10) >>> 0;
-  if (/^\d+$/.test(h)) return parseInt(h, 10) >>> 0;
-  return null;
-}
-
-export function writeSeedToHash(seed) {
-  const next = `#seed=${seed >>> 0}`;
-  history.replaceState(null, "", next);
-}
-
-export function clearSeedFromHash() {
-  history.replaceState(null, "", location.pathname + location.search);
+export function decorateLine(line, misprintRoll) {
+  return {
+    text: line.text,
+    price: line.price,
+    priceStr: priceToken(line.price),
+    contributes: priceContributesNumeric(line.price),
+    misprint: misprintRoll < 0.11,
+  };
 }

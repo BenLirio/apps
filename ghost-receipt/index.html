@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Ghost Receipt — itemized regrets from a night that got away from you</title>
-<meta name="description" content="Tap a curling thermal-paper napkin and absurd line items materialize one by one — wrong taxis, sentences you never finished, apologies you owed yourself. Twelve taps prints your final NIGHT OUT total.">
+<meta name="description" content="Tell the cashier what kind of night it was. They itemize. Twelve lines later you get a NIGHT OUT total stamped by the Former Self Tavern.">
 
 <!-- Share-preview meta -->
 <meta property="og:title" content="Ghost Receipt">
-<meta property="og:description" content="Tap to print itemized regrets. Twelve taps later you get a NIGHT OUT total signed by the Former Self Tavern.">
+<meta property="og:description" content="Tell the cashier what kind of night it was. They itemize. Twelve lines, one stamp, and a NIGHT OUT total from the Former Self Tavern.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://benlirio.com/apps/ghost-receipt/">
 <meta property="og:image" content="https://benlirio.com/apps/ghost-receipt/og.jpg">
@@ -16,7 +16,7 @@
 <meta property="og:image:height" content="675">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Ghost Receipt">
-<meta name="twitter:description" content="Tap to print itemized regrets. Twelve taps later you get a NIGHT OUT total signed by the Former Self Tavern.">
+<meta name="twitter:description" content="Tell the cashier what kind of night it was. They itemize. Twelve lines, one stamp.">
 <meta name="twitter:image" content="https://benlirio.com/apps/ghost-receipt/og.jpg">
 
 <link rel="icon" type="image/jpeg" href="favicon.jpg">
@@ -35,10 +35,30 @@
 
   <header class="venue-head">
     <h1 class="venue-name">FORMER SELF TAVERN</h1>
-    <p class="venue-sub">tap the receipt to itemize the night.<br>twelve items prints the total.</p>
+    <p class="venue-sub" id="venueSub">tell the cashier what kind of night it was.<br>they'll itemize.</p>
   </header>
 
-  <div class="counter">
+  <!-- prompt form: the cashier's order pad -->
+  <form class="order-pad" id="promptForm">
+    <label class="order-pad-label" for="promptInput">describe the night, one or two lines:</label>
+    <textarea class="order-pad-input" id="promptInput" name="promptInput"
+              maxlength="500" rows="3"
+              placeholder="e.g. wedding afterparty for a friend i barely knew. ended up arguing about a movie no one had seen."
+              autocomplete="off" autocapitalize="sentences" spellcheck="true"></textarea>
+    <div class="order-pad-row">
+      <button class="btn-primary" id="promptSubmit" type="submit">ring it up</button>
+      <span class="order-pad-hint" id="promptError"></span>
+    </div>
+    <p class="order-pad-foot">12 line items. one stamp. then it closes.</p>
+  </form>
+
+  <!-- loader shown while the cashier is itemizing -->
+  <div class="cashier-loading" id="cashierLoading" hidden>
+    <div class="cashier-loading-row">the cashier is itemizing<span class="ellipses">…</span></div>
+    <div class="cashier-loading-sub" id="cashierLoadingSub">running the tab. give them a second.</div>
+  </div>
+
+  <div class="counter" id="counter" hidden>
     <div class="counter-grain" aria-hidden="true"></div>
 
     <article class="receipt" id="receipt" role="button" tabindex="0" aria-label="Tap to print the next line item">
@@ -80,7 +100,6 @@
     <button class="btn-secondary" id="newBtn" type="button" onclick="newReceipt()">a different night</button>
   </div>
 
-  <p class="footer-note">no accounts. no tracking. just receipts.</p>
 </div>
 
 <script type="module" src="app.js"></script>

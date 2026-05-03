@@ -1,26 +1,28 @@
-// journey.js — DOM wiring + tap loop for Ghost Receipt.
-// Owns: tap handler, line-by-line reveal animation, totals stamp, share +
-// reset CTAs, the four-copy locations (loading-equivalent: pre-tap pulse,
-// error / wobble: closed receipt, pre-interaction: venue header, result
-// micro-copy: stamp footer + fine-print). No business logic — that lives
-// in mechanic.js.
+// journey.js — DOM wiring + screen flow for Ghost Receipt.
+// Owns: prompt-form submission, the cashier-itemizing loading state, the
+// tap-loop reveal animation, the totals stamp, share + reset CTAs, and the
+// four-copy locations (loading: cashier-loading sub-line, error: prompt
+// validation hint + closed-receipt wobble, pre-interaction: venue header +
+// prompt-form copy, result micro-copy: stamp footer + fine-print). No
+// business logic — that lives in mechanic.js / ai.js.
 
+import { TOTAL_TAPS } from "./mechanic.js";
 import {
-  buildReceipt,
-  TOTAL_TAPS,
-  freshSeed,
+  generateReceipt,
+  saveReceiptToStore,
+  loadReceiptFromStore,
+  readShortIdFromUrl,
+  writeShortIdToUrl,
   readSeedFromHash,
-  writeSeedToHash,
-  clearSeedFromHash,
-} from "./mechanic.js";
+  clearUrlState,
+} from "./ai.js";
+import { buildReceiptFromSeed } from "./mechanic.js";
 
-// ---- copy locations the four-copy rule requires (per implement-deploy SKILL.md) ----
-// 1. Loading / computation message  -> the pulsing "tap the receipt" hint
-//    (computation IS the tap; we don't have a fetch, but the pre-tap state
-//    must be voiced, not generic "Click to start")
-// 2. Error / validation             -> wobble on extra taps + "RECEIPT CLOSED"
-// 3. Pre-interaction                -> venue header + sub-line
-// 4. Result micro-copy              -> per-receipt fine-print + closed stamp
+// ---- copy locations ----
+// 1. Loading / computation     -> "the cashier is itemizing..." panel
+// 2. Error / validation        -> prompt-form error span + closed-receipt wobble
+// 3. Pre-interaction           -> venue-head + prompt-form label + foot line
+// 4. Result micro-copy         -> per-receipt fine-print + closed stamp
 
 const PRE_TAP_HINTS = [
   "tap the receipt",
@@ -41,16 +43,33 @@ const FINAL_HINTS = [
   "one more. then it closes",
 ];
 
+const CASHIER_SUBS = [
+  "running the tab. give them a second.",
+  "they're squinting at the keypad. it'll be a moment.",
+  "the printer's warming up. don't refresh.",
+  "they're rounding things. you'll prefer it.",
+];
+
 // ---- module state ----
 let receiptData = null;
 let revealed = 0;
 let closed = false;
 
-// ---- DOM refs (resolved in start()) ----
-let elReceipt, elPaper, elLines, elTotals, elTotalsAmt, elTotalsExtras, elTotalsFine, elTotalsStamp, elTapHint, elTapCounter, elShareRow, elShareBtn, elStampMeta;
+// ---- DOM refs (resolved in startJourney) ----
+let elPromptForm, elPromptInput, elPromptSubmit, elPromptError;
+let elCashierLoading, elCashierLoadingSub;
+let elCounter, elReceipt, elPaper, elLines, elTotals, elTotalsAmt, elTotalsExtras, elTotalsFine, elTotalsStamp, elTapHint, elTapCounter, elShareRow, elShareBtn, elStampMeta, elVenueSub;
 
 // ---- public bootstrap ----
 export function startJourney() {
+  // Resolve all refs once
+  elPromptForm = document.getElementById("promptForm");
+  elPromptInput = document.getElementById("promptInput");
+  elPromptSubmit = document.getElementById("promptSubmit");
+  elPromptError = document.getElementById("promptError");
+  elCashierLoading = document.getElementById("cashierLoading");
+  elCashierLoadingSub = document.getElementById("cashierLoadingSub");
+  elCounter = document.getElementById("counter");
   elReceipt = document.getElementById("receipt");
   elPaper = document.getElementById("receiptPaper");
   elLines = document.getElementById("receiptLines");
@@ -64,27 +83,145 @@ export function startJourney() {
   elShareRow = document.getElementById("shareRow");
   elShareBtn = document.getElementById("shareBtn");
   elStampMeta = document.getElementById("stampMeta");
+  elVenueSub = document.getElementById("venueSub");
 
-  // 1. Determine seed: shared link wins; otherwise generate fresh and reflect
-  //    the seed into the URL so the user's own URL is shareable from tap one.
-  const sharedSeed = readSeedFromHash();
-  const seed = sharedSeed != null ? sharedSeed : freshSeed();
+  // Prompt form submission
+  elPromptForm.addEventListener("submit", onPromptSubmit);
 
-  receiptData = buildReceipt(seed);
-  revealed = 0;
-  closed = false;
-  writeSeedToHash(seed);
+  // Hydrate from URL or fall through to prompt
+  bootFromUrl();
+}
 
-  if (elStampMeta) elStampMeta.textContent = receiptData.stampMeta;
+// Load any existing receipt referenced by the URL. If no ?c= and no #seed=,
+// show the prompt form so the user describes their night.
+async function bootFromUrl() {
+  const shortId = readShortIdFromUrl();
+  if (shortId) {
+    showCashierLoading("loading the receipt…");
+    const data = await loadReceiptFromStore(shortId);
+    if (data) {
+      activateReceipt(data, /* fastFill */ true);
+      return;
+    }
+    // 404 / network failure — fall through to prompt form below.
+    hideCashierLoading();
+  }
 
-  // 2. If this is a shared link, fast-fill the entire receipt (the user
-  //    landing on a friend's URL wants the artifact, not the tap loop).
-  if (sharedSeed != null) {
-    fastFill();
+  const legacySeed = readSeedFromHash();
+  if (legacySeed != null) {
+    // Old shareable links carried `#seed=N`. Reproduce deterministically.
+    const data = buildReceiptFromSeed(legacySeed);
+    activateReceipt(data, /* fastFill */ true);
     return;
   }
 
-  // 3. Otherwise, wire the tap loop.
+  showPromptForm();
+}
+
+// ---- prompt form ----
+function showPromptForm() {
+  elPromptForm.hidden = false;
+  elCashierLoading.hidden = true;
+  elCounter.hidden = true;
+  elShareRow.hidden = true;
+  elPromptInput.focus();
+}
+
+function showCashierLoading(headline) {
+  elPromptForm.hidden = true;
+  elCounter.hidden = true;
+  elShareRow.hidden = true;
+  elCashierLoading.hidden = false;
+  // Rotate the sub-line each call so retries don't feel stuck.
+  if (elCashierLoadingSub) {
+    const i = Math.floor(Math.random() * CASHIER_SUBS.length);
+    elCashierLoadingSub.textContent = CASHIER_SUBS[i];
+  }
+}
+
+function hideCashierLoading() {
+  elCashierLoading.hidden = true;
+}
+
+async function onPromptSubmit(ev) {
+  ev.preventDefault();
+  const text = (elPromptInput.value || "").trim();
+  if (text.length < 4) {
+    elPromptError.textContent = "tell the cashier something. one line is plenty.";
+    elPromptInput.focus();
+    return;
+  }
+  elPromptError.textContent = "";
+  elPromptSubmit.disabled = true;
+
+  showCashierLoading("the cashier is itemizing…");
+
+  let data;
+  try {
+    data = await generateReceipt(text);
+  } catch (_) {
+    // Belt-and-suspenders: generateReceipt itself never throws, but if any
+    // import-time issue caused this branch, fall back to a deterministic
+    // banks-only receipt seeded by the user's text so the user still gets
+    // an artifact.
+    const seed = simpleHash(text);
+    data = buildReceiptFromSeed(seed);
+    data.userPrompt = text.slice(0, 500);
+  }
+
+  // Save to case-store. If the store call fails the URL stays as-is and
+  // sharing simply won't carry state — but the user's receipt still works.
+  const shortId = await saveReceiptToStore(data);
+  if (shortId) writeShortIdToUrl(shortId);
+
+  hideCashierLoading();
+  activateReceipt(data, /* fastFill */ false);
+}
+
+function simpleHash(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
+// ---- activate the receipt UI ----
+function activateReceipt(data, fastFill) {
+  receiptData = data;
+  revealed = 0;
+  closed = false;
+
+  elPromptForm.hidden = true;
+  elCashierLoading.hidden = true;
+  elCounter.hidden = false;
+
+  // Reset rendered children in case we ever reactivate without a reload.
+  elLines.innerHTML = "";
+  elTotals.hidden = true;
+  elTotalsExtras.innerHTML = "";
+
+  if (elStampMeta) elStampMeta.textContent = data.stampMeta;
+
+  // Once the cashier has rung up your night, the sub-line on the venue head
+  // shifts from "tell the cashier..." to a tap prompt. Voice stays dry.
+  if (elVenueSub) {
+    elVenueSub.innerHTML = fastFill
+      ? "someone's ledger of a night.<br>tap below for your own."
+      : "the cashier rang it up.<br>tap to see what you owe.";
+  }
+
+  if (fastFill) {
+    for (const line of data.lines) printLine(line);
+    revealed = TOTAL_TAPS;
+    closeReceipt();
+    elTapHint.textContent = "someone's receipt — tap below for your own";
+    elTapHint.style.animation = "none";
+    elTapHint.style.opacity = "0.7";
+    return;
+  }
+
   updateHint();
   updateCounter();
   attachTapHandlers();
@@ -92,25 +229,17 @@ export function startJourney() {
 
 // ---- tap loop ----
 function attachTapHandlers() {
-  const onTap = (ev) => {
-    // Don't intercept clicks on share buttons / etc — but the receipt itself
-    // and the surrounding counter background both count.
-    handleTap();
-  };
+  elReceipt.addEventListener("click", handleTap);
 
-  elReceipt.addEventListener("click", onTap);
-  // Counter background is also a tap surface (forgiving target per design intent)
-  const counter = document.querySelector(".counter");
-  if (counter) {
-    counter.addEventListener("click", (ev) => {
-      // only if the user hit the counter background, not the receipt itself
-      if (ev.target === counter || ev.target.classList.contains("counter-grain")) {
+  // Counter background also counts as a tap (forgiving target).
+  if (elCounter) {
+    elCounter.addEventListener("click", (ev) => {
+      if (ev.target === elCounter || ev.target.classList.contains("counter-grain")) {
         handleTap();
       }
     });
   }
 
-  // keyboard: space / enter on the receipt
   elReceipt.addEventListener("keydown", (ev) => {
     if (ev.key === " " || ev.key === "Enter") {
       ev.preventDefault();
@@ -121,9 +250,7 @@ function attachTapHandlers() {
 
 function handleTap() {
   if (closed) {
-    // post-close: gentle wobble, no new line
     elReceipt.classList.remove("wobble");
-    // force reflow so re-adding triggers the animation again
     void elReceipt.offsetWidth;
     elReceipt.classList.add("wobble");
     return;
@@ -137,7 +264,6 @@ function handleTap() {
   updateCounter();
 
   if (revealed >= TOTAL_TAPS) {
-    // close after a short beat so the last line lands first
     setTimeout(closeReceipt, 320);
   }
 }
@@ -153,7 +279,6 @@ function printLine(line) {
 
   const dots = document.createElement("span");
   dots.className = "line-dots";
-  // dot leader fills the gap; we let CSS clip overflow
   dots.textContent = " " + "·".repeat(60) + " ";
 
   const amt = document.createElement("span");
@@ -163,8 +288,6 @@ function printLine(line) {
   li.append(text, dots, amt);
   elLines.appendChild(li);
 
-  // scroll the just-printed line into view so accreting receipt feels right
-  // (we use scrollIntoView on the line itself; smooth on user systems that allow)
   try {
     li.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   } catch (e) {
@@ -175,7 +298,6 @@ function printLine(line) {
 function closeReceipt() {
   closed = true;
 
-  // render extras
   elTotalsExtras.innerHTML = "";
   for (const ex of receiptData.extras) {
     const row = document.createElement("div");
@@ -199,33 +321,17 @@ function closeReceipt() {
 
   elTotals.hidden = false;
 
-  // hide the pulsing hint, switch counter to a closed-receipt label
   elTapHint.textContent = "receipt closed";
   elTapHint.style.animation = "none";
   elTapHint.style.opacity = "0.5";
   updateCounter();
 
-  // reveal the share row
   elShareRow.hidden = false;
 
-  // wire the share button (idempotent — repeat calls are harmless)
   if (!elShareBtn.dataset.wired) {
     elShareBtn.dataset.wired = "1";
     elShareBtn.addEventListener("click", () => {});
   }
-}
-
-// ---- fast-fill (when arriving via a shared seed link) ----
-function fastFill() {
-  for (const line of receiptData.lines) {
-    printLine(line);
-  }
-  revealed = TOTAL_TAPS;
-  closeReceipt();
-  // Override the tap-hint to acknowledge this is someone's shared receipt
-  elTapHint.textContent = "someone's receipt — tap below for your own";
-  elTapHint.style.animation = "none";
-  elTapHint.style.opacity = "0.7";
 }
 
 // ---- copy refresh ----
@@ -235,9 +341,8 @@ function updateHint() {
   if (revealed === 0) pool = PRE_TAP_HINTS;
   else if (revealed >= TOTAL_TAPS - 2) pool = FINAL_HINTS;
   else pool = POST_TAP_HINTS;
-  // deterministic hint pick: hash by (seed XOR revealed) so it doesn't strobe
-  const seed = (receiptData.seed ^ revealed) >>> 0;
-  elTapHint.textContent = pool[seed % pool.length];
+  const seedish = ((receiptData.seed || 0) ^ revealed) >>> 0;
+  elTapHint.textContent = pool[seedish % pool.length];
 }
 
 function updateCounter() {
@@ -251,13 +356,9 @@ function updateCounter() {
 
 // ---- share ----
 export async function share() {
-  // Always re-pin the URL to the current seed before sharing (defensive).
-  if (receiptData) writeSeedToHash(receiptData.seed);
-
   const url = location.href;
   const text = `my ghost receipt · NIGHT OUT TOTAL ${receiptData ? receiptData.totalStr : ""} · former self tavern`;
 
-  // Prefer the Web Share sheet on mobile; fall back to clipboard.
   try {
     if (navigator.share) {
       await navigator.share({ title: "Ghost Receipt", text, url });
@@ -271,7 +372,6 @@ export async function share() {
     await navigator.clipboard.writeText(url);
     flashCopied("link copied");
   } catch (e) {
-    // last resort: prompt the user
     window.prompt("copy this receipt link:", url);
   }
 }
@@ -290,8 +390,7 @@ function flashCopied(label) {
 
 // ---- start a fresh different night ----
 export function newReceipt() {
-  // strip seed; reload to get a brand new receipt. Reload is intentional —
-  // it guarantees a clean state across the (intentionally simple) DOM.
-  clearSeedFromHash();
+  // Strip every URL state form (case-id, legacy hash) and reload fresh.
+  clearUrlState();
   location.reload();
 }
