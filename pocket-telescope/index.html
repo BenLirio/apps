@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pocket Telescope — one object, twelve historical lenses</title>
+  <meta name="description" content="Tonight's brightest object overhead, drawn in the annotated sketch style of twelve historical astronomers. Pure-client ephemeris. No accounts.">
+  <meta property="og:title" content="Pocket Telescope">
+  <meta property="og:description" content="Tonight's brightest object overhead, drawn in twelve historical astronomers' eyepiece styles.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/pocket-telescope/">
+  <meta property="og:image" content="https://benlirio.com/apps/pocket-telescope/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pocket Telescope">
+  <meta name="twitter:description" content="Tonight's brightest object overhead, drawn in twelve historical astronomers' eyepiece styles.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/pocket-telescope/og.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <header class="masthead">
+      <div class="masthead-l">
+        <div class="brand">// POCKET TELESCOPE</div>
+        <div class="kicker" id="kicker">// computing tonight's brightest target…</div>
+      </div>
+      <div class="masthead-r">
+        <button id="locBtn" class="pill loc-btn" type="button" aria-label="Set location">
+          <span class="loc-dot"></span><span id="locLabel">— · —</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="eyepiece-wrap" aria-label="Eyepiece view">
+      <div class="object-meta" id="objectMeta">
+        <span class="pill pill-target" id="targetName">— · —</span>
+        <span class="pill" id="targetAlt">alt —°</span>
+        <span class="pill" id="targetMag">mag —</span>
+      </div>
+      <div class="eyepiece" id="eyepiece">
+        <canvas id="lens" width="900" height="900" aria-label="Telescope eyepiece view"></canvas>
+        <div class="eyepiece-stamp" id="lensStamp">// AFTER —, ————-——-——</div>
+      </div>
+      <div class="caption" id="caption">// observer · instrument · magnification · UTC</div>
+    </section>
+
+    <section class="lens-rack" aria-label="Historical lens rack">
+      <div class="rack-head">
+        <span class="rack-title">// LENS RACK · TWELVE HISTORICAL OBSERVERS</span>
+        <button id="cycleBtn" class="pill pill-action" type="button">▶ cycle all</button>
+      </div>
+      <div class="lens-grid" id="lensGrid"></div>
+    </section>
+
+    <section class="object-rack" aria-label="Tonight's targets">
+      <div class="rack-head">
+        <span class="rack-title">// TARGETS OVERHEAD · NOW</span>
+        <span class="rack-sub" id="rackSub">// brightest first · refresh per location</span>
+      </div>
+      <div class="object-grid" id="objectGrid"></div>
+    </section>
+
+    <section class="permalink-rack">
+      <div class="rack-head">
+        <span class="rack-title">// PERMALINK</span>
+      </div>
+      <div class="permalink-row">
+        <code id="permaUrl" class="perma-url">—</code>
+        <button id="copyBtn" class="pill pill-action" type="button">copy</button>
+      </div>
+      <p class="perma-note">// same URL = same eyepiece view, forever. the page IS the share.</p>
+    </section>
+
+    <footer class="legend">
+      <p class="legend-line">// pure-client ephemeris · Meeus low-precision · no API · no tracking · no accounts</p>
+      <p class="legend-line legend-fine">// each lens is a re-rendering of the same computed object position+phase, drawn in the registered style of the named observer. dates are first-light dates of the named instrument or the observer's published sketch. not a literal recreation of any specific historical observation.</p>
+    </footer>
+  </main>
+
+  <dialog id="locDialog" class="loc-dialog">
+    <form method="dialog" class="loc-form">
+      <div class="dialog-head">// SET LOCATION</div>
+      <button type="button" id="geoBtn" class="pill pill-action wide">use my GPS</button>
+      <div class="dialog-divider">// or pick a city</div>
+      <select id="citySel" class="city-select"></select>
+      <div class="dialog-divider">// or enter coordinates</div>
+      <div class="latlon-row">
+        <input id="latInput" type="number" step="0.001" placeholder="lat (°)" />
+        <input id="lonInput" type="number" step="0.001" placeholder="lon (°)" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="cancelBtn" class="pill">cancel</button>
+        <button type="button" id="saveBtn" class="pill pill-action">save</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
