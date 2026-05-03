@@ -160,6 +160,38 @@ main {
   overflow: hidden;
 }
 
+/* Idea cards show full pitch + rationale, no truncation. */
+.card .pitch {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: var(--fg);
+}
+.card .rationale {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: var(--muted);
+}
+.card .rationale-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+/* Prototype/published cards: logo if it exists, otherwise just the title. */
+.card .logo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 220px;
+  margin: 0 auto 12px;
+  object-fit: cover;
+  border: 2px solid var(--card-border);
+  background: #000;
+}
+.card.has-logo h2 { text-align: center; }
+
 .card .tags {
   font-size: 14px;
   letter-spacing: .04em;
@@ -238,6 +270,83 @@ footer a {
   color: var(--accent);
   border-bottom: 1px dotted var(--accent);
 }
+
+/* Modal: replaces browser-native confirm()/prompt() so we get an in-page UI
+   that matches the CRT theme and can host a real <textarea> for reasons. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--card-bg);
+  border: 2px solid var(--accent);
+  padding: 20px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 0 24px rgba(255, 107, 53, .25);
+}
+
+.modal h3 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  letter-spacing: .04em;
+  margin: 0 0 14px;
+  color: var(--accent);
+  line-height: 1.5;
+}
+
+.modal label {
+  display: block;
+  font-size: 14px;
+  letter-spacing: .04em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.modal textarea {
+  width: 100%;
+  min-height: 80px;
+  font-family: inherit;
+  font-size: 18px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 2px solid var(--card-border);
+  color: var(--fg);
+  resize: vertical;
+}
+
+.modal textarea:focus { outline: none; border-color: var(--accent); }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 2px solid var(--card-border);
+  color: var(--fg);
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: border-color .08s linear, color .08s linear;
+}
+
+.modal-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.modal-actions button.confirm { border-color: var(--reject); color: var(--reject); }
+.modal-actions button.confirm:hover { background: var(--reject); color: var(--bg); }
 
 @media (max-width: 500px) {
   header { padding: 24px 12px 12px; }

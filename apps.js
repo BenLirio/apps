@@ -90,20 +90,49 @@
     const tsRaw = a.archived ? a.archived_at : (a.promoted_to_published_at || a.promoted_to_prototype_at || a.created_at);
     const tsDate = (tsRaw || '').slice(0, 10);
 
-    let blurb = '';
-    if (a.archived || a.stage === 'prototype' || a.stage === 'published') {
-      blurb = a.description || a.pitch || '';
+    const titleInner = `<h2>${escapeHtml(a.name)}</h2>`;
+    const titleHtml = a.github_pages_url && !a.archived
+      ? `<a class="title-link" href="${escapeAttr(a.github_pages_url)}">${titleInner}</a>`
+      : titleInner;
+
+    // Body shape varies by stage:
+    //   idea       -> full pitch + full rationale, no truncation
+    //   prototype  -> logo (if any) + name only, no description
+    //   published  -> same as prototype
+    //   archived   -> existing behavior: short blurb (description/pitch)
+    let body = '';
+    const isLive = !a.archived;
+    if (isLive && a.stage === 'idea') {
+      if (a.pitch) body += `<p class="pitch">${escapeHtml(a.pitch)}</p>`;
+      if (a.rationale) {
+        body += `<p class="rationale"><span class="rationale-label">RATIONALE</span>${escapeHtml(a.rationale)}</p>`;
+      }
+    } else if (isLive && (a.stage === 'prototype' || a.stage === 'published')) {
+      if (a.logo) {
+        card.classList.add('has-logo');
+        const img = `<img class="logo" src="${escapeAttr(a.logo)}" alt="${escapeAttr(a.name)} logo" loading="lazy">`;
+        body += a.github_pages_url
+          ? `<a class="title-link" href="${escapeAttr(a.github_pages_url)}">${img}</a>`
+          : img;
+      }
+      // No description: title alone (or title + logo) is the whole identity here.
     } else {
-      blurb = a.pitch || '';
+      // archived
+      const blurb = a.description || a.pitch || '';
+      if (blurb) body += `<p class="blurb">${escapeHtml(blurb)}</p>`;
     }
 
-    const titleHtml = a.github_pages_url && !a.archived
-      ? `<a class="title-link" href="${escapeAttr(a.github_pages_url)}"><h2>${escapeHtml(a.name)}</h2></a>`
-      : `<h2>${escapeHtml(a.name)}</h2>`;
+    // For prototype/published, render the logo BEFORE the title so it reads
+    // top-to-bottom as logo → name. For idea, the title comes first then body.
+    let inner;
+    if (isLive && (a.stage === 'prototype' || a.stage === 'published')) {
+      inner = `${body}${titleHtml}`;
+    } else {
+      inner = `${titleHtml}${body}`;
+    }
 
     card.innerHTML = `
-      ${titleHtml}
-      ${blurb ? `<p class="blurb">${escapeHtml(blurb)}</p>` : ''}
+      ${inner}
       ${tags ? `<p class="tags">${tags}</p>` : ''}
       <p class="meta">${stagePill}${tsDate ? `<time datetime="${escapeAttr(tsRaw || '')}">${escapeHtml(tsDate)}</time>` : ''}</p>
       <div class="actions">${actionButtons(a)}</div>
@@ -137,10 +166,12 @@
   async function onAction(card, a, action) {
     const slug = a.slug;
     let reason = '';
+    // Destructive actions get a confirmation modal with a reason field.
     if (action === 'reject' || action === 'archive') {
-      reason = (prompt(`Reason for ${action}? (optional)`, '') || '').trim();
+      const result = await openReasonModal(action, a.name);
+      if (!result.confirmed) return;
+      reason = result.reason;
     }
-    if ((action === 'reject' || action === 'archive') && !confirm(`${action} "${a.name}"?`)) return;
 
     setStatus(card, msgFor(action) + '…');
     card.querySelectorAll('button').forEach(b => { b.disabled = true; });
@@ -157,6 +188,43 @@
       setStatus(card, 'failed: ' + err.message);
       card.querySelectorAll('button').forEach(b => { b.disabled = false; });
     }
+  }
+
+  // In-page modal that returns {confirmed, reason}. Resolves on Confirm/Cancel,
+  // Escape key, or backdrop click. Supports a single open modal at a time.
+  function openReasonModal(action, name) {
+    return new Promise(resolve => {
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      const verb = action.charAt(0).toUpperCase() + action.slice(1);
+      backdrop.innerHTML = `
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <h3 id="modal-title">${escapeHtml(verb)} &ldquo;${escapeHtml(name)}&rdquo;?</h3>
+          <label for="modal-reason">Reason (optional)</label>
+          <textarea id="modal-reason" placeholder="why are you ${escapeHtml(action)}ing this app?"></textarea>
+          <div class="modal-actions">
+            <button type="button" class="cancel">CANCEL</button>
+            <button type="button" class="confirm">${escapeHtml(verb).toUpperCase()}</button>
+          </div>
+        </div>
+      `;
+      const close = (confirmed) => {
+        const reason = (backdrop.querySelector('#modal-reason').value || '').trim();
+        document.removeEventListener('keydown', onKey);
+        backdrop.remove();
+        resolve({ confirmed, reason: confirmed ? reason : '' });
+      };
+      const onKey = (e) => {
+        if (e.key === 'Escape') close(false);
+        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) close(true);
+      };
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(false); });
+      backdrop.querySelector('.cancel').addEventListener('click', () => close(false));
+      backdrop.querySelector('.confirm').addEventListener('click', () => close(true));
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(backdrop);
+      backdrop.querySelector('#modal-reason').focus();
+    });
   }
 
   function setStatus(card, m) {
