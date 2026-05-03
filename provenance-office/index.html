@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Provenance Office — Northbrook Civic Museum</title>
+  <meta name="description" content="Draw an unidentifiable artifact. The Office of Provenance & Acquisitions will plead the board to buy it.">
+  <meta property="og:title" content="Provenance Office — Northbrook Civic Museum">
+  <meta property="og:description" content="Draw an unidentifiable artifact. The Office of Provenance & Acquisitions will plead the board to buy it.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/provenance-office/">
+  <meta property="og:image" content="https://benlirio.com/apps/provenance-office/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Provenance Office — Northbrook Civic Museum">
+  <meta name="twitter:description" content="Draw an unidentifiable artifact. The Office of Provenance & Acquisitions will plead the board to buy it.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/provenance-office/og.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+
+    <!-- DRAW VIEW -->
+    <section id="draw-view" class="view">
+      <header class="masthead">
+        <div class="seal">N C M</div>
+        <div class="masthead-text">
+          <div class="institution">Northbrook Civic Museum</div>
+          <div class="department">Office of Provenance &amp; Acquisitions</div>
+        </div>
+      </header>
+
+      <div class="intake-block">
+        <div class="form-row">
+          <span class="form-label">FORM PRO-7 / INTAKE</span>
+          <span class="form-num" id="form-num">File №: PROV-2026-—————</span>
+        </div>
+        <div class="lede">
+          Submit one (1) unidentifiable object for board review. The Office will assess its rarity, era, and craftsmanship — then draft a letter pleading the board to acquire it for an absurd sum.
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="canvas-frame">
+          <canvas id="pad" width="600" height="600"></canvas>
+          <div class="canvas-corner tl">FIG. 1</div>
+          <div class="canvas-corner br">SUBMITTED ARTIFACT</div>
+        </div>
+        <div class="tool-row">
+          <span class="tool-label">tool:</span>
+          <button type="button" class="chip" data-tool="ink" id="tool-ink" aria-pressed="true">ink</button>
+          <button type="button" class="chip" data-tool="erase" id="tool-erase" aria-pressed="false">erase</button>
+          <button type="button" class="chip danger" id="tool-clear">clear</button>
+        </div>
+      </div>
+
+      <section class="readout" aria-label="Live deterministic appraisal">
+        <div class="readout-head">
+          <span class="readout-label">// PROVISIONAL APPRAISAL</span>
+          <span class="readout-status" id="readout-status">awaiting strokes</span>
+        </div>
+        <ul class="readout-list" id="readout">
+          <li><span class="k">strokes recorded</span><span class="v" id="r-strokes">0</span></li>
+          <li><span class="k">total ink path</span><span class="v" id="r-path">0 in.</span></li>
+          <li><span class="k">ink density</span><span class="v" id="r-density">— %</span></li>
+          <li><span class="k">aspect ratio</span><span class="v" id="r-aspect">—</span></li>
+          <li><span class="k">presumed era</span><span class="v" id="r-era">—</span></li>
+          <li><span class="k">estimated rarity</span><span class="v" id="r-rarity">—</span></li>
+          <li><span class="k">craftsmanship score</span><span class="v" id="r-craft">—  / 10</span></li>
+        </ul>
+        <div class="readout-foot" id="readout-foot">Begin marking the canvas above. Figures update with each stroke.</div>
+      </section>
+
+      <button id="submit" class="primary" type="button" disabled>Submit for Appraisal</button>
+
+      <p class="footnote">All appraisals are provisional and bind no party financially. The Northbrook Civic Museum is a fictitious institution maintained for civic amusement.</p>
+    </section>
+
+    <!-- LETTER VIEW -->
+    <section id="letter-view" class="view hidden" aria-live="polite">
+      <article id="letter" class="letter">
+        <header class="letter-head">
+          <div class="letterhead-line letterhead-line-1">NORTHBROOK CIVIC MUSEUM</div>
+          <div class="letterhead-line letterhead-line-2">— OFFICE OF PROVENANCE &amp; ACQUISITIONS —</div>
+          <div class="letterhead-line letterhead-line-3">112 ELM STREET · NORTHBROOK, MASS. · CHARTERED 1894</div>
+        </header>
+
+        <div class="letter-meta">
+          <div class="meta-left">
+            <div><strong>File №:</strong> <span id="l-file">PROV-2026-—————</span></div>
+            <div><strong>Subject:</strong> Acquisition Petition — Submitted Artifact, <span id="l-subject">Fig. 1</span></div>
+          </div>
+          <div class="meta-right">
+            <div id="l-date">— —, 2026</div>
+            <div class="meta-classification">FOR INTERNAL CIRCULATION</div>
+          </div>
+        </div>
+
+        <div class="letter-body">
+          <p class="salutation">Dear Board of Trustees,</p>
+
+          <p class="appraisal-pre">Pursuant to Form PRO-7, the Office submits the following provisional figures concerning the artifact appended hereto as <em>Fig. 1</em>:</p>
+
+          <table class="appraisal-table" aria-label="Appraisal figures">
+            <tbody>
+              <tr><th>Estimated Rarity</th><td id="l-rarity">—</td></tr>
+              <tr><th>Presumed Era</th><td id="l-era">—</td></tr>
+              <tr><th>Craftsmanship Score</th><td id="l-craft">— / 10</td></tr>
+              <tr><th>Strokes Recorded</th><td id="l-strokes">—</td></tr>
+              <tr><th>Aspect Ratio</th><td id="l-aspect">—</td></tr>
+              <tr><th>Proposed Acquisition Sum</th><td id="l-sum" class="sum">$ —</td></tr>
+            </tbody>
+          </table>
+
+          <div id="prose-block" class="prose-block">
+            <div class="prose-skel">
+              <div class="prose-line"></div>
+              <div class="prose-line"></div>
+              <div class="prose-line"></div>
+              <div class="prose-line short"></div>
+            </div>
+          </div>
+
+          <figure class="archive-photo" aria-label="Submitted artifact, archive photograph">
+            <div class="photo-frame">
+              <img id="l-photo" alt="Photograph of the submitted artifact, Fig. 1">
+            </div>
+            <figcaption>Fig. 1 — submitted artifact. Photographed in the archive vestibule, this morning.</figcaption>
+          </figure>
+
+          <p class="closing">In the strongest terms the Office is permitted, the undersigned commends this object to the Board's earnest deliberation.</p>
+
+          <div class="signature-block">
+            <div class="signature-line"></div>
+            <div class="signature-name" id="l-officer">Eunice T. Hollander</div>
+            <div class="signature-title">Senior Provenance Officer, Office of Provenance &amp; Acquisitions</div>
+          </div>
+
+          <div class="stamp-row">
+            <div class="stamp">PROV-2026<br>RECEIVED</div>
+            <div class="stamp small">PENDING<br>BOARD</div>
+          </div>
+        </div>
+      </article>
+
+      <div class="actions">
+        <div id="share" style="display:flex">
+          <button id="share-btn" class="primary" type="button" onclick="share()">Share the Letter</button>
+        </div>
+        <button id="restart" class="secondary" type="button">Submit Another Artifact</button>
+      </div>
+
+      <p class="footnote letter-footnote">All appraisals are provisional and bind no party financially. The Northbrook Civic Museum is a fictitious institution maintained for civic amusement.</p>
+    </section>
+
+  </main>
+</body>
+</html>
