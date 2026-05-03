@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Decision Arcade</title>
-  <meta property="og:title" content="Decision Arcade">
-  <meta property="og:description" content="5 rounds. 2 pictures. Pick the one that hits. Find your archetype.">
+  <title>Decision Arcade — A Personality Dossier</title>
+  <meta property="og:title" content="Decision Arcade — A Personality Dossier">
+  <meta property="og:description" content="Five rounds. Two pictures. Your gut goes on the record.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/decision-arcade/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 
   <!-- Preload all 10 round images during the intro screen so they're cached
-       before the user taps START. Total is ~380KB at q80 WebP, smaller than
+       before the user taps BEGIN. Total is ~380KB at q80 WebP, smaller than
        most single fonts — fine to preload eagerly. -->
   <link rel="preload" as="image" href="images/steaming-mug.webp">
   <link rel="preload" as="image" href="images/open-road.webp">
@@ -35,26 +35,47 @@
 
     <!-- Intro Screen -->
     <div id="screen-intro" class="screen active">
-      <div class="arcade-header">
-        <div class="coin-slot">INSERT COIN</div>
-        <h1>DECISION<br>ARCADE</h1>
-        <p class="tagline">5 rounds. 2 pictures. Tap the one that hits.<br>The clock keeps you honest.</p>
+      <header class="masthead">
+        <div class="masthead-rule"></div>
+        <div class="masthead-meta">
+          <span>VOL. I</span>
+          <span>A PERSONALITY DOSSIER</span>
+          <span>NO. 005</span>
+        </div>
+        <div class="masthead-rule"></div>
+      </header>
+
+      <div class="intro-stack">
+        <h1 class="display-title">
+          <span class="display-line">Decision</span>
+          <span class="display-line italic">Arcade</span>
+        </h1>
+        <p class="lede">
+          Five rounds. Two pictures. <em>Your gut goes on the record.</em>
+        </p>
+
+        <ol class="instructions">
+          <li><span class="num">01</span><span class="rule-text">Tap whichever picture <em>hits</em>.</span></li>
+          <li><span class="num">02</span><span class="rule-text">Don't think — the clock is honest.</span></li>
+          <li><span class="num">03</span><span class="rule-text">Receive your verdict.</span></li>
+        </ol>
+
+        <button id="start-btn" class="primary-btn" onclick="startGame()">
+          <span class="btn-label">Begin the test</span>
+          <span class="btn-arrow" aria-hidden="true">→</span>
+        </button>
+
+        <p class="footnote">A 30-second psychological exercise. No data is stored.</p>
       </div>
-      <div class="intro-rules">
-        <div class="rule"><span class="rule-key">▸</span> tap a picture</div>
-        <div class="rule"><span class="rule-key">▸</span> no overthinking</div>
-        <div class="rule"><span class="rule-key">▸</span> 3.5s on the clock</div>
-      </div>
-      <button id="start-btn" class="arcade-btn" onclick="startGame()">START GAME</button>
-      <div class="credit-count">CREDITS: 1</div>
     </div>
 
     <!-- Game Screen -->
     <div id="screen-game" class="screen">
       <div class="hud">
         <div class="hud-row">
-          <div class="question-counter">
-            <span id="q-current">1</span><span class="q-sep">of</span><span id="q-total">5</span>
+          <div class="round-counter">
+            <span class="round-label">Round</span>
+            <span id="q-current">1</span><span class="q-sep">/</span><span id="q-total">5</span>
           </div>
           <div class="timer-seconds" id="timer-seconds">3.5s</div>
         </div>
@@ -62,45 +83,66 @@
           <div class="timer-bar" id="timer-bar"></div>
         </div>
       </div>
-      <div class="emoji-grid" id="emoji-grid" aria-label="Pick one picture">
+
+      <p class="prompt-line">Which one <em>hits</em>?</p>
+
+      <div class="picture-grid" id="emoji-grid" aria-label="Pick one picture">
         <!-- 2 picture buttons injected at runtime -->
       </div>
+
       <div class="game-foot">
-        <div id="hesitate-flash" class="hesitate-flash" aria-hidden="true">SKIPPED</div>
+        <div id="hesitate-flash" class="hesitate-flash" aria-hidden="true">— passed —</div>
       </div>
     </div>
 
     <!-- Computing Screen -->
     <div id="screen-computing" class="screen">
       <div class="computing-inner">
-        <div class="spinner-block">
-          <div class="pixel-spinner" id="pixel-spinner"></div>
+        <div class="dots-block" id="pixel-spinner" aria-hidden="true">
+          <span></span><span></span><span></span>
         </div>
-        <p class="computing-msg" id="computing-msg">cross-referencing your chaos with the archives...</p>
+        <p class="computing-msg" id="computing-msg">Cross-referencing your reactions…</p>
       </div>
     </div>
 
     <!-- Result Screen -->
     <div id="screen-result" class="screen">
-      <div class="result-stack">
+      <header class="result-masthead">
+        <div class="masthead-rule"></div>
+        <div class="masthead-meta">
+          <span>FILE NO. 005</span>
+          <span>VERDICT</span>
+          <span>SEALED</span>
+        </div>
+        <div class="masthead-rule"></div>
+      </header>
 
-        <div class="result-eyebrow">— VERDICT —</div>
-        <h2 class="archetype-name" id="archetype-name">THE QUIET ARCHITECT</h2>
+      <div class="result-stack">
+        <p class="eyebrow">The case yields</p>
+        <h2 class="archetype-name" id="archetype-name">The Quiet Architect</h2>
         <p class="archetype-desc" id="archetype-desc">You move through life efficiently.</p>
 
-        <div class="result-divider"><span>THE EVIDENCE</span></div>
+        <div class="section-divider"><span>Exhibit A · Evidence</span></div>
         <div class="picked-strip" id="picked-strip" aria-label="Your picks"></div>
 
-        <div class="result-divider"><span>READOUT</span></div>
+        <div class="section-divider"><span>Readout</span></div>
         <div class="leans" id="leans"></div>
 
         <p class="result-flavor" id="result-flavor"></p>
+
+        <div class="signoff">
+          <span class="signoff-line">— Signed, the Bureau</span>
+        </div>
       </div>
+
       <div class="result-actions">
         <div id="share" style="display:none">
-          <button class="arcade-btn share-btn" onclick="share()">SHARE YOUR RESULT</button>
+          <button class="primary-btn share-btn" onclick="share()">
+            <span class="btn-label">Share your verdict</span>
+            <span class="btn-arrow" aria-hidden="true">→</span>
+          </button>
         </div>
-        <button class="arcade-btn replay-btn" onclick="restartGame()">PLAY AGAIN</button>
+        <button class="ghost-btn replay-btn" onclick="restartGame()">Take it again</button>
       </div>
     </div>
 

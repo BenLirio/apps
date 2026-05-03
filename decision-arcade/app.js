@@ -52,45 +52,45 @@ function archetypeFor(scores) {
 
 const ARCHETYPES = [
   // 000 — practical, logic, solitary
-  { name: "THE QUIET ARCHITECT",
+  { name: "The Quiet Architect",
     desc: "You move through life efficiently, decide with data, and you build mostly in private.",
     flavor: "You have a colour-coded spreadsheet for things you've never told anyone about." },
   // 001 — practical, logic, connected
-  { name: "THE STEADY ANCHOR",
+  { name: "The Steady Anchor",
     desc: "You're the measured one — calm under pressure, and the friend everyone calls when something breaks.",
     flavor: "Your group chat ranks you the steadiest hand in a crisis." },
   // 010 — practical, feeling, solitary
-  { name: "THE SOFT HERMIT",
+  { name: "The Soft Hermit",
     desc: "You feel deeply, mostly inside the safety of your own four walls.",
     flavor: "You've cried at a candle commercial and then made yourself a small dinner." },
   // 011 — practical, feeling, connected
-  { name: "THE WARM HEARTH",
+  { name: "The Warm Hearth",
     desc: "Your home is the safe place where everyone ends up — and you keep it that way on purpose.",
     flavor: "You've talked three friends through a crisis without leaving your couch." },
   // 100 — adventurous, logic, solitary
-  { name: "THE LONE STRATEGIST",
+  { name: "The Lone Strategist",
     desc: "You take big swings — but only after you've run the numbers, and you take them alone.",
     flavor: "You called it a calculated risk. You'd seen the spreadsheet weeks ago — you didn't tell anyone." },
   // 101 — adventurous, logic, connected
-  { name: "THE EXPEDITION LEADER",
+  { name: "The Expedition Leader",
     desc: "You take the group somewhere far on purpose, with a plan and a packing list.",
     flavor: "You've turned a vacation into a logistical operation and everyone thanked you for it." },
   // 110 — adventurous, feeling, solitary
-  { name: "THE WANDERING ROMANTIC",
+  { name: "The Wandering Romantic",
     desc: "You chase the next intense moment — and the moment is almost always about you in it.",
     flavor: "You've impulse-booked a flight to recover from a feeling. It worked." },
   // 111 — adventurous, feeling, connected
-  { name: "THE PASSIONATE PILGRIM",
+  { name: "The Passionate Pilgrim",
     desc: "Big heart, big map — and you take the people you love along for the ride.",
     flavor: "You've thrown a party that became a road trip that became a story everyone retells." },
 ];
 
 const COMPUTING_MSGS = [
-  "cross-referencing your chaos with the archives...",
-  "consulting the oracle of bad decisions...",
-  "mapping your soul onto the decision matrix...",
-  "running your picks through the vibes engine...",
-  "summoning your archetype from the void..."
+  "Cross-referencing your reactions…",
+  "Reading between your picks…",
+  "Consulting the case file…",
+  "Filing your verdict with the Bureau…",
+  "Decoding your unconscious…"
 ];
 
 const TIMER_BASE_MS = 3500;
@@ -130,7 +130,6 @@ function preloadAllImages() {
   _preloaded = true;
 }
 
-// Fire the JS preload as soon as we can — long before the user taps START.
 document.addEventListener('DOMContentLoaded', preloadAllImages);
 
 function loadRound(idx) {
@@ -265,14 +264,15 @@ function showResult() {
     stripEl.appendChild(cell);
   });
 
-  // Per-axis verdict lines — replaces the old bar chart with vibe-language.
+  // Per-axis verdict lines — use real dimension names, not "Axis N".
   const leansEl = document.getElementById('leans');
   leansEl.innerHTML = '';
   normalized.forEach((val, i) => {
     const verdict = leanVerdict(val, AXIS_LABELS[i]);
+    const axisLabel = AXIS_LABELS[i].join(' / ');
     const row = document.createElement('div');
     row.className = 'lean-row';
-    row.innerHTML = `<span class="lean-axis">Axis ${i+1}</span><span class="lean-verdict">${verdict}</span>`;
+    row.innerHTML = `<span class="lean-axis">${axisLabel}</span><span class="lean-verdict">${verdict}</span>`;
     leansEl.appendChild(row);
   });
 
@@ -297,7 +297,6 @@ function showResult() {
   if (tail.length) flavor += ' (' + tail.join(' · ') + ')';
   document.getElementById('result-flavor').textContent = flavor;
 
-  // Share text — no emoji strip; the archetype name and link carry it.
   window._shareText =
     `Decision Arcade — ${archetype.name}\n\nfind yours → ${location.href}`;
 
