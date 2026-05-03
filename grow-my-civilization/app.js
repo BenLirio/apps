@@ -60,8 +60,8 @@ const LEGACY_GOALS = {
     name: 'The Long Dynasty',
     short: 'Long Dynasty',
     icon: '⌛',
-    blurb: 'Outlive twenty chapters. Endure beyond memory.',
-    progress: () => `${Math.min(chapter, 20)}/20 chapters`,
+    blurb: 'Survive 20 chapters.',
+    progress: () => `${Math.min(chapter, 20)} / 20 chapters`,
     isMet: () => chapter >= 20,
     verdict: (met) => met
       ? 'A dynasty that outlasted its own legends.'
@@ -72,8 +72,8 @@ const LEGACY_GOALS = {
     name: 'The Pinnacle',
     short: 'Pinnacle',
     icon: '◭',
-    blurb: 'Reach the Atomic Age or beyond. Touch the heights.',
-    progress: () => `${ERAS[stats.era].name} (need Atomic+)`,
+    blurb: 'Reach the Atomic Age.',
+    progress: () => `${ERAS[stats.era].name} → ATOMIC`,
     isMet: () => stats.era >= 8,
     verdict: (met) => met
       ? 'They reached the heights and looked down on what they had been.'
@@ -84,8 +84,8 @@ const LEGACY_GOALS = {
     name: 'The Glorious Pyre',
     short: 'Glorious Pyre',
     icon: '✶',
-    blurb: 'Burn brilliantly and briefly: collapse before Chapter 13 with three eras crossed and one truly daring chapter (single ambition spend ≥ 22).',
-    progress: () => `Ch ${chapter}/12 · era ${stats.era}/3 · burn ${stats.peakAmbitionBurn}/22`,
+    blurb: 'Burn bright. Die young. Be remembered.',
+    progress: () => `Ch ${chapter} / 12 · burn ${stats.peakAmbitionBurn} / 22`,
     isMet: () => gameOver && chapter <= 12 && stats.era >= 3 && stats.peakAmbitionBurn >= 22,
     verdict: (met) => met
       ? 'A brief, brilliant fire — the kind history sings about.'
@@ -131,7 +131,6 @@ let peakAmbition = 40;
 let peakEra = 0;
 
 let chapter = 0;
-let stagnationStreak = 0;          // consecutive chapters without spending ambition
 let chronicle = [];                // [{ crisisTitle, crisisDescription, choiceLabel, narrative, chapter, era, engaged, statDelta }]
 let activeCrises = [];             // up to 3 face-up crisis objects
 let selectedCrisisIdx = null;      // which crisis card is currently expanded
@@ -451,7 +450,6 @@ function startGame() {
   stats = { stability: 60, ambition: 40, era: 0, totalAmbitionSpent: 0, peakAmbitionBurn: 0 };
   peakStability = 60; peakAmbition = 40; peakEra = 0;
   chapter = 0;
-  stagnationStreak = 0;
   chronicle = [];
   activeCrises = [];
   selectedCrisisIdx = null;
@@ -572,8 +570,8 @@ function renderCrisesList() {
         btn.innerHTML = `
           <div class="choice-label">${escapeHtml(ch.label)}</div>
           <div class="choice-cost">
-            <span class="cost stab ${ch.stability >= 0 ? 'pos' : 'neg'}">S ${signed(ch.stability)}</span>
-            <span class="cost amb ${ch.ambition >= 0 ? 'pos' : 'neg'}">A ${signed(ch.ambition)}</span>
+            <div class="cost-row"><span class="${ch.stability >= 0 ? 'pos' : 'neg'}">${signed(ch.stability)}</span> Stability</div>
+            <div class="cost-row"><span class="${ch.ambition >= 0 ? 'pos' : 'neg'}">${signed(ch.ambition)}</span> Ambition</div>
           </div>
         `;
         btn.addEventListener('click', (ev) => {
@@ -697,9 +695,6 @@ function applyChoiceDeltas(choice) {
     const burned = -ambDelta;
     stats.totalAmbitionSpent += burned;
     stats.peakAmbitionBurn = Math.max(stats.peakAmbitionBurn, burned);
-    stagnationStreak = 0;
-  } else {
-    stagnationStreak += 1;
   }
 
   stats.era = eraFromSpent(stats.totalAmbitionSpent);
@@ -724,10 +719,6 @@ function checkGoalMet() {
 function checkCollapse() {
   if (stats.stability <= 0) {
     collapseReason = 'The state collapsed. The people scattered to the four winds.';
-    return true;
-  }
-  if (stagnationStreak >= 5) {
-    collapseReason = 'No one dared to act. The civilization quietly faded into hearsay.';
     return true;
   }
   return false;
@@ -838,9 +829,13 @@ function spawnTriumphs() {
 function updateHUD() {
   const eraIdx = stats.era;
   document.getElementById('age-badge').textContent = ERAS[eraIdx].name;
+  document.getElementById('era-label').textContent = `Chapter ${chapter}`;
+
   const goal = LEGACY_GOALS[legacyGoal];
-  const goalLabel = goal ? `Goal · ${goal.short}: ${goal.progress()}` : '';
-  document.getElementById('era-label').textContent = `${ERAS[eraIdx].name} · Chapter ${chapter} · ${goalLabel}`;
+  const goalProgress = document.getElementById('goal-progress');
+  if (goalProgress && goal) {
+    goalProgress.innerHTML = `<span class="goal-progress-icon">${goal.icon}</span><span class="goal-progress-name">${goal.short}</span><span class="goal-progress-detail">${goal.progress()}</span>`;
+  }
 
   // Resource bars
   setBar('stability', stats.stability);
@@ -849,11 +844,21 @@ function updateHUD() {
   document.getElementById('stab-value').textContent = String(stats.stability);
   document.getElementById('amb-value').textContent  = String(stats.ambition);
 
-  // Warning glow when stability is low or stagnation is rising.
+  // Warning glow when stability is low.
   const stabBar = document.getElementById('stability-bar');
   if (stabBar) stabBar.classList.toggle('warn', stats.stability <= 25);
-  const ambBar = document.getElementById('ambition-bar');
-  if (ambBar) ambBar.classList.toggle('warn', stagnationStreak >= 3);
+
+  // Era progress hint — shows the spent-ambition mechanic explicitly.
+  const eraHint = document.getElementById('era-progress');
+  if (eraHint) {
+    const nextIdx = Math.min(eraIdx + 1, ERAS.length - 1);
+    if (nextIdx === eraIdx) {
+      eraHint.textContent = `Highest era reached. Ambition spent: ${stats.totalAmbitionSpent}`;
+    } else {
+      const remaining = ERA_THRESHOLDS[nextIdx] - stats.totalAmbitionSpent;
+      eraHint.textContent = `Spend ${remaining} more ambition to reach the ${ERAS[nextIdx].name}`;
+    }
+  }
 
   // Goal-met laurel
   const laurel = document.getElementById('goal-laurel');

@@ -52,13 +52,14 @@
           <span id="age-badge"></span>
         </div>
         <div id="era-label"></div>
+        <div id="goal-progress"></div>
         <div id="goal-laurel" style="display:none"></div>
       </div>
 
       <div id="resource-bars">
         <div class="resource">
           <div class="resource-row">
-            <span class="resource-label">Stability</span>
+            <span class="resource-label">Stability <span class="resource-hint">— stays alive</span></span>
             <span class="resource-value" id="stab-value">60</span>
           </div>
           <div class="resource-track" id="stability-bar">
@@ -67,12 +68,13 @@
         </div>
         <div class="resource">
           <div class="resource-row">
-            <span class="resource-label">Ambition</span>
+            <span class="resource-label">Ambition <span class="resource-hint">— spend to advance eras</span></span>
             <span class="resource-value" id="amb-value">40</span>
           </div>
           <div class="resource-track" id="ambition-bar">
             <div class="resource-fill ambition-fill" id="ambition-fill" style="width:40%"></div>
           </div>
+          <div id="era-progress"></div>
         </div>
       </div>
 
@@ -85,7 +87,7 @@
             <div id="thinking-dots">consulting the oracles<span class="dots"></span></div>
           </div>
           <div id="decision-ready" style="display:none">
-            <div id="crises-instructions">Three crises face you. Tap one to engage; the rest will fester.</div>
+            <div id="crises-instructions">Tap a crisis to act on it. The others will fester.</div>
             <div id="crises-list"></div>
             <div id="resolution-line"></div>
           </div>
