@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Grow My Civilization</title>
   <meta property="og:title" content="Grow My Civilization">
-  <meta property="og:description" content="An illuminated chronicle. Steer a civilization through impossible choices. How long can yours last?">
+  <meta property="og:description" content="An illuminated chronicle. Spend Stability and Ambition through three crises a chapter. Pick your legacy goal — endure, ascend, or burn brilliantly.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/grow-my-civilization/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
     <div id="setup-panel">
       <div id="header">
         <h1><span class="drop">G</span>row My Civilization</h1>
-        <p id="header-sub">An illuminated chronicle.<br>Each choice helps or hurts. How long can yours last?</p>
+        <p id="header-sub">An illuminated chronicle.<br>Spend stability. Spend ambition. Choose your legacy.</p>
       </div>
 
       <div id="setup-form">
@@ -36,6 +36,10 @@
         <div class="btn-row">
           <button id="reroll-btn" type="button">↻ Roll Again</button>
         </div>
+
+        <p class="naming-intro" style="margin-top: 18px;">Choose its legacy</p>
+        <div id="goal-picker"></div>
+
         <button id="start-btn">Begin the Chronicle</button>
       </div>
     </div>
@@ -48,16 +52,31 @@
           <span id="age-badge"></span>
         </div>
         <div id="era-label"></div>
+        <div id="goal-laurel" style="display:none"></div>
       </div>
 
-      <div id="stats-bar">
-        <div class="stat"><span class="stat-label">People</span><span id="stat-pop">1</span></div>
-        <div class="stat"><span class="stat-label">State</span><span id="stat-status">—</span></div>
-        <div class="stat"><span class="stat-label">Chapter</span><span id="stat-turns">0</span></div>
+      <div id="resource-bars">
+        <div class="resource">
+          <div class="resource-row">
+            <span class="resource-label">Stability</span>
+            <span class="resource-value" id="stab-value">60</span>
+          </div>
+          <div class="resource-track" id="stability-bar">
+            <div class="resource-fill stability-fill" id="stability-fill" style="width:60%"></div>
+          </div>
+        </div>
+        <div class="resource">
+          <div class="resource-row">
+            <span class="resource-label">Ambition</span>
+            <span class="resource-value" id="amb-value">40</span>
+          </div>
+          <div class="resource-track" id="ambition-bar">
+            <div class="resource-fill ambition-fill" id="ambition-fill" style="width:40%"></div>
+          </div>
+        </div>
       </div>
 
-      <!-- Persistent chapter shell. Stays mounted through every turn so the
-           page doesn't resize between thinking and ready states. -->
+      <!-- Persistent decision panel. Inner state toggles between thinking and ready. -->
       <div id="decision-panel" style="display:none">
         <div id="decision-era-tag">Chapter</div>
         <div id="story-so-far"></div>
@@ -66,9 +85,9 @@
             <div id="thinking-dots">consulting the oracles<span class="dots"></span></div>
           </div>
           <div id="decision-ready" style="display:none">
-            <div id="decision-event"></div>
-            <div id="decision-choices"></div>
-            <div id="decision-flavor"></div>
+            <div id="crises-instructions">Three crises face you. Tap one to engage; the rest will fester.</div>
+            <div id="crises-list"></div>
+            <div id="resolution-line"></div>
           </div>
         </div>
       </div>
@@ -78,6 +97,7 @@
     <div id="verdict-panel" style="display:none">
       <div id="verdict-title"></div>
       <div id="verdict-civ-name"></div>
+      <div id="verdict-goal-line"></div>
       <div id="verdict-decisions-label">Your Chronicle</div>
       <div id="verdict-decisions"></div>
       <div id="verdict-stats"></div>
