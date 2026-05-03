@@ -395,3 +395,21 @@ body {
   .splash-card h1 { font-size: 22px; }
   .verdict-name { font-size: 18px; }
 }
+
+/* Desktop / tablet: cap stage to a phone-shaped portrait viewport and center it.
+   Without this, the 192x320 virtual canvas gets stretched across the full
+   viewport (e.g. 1920x1000), which paints every sprite at huge scale. */
+@media (min-width: 480px) {
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  #stage {
+    width: min(420px, 100%);
+    min-height: 0;
+    height: min(calc(100svh - 32px), 820px);
+  }
+}
