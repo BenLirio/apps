@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Console Pilot — tilt your phone, fly the corridor</title>
+<meta name="description" content="Hold your phone like a yoke. Tilt to fly a one-person scout through a nebula corridor. Get a Flight Recorder card and a callsign earned from how you flew." />
+
+<!-- share preview -->
+<meta property="og:title" content="Console Pilot" />
+<meta property="og:description" content="Tilt your phone like a yoke. Fly the corridor. Get christened." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="" />
+<meta property="og:image" content="" />
+<meta property="og:image:width" content="1280" />
+<meta property="og:image:height" content="720" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Console Pilot" />
+<meta name="twitter:description" content="Tilt your phone like a yoke. Fly the corridor. Get christened." />
+<meta name="twitter:image" content="" />
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app cockpit">
+    <!-- Pre-flight panel: shown until the user starts the run -->
+    <section id="preflight" class="panel preflight" aria-live="polite">
+      <header class="panel-head">
+        <span class="dot dot-armed"></span>
+        <h1>CONSOLE&nbsp;PILOT</h1>
+        <span class="ident">SCOUT&nbsp;//&nbsp;V-1</span>
+      </header>
+      <p class="brief" id="brief-mobile">Hold your phone like a yoke. Tilt to fly the scout. Skim debris, kiss the beacons. Don't blink.</p>
+      <p class="brief" id="brief-desktop" hidden>No phone? Move your mouse. The reticle is your nose. Skim debris, kiss the beacons.</p>
+      <ul class="readout">
+        <li><span>SECTOR</span><b id="pf-sector">G7-???</b></li>
+        <li><span>RUN&nbsp;TIME</span><b>~60s</b></li>
+        <li><span>OBJECTIVE</span><b>SURVIVE&nbsp;&amp;&nbsp;COLLECT</b></li>
+      </ul>
+      <button id="btn-engage" class="btn btn-primary" type="button">ENGAGE</button>
+      <p class="hint" id="hint-permission" hidden>This phone needs permission for tilt. Tap ENGAGE — we'll ask once.</p>
+    </section>
+
+    <!-- Calibration overlay — captures pose-zero before the run -->
+    <section id="calibrate" class="panel calibrate" hidden aria-live="polite">
+      <div class="cal-arrow" aria-hidden="true">⤴︎</div>
+      <h2>HOLD NEUTRAL</h2>
+      <p>Hold your phone how you want to fly. We'll lock that pose as level.</p>
+      <div class="cal-progress"><span id="cal-bar"></span></div>
+      <p class="hint">3-2-1 then steer.</p>
+    </section>
+
+    <!-- Flight surface -->
+    <section id="flight" class="flight" hidden>
+      <canvas id="screen" aria-label="Flight view"></canvas>
+      <div class="hud">
+        <div class="hud-cell"><span>G</span><b id="hud-g">0.0</b></div>
+        <div class="hud-cell"><span>SECTOR</span><b id="hud-sector">G7-001</b></div>
+        <div class="hud-cell"><span>BEACONS</span><b id="hud-beacons">0</b></div>
+        <div class="hud-cell hud-time"><span>T</span><b id="hud-time">60.0</b></div>
+      </div>
+    </section>
+
+    <!-- Flight recorder card — the share artifact -->
+    <section id="recorder" class="panel recorder" hidden aria-live="polite">
+      <header class="rec-head">
+        <span class="rec-stamp">FLIGHT&nbsp;RECORDER</span>
+        <span class="rec-id" id="rec-id">REC&nbsp;//&nbsp;0000</span>
+      </header>
+      <div class="rec-callsign">
+        <span class="rec-label">THE&nbsp;SHIP&nbsp;CHRISTENS&nbsp;YOU</span>
+        <h2 id="rec-callsign">Cmdr. Shortwave</h2>
+        <p class="rec-line" id="rec-blurb">Steady hands. Soft elbows. Loud nebula.</p>
+      </div>
+      <ul class="rec-stats">
+        <li><span>MAX-G</span><b id="rec-g">3.4</b></li>
+        <li><span>CLOSEST PASS</span><b id="rec-pass">12 m</b></li>
+        <li><span>SECTOR</span><b id="rec-sector">G7-014</b></li>
+        <li><span>BEACONS</span><b id="rec-beacons">06 / 09</b></li>
+      </ul>
+      <p class="rec-tail" id="rec-tail">END LOG · CORRIDOR DUSTED · BAR 9 OF 12.</p>
+      <div class="share-row">
+        <button class="btn btn-ghost" id="btn-replay" type="button">FLY AGAIN</button>
+        <button class="btn btn-primary" id="btn-share" type="button" onclick="share()">SHARE LOG</button>
+      </div>
+      <p class="copied" id="copied" hidden>copied. send it before the next run gets better.</p>
+    </section>
+  </div>
+
+  <script type="module" src="app.js"></script>
+  <script src="feedback.js" defer></script>
+</body>
+</html>
