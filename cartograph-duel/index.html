@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cartograph Duel — draw countries from memory</title>
+  <meta name="description" content="Two friends, one room code, three rounds. Draw the country from memory. Closest outline wins.">
+
+  <!-- Share preview meta — Step 2c/3 fill og:image, og:url, twitter:image via sed -->
+  <meta property="og:title" content="Cartograph Duel">
+  <meta property="og:description" content="Draw countries from memory. Closest outline wins. Best of 3, room code attached.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/cartograph-duel/">
+  <meta property="og:image" content="https://benlirio.com/apps/cartograph-duel/og.jpg">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="720">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Cartograph Duel">
+  <meta name="twitter:description" content="Draw countries from memory. Closest outline wins.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/cartograph-duel/og.jpg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Screen 1: Landing -->
+  <section id="screen-landing" class="screen">
+    <header class="masthead">
+      <div class="kicker">EST. MMXXVI · WEST WING, MAP ROOM</div>
+      <h1>Cartograph Duel</h1>
+      <p class="tagline">Two friends. One country at a time. Whoever draws closest to the real outline wins the round. Best of three takes the match.</p>
+    </header>
+
+    <div id="challenge-banner" class="banner" hidden>
+      You have been challenged to room <strong id="challenge-banner-code"></strong>. Enter your name and step into the duel.
+    </div>
+
+    <div class="card">
+      <label class="field">
+        <span class="field-label">CARTOGRAPHER'S NAME</span>
+        <input id="player-name" type="text" maxlength="20" placeholder="e.g. Ada" autocomplete="off">
+      </label>
+
+      <button id="create-btn" class="btn btn-primary">Open a new room</button>
+
+      <div class="divider"><span>or</span></div>
+
+      <label class="field">
+        <span class="field-label">ROOM CODE</span>
+        <input id="join-code" type="text" maxlength="4" placeholder="ABCD" autocomplete="off" inputmode="text" autocapitalize="characters">
+      </label>
+      <button id="join-btn" class="btn btn-secondary">Answer the summons</button>
+
+      <p id="error-msg" class="error" hidden></p>
+    </div>
+
+    <div class="how">
+      <h2>HOW IT GOES</h2>
+      <ol>
+        <li>Both players see a country name. (No reference picture — that's the fun part.)</li>
+        <li>You draw its outline from memory on your own canvas. Sixty seconds.</li>
+        <li>Both submissions reveal at once. Geometric overlap with the real shape decides the round.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Screen 2: Waiting -->
+  <section id="screen-waiting" class="screen" hidden>
+    <h2 class="screen-title">Awaiting your second.</h2>
+    <p class="muted">Hand them the code below — or scan the QR if they're at the same table.</p>
+
+    <div class="room-code-block">
+      <div class="room-code-label">ROOM</div>
+      <div id="room-code-display" class="room-code"></div>
+    </div>
+
+    <img id="qr-img" alt="QR code to join the room" class="qr">
+
+    <div id="join-link-display" class="join-link"></div>
+    <button id="copy-link-btn" class="btn btn-secondary">copy challenge link</button>
+
+    <p class="muted small">As soon as they join, the first country drops on both screens.</p>
+  </section>
+
+  <!-- Screen 3: Round (drawing) -->
+  <section id="screen-round" class="screen" hidden>
+    <div class="round-header">
+      <div id="round-label" class="round-label">round 1 of 3</div>
+      <div id="match-score" class="match-score">you 0 · 0 rival</div>
+    </div>
+
+    <div class="prompt-block">
+      <div class="prompt-prelabel">DRAW FROM MEMORY</div>
+      <div id="country-name" class="prompt-name">—</div>
+      <div id="country-hint" class="prompt-hint"></div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="draw-canvas"></canvas>
+    </div>
+
+    <div class="round-controls">
+      <button id="clear-btn" class="btn btn-secondary">clear</button>
+      <button id="submit-btn" class="btn btn-primary" disabled>draw the outline first</button>
+      <div id="timer" class="timer">60s</div>
+    </div>
+
+    <p id="waiting-note" class="muted small" hidden>Locked in. The rival is still drawing…</p>
+  </section>
+
+  <!-- Screen 4: Round result -->
+  <section id="screen-round-result" class="screen" hidden>
+    <h2 class="screen-title">Reveal: <span id="rr-country">—</span></h2>
+    <div id="rr-verdict" class="verdict">—</div>
+
+    <div class="reveal-grid">
+      <div class="reveal-card">
+        <div class="reveal-name" id="rr-my-name">you</div>
+        <canvas id="rr-my-overlay"></canvas>
+        <div class="reveal-score" id="rr-my-score">0%</div>
+      </div>
+      <div class="reveal-card">
+        <div class="reveal-name" id="rr-opp-name">rival</div>
+        <canvas id="rr-opp-overlay"></canvas>
+        <div class="reveal-score" id="rr-opp-score">0%</div>
+      </div>
+    </div>
+
+    <div id="rr-match-score" class="match-score-large">match: you 0 · 0 rival</div>
+
+    <button id="rr-next-btn" class="btn btn-primary">next country</button>
+  </section>
+
+  <!-- Screen 5: Match result -->
+  <section id="screen-match-result" class="screen" hidden>
+    <div class="seal">★</div>
+    <h2 id="mr-headline" class="result-headline">CARTOGRAPHER LAUREATE</h2>
+    <p id="mr-detail" class="result-detail">—</p>
+    <div id="mr-final-score" class="match-score-large">—</div>
+
+    <div class="share-row">
+      <button id="share-btn" class="btn btn-primary" onclick="share()">challenge another friend</button>
+      <button id="rematch-btn" class="btn btn-secondary">run it back</button>
+    </div>
+  </section>
+
+</div>
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</body>
+</html>

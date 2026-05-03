@@ -1,0 +1,350 @@
+/* Aesthetic: cartographer's notebook — cream paper, IM Fell English serif,
+   ink-blue strokes, vermilion accent. No purple, no glassmorphism, no Inter. */
+
+:root {
+  --paper: #f6efde;
+  --paper-line: #e6dec3;
+  --ink: #1c2240;
+  --ink-light: rgba(28, 34, 64, 0.55);
+  --ink-faint: rgba(28, 34, 64, 0.22);
+  --vermilion: #b43c28;
+  --vermilion-dim: #8b2e1d;
+  --gold: #b48a2a;
+}
+
+html { background: var(--paper); }
+body {
+  background:
+    radial-gradient(ellipse at top left, rgba(180, 138, 42, 0.06), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(180, 60, 40, 0.05), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 31px, var(--paper-line) 31px 32px),
+    var(--paper);
+  color: var(--ink);
+  font-family: 'IM Fell English', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.app { padding-top: max(20px, env(safe-area-inset-top)); }
+
+.screen { display: flex; flex-direction: column; gap: 18px; }
+
+/* ── Masthead ─────────────────────────────────── */
+.masthead { text-align: center; padding: 6px 0 4px; border-bottom: 1.5px solid var(--ink); }
+.kicker {
+  font-family: 'IM Fell English SC', 'IM Fell English', Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ink-light);
+  margin-bottom: 4px;
+}
+h1 {
+  font-family: 'IM Fell English SC', 'IM Fell English', Georgia, serif;
+  font-size: clamp(38px, 9vw, 56px);
+  margin: 0 0 6px;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+.tagline { color: var(--ink-light); margin: 4px 0 14px; font-style: italic; font-size: 16px; }
+
+/* ── Banner (challenge deep-link) ─────────────── */
+.banner {
+  border: 1.5px dashed var(--vermilion);
+  background: rgba(180, 60, 40, 0.07);
+  padding: 12px 14px;
+  font-style: italic;
+  text-align: center;
+}
+.banner strong {
+  font-style: normal;
+  letter-spacing: 0.2em;
+  font-family: 'IM Fell English SC', Georgia, serif;
+  color: var(--vermilion);
+}
+
+/* ── Card ──────────────────────────────────────── */
+.card {
+  background: rgba(255, 252, 240, 0.7);
+  border: 1.5px solid var(--ink);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--ink-light);
+}
+input[type="text"] {
+  font: inherit;
+  font-size: 20px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 44px;
+}
+#join-code { letter-spacing: 0.3em; text-transform: uppercase; text-align: center; font-size: 24px; }
+
+.btn {
+  font: inherit;
+  font-size: 17px;
+  padding: 12px 18px;
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 48px;
+  transition: transform 80ms ease, background 120ms ease;
+}
+.btn:hover:not(:disabled) { background: rgba(28, 34, 64, 0.06); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--vermilion);
+  color: var(--paper);
+  border-color: var(--vermilion-dim);
+  font-family: 'IM Fell English SC', Georgia, serif;
+  letter-spacing: 0.1em;
+}
+.btn-primary:hover:not(:disabled) { background: var(--vermilion-dim); color: var(--paper); }
+
+.btn-secondary {
+  background: transparent;
+  border-style: solid;
+}
+
+.btn.demoted { opacity: 0.5; }
+.btn.promoted { box-shadow: 0 0 0 3px rgba(180, 60, 40, 0.18); }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-light);
+  font-style: italic;
+  font-size: 14px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--ink-faint);
+}
+
+.error {
+  color: var(--vermilion);
+  font-style: italic;
+  margin: 4px 0 0;
+}
+
+/* ── How it goes ──────────────────────────────── */
+.how {
+  border-top: 1px dashed var(--ink-faint);
+  padding-top: 16px;
+}
+.how h2 {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  color: var(--ink-light);
+  margin: 0 0 10px;
+}
+.how ol { padding-left: 22px; margin: 0; }
+.how li { margin: 6px 0; }
+
+/* ── Waiting screen ───────────────────────────── */
+.screen-title {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(24px, 6vw, 32px);
+  margin: 8px 0 4px;
+  text-align: center;
+  letter-spacing: 0.05em;
+  font-weight: 400;
+}
+.muted { color: var(--ink-light); }
+.small { font-size: 14px; }
+
+.room-code-block {
+  text-align: center;
+  border: 2px solid var(--ink);
+  padding: 18px;
+  margin: 8px 0;
+  background: rgba(255, 252, 240, 0.7);
+}
+.room-code-label {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: var(--ink-light);
+}
+.room-code {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(56px, 14vw, 80px);
+  letter-spacing: 0.25em;
+  color: var(--vermilion);
+  line-height: 1.05;
+  margin-top: 4px;
+}
+
+.qr {
+  align-self: center;
+  width: 200px;
+  height: 200px;
+  border: 6px solid var(--paper);
+  outline: 1.5px solid var(--ink);
+  background: white;
+}
+
+.join-link {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  background: rgba(28, 34, 64, 0.05);
+  padding: 8px 10px;
+  border-left: 3px solid var(--ink);
+}
+
+/* ── Round (drawing) ──────────────────────────── */
+.round-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--ink-faint);
+  padding-bottom: 8px;
+}
+.round-label {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 12px;
+  letter-spacing: 0.3em;
+  color: var(--ink-light);
+}
+.match-score {
+  font-style: italic;
+  color: var(--ink-light);
+}
+
+.prompt-block { text-align: center; padding: 4px 0; }
+.prompt-prelabel {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ink-light);
+}
+.prompt-name {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(38px, 9vw, 52px);
+  letter-spacing: 0.06em;
+  margin: 4px 0 0;
+  color: var(--vermilion);
+}
+.prompt-hint { font-style: italic; color: var(--ink-light); margin-top: 2px; }
+
+.canvas-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0;
+}
+#draw-canvas {
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  touch-action: none;
+  cursor: crosshair;
+  display: block;
+}
+
+.round-controls {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.timer {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 22px;
+  letter-spacing: 0.15em;
+  color: var(--vermilion);
+  text-align: right;
+  min-width: 56px;
+}
+
+/* ── Round result ────────────────────────────── */
+.verdict {
+  text-align: center;
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(20px, 5vw, 26px);
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  padding: 8px 0;
+  margin: 4px 0;
+}
+
+.reveal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.reveal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1.5px solid var(--ink);
+  background: rgba(255, 252, 240, 0.7);
+}
+.reveal-name {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--ink-light);
+}
+.reveal-card canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--ink-faint);
+}
+.reveal-score {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 28px;
+  color: var(--vermilion);
+  letter-spacing: 0.05em;
+}
+
+.match-score-large {
+  text-align: center;
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  color: var(--ink);
+  margin: 6px 0 4px;
+}
+
+/* ── Match result ────────────────────────────── */
+.seal {
+  text-align: center;
+  font-size: 56px;
+  color: var(--vermilion);
+  margin: 4px 0 -4px;
+}
+.result-headline {
+  text-align: center;
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(32px, 8vw, 48px);
+  letter-spacing: 0.1em;
+  color: var(--vermilion);
+  margin: 6px 0 4px;
+}
+.result-detail {
+  text-align: center;
+  font-style: italic;
+  color: var(--ink);
+  font-size: 17px;
+  margin: 0 4px 8px;
+}
