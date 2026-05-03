@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entertainment Factory — proposed ideas</title>
+  <meta property="og:title" content="Entertainment Factory — proposed ideas">
+  <meta property="og:description" content="Ideas the factory wants to build. Promote to ship, reject to discard.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/ideas/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-endpoint="" data-disabled="true">
+  <header>
+    <div class="crt">
+      <h1>PROPOSED IDEAS</h1>
+      <p class="sub">0 pending &middot; 29 live &middot; <a class="nav" href="../">← back to apps</a></p>
+    </div>
+  </header>
+  <main>
+    <p class="warning">⚠ idea-action endpoint not configured (config.idea_action.endpoint missing in state/ideas.json) — buttons disabled.</p>
+    <div class="grid">
+      <p>No ideas in the queue. Generate one by clicking <a href="../">+ New App</a> on any deployed app.</p>
+    </div>
+  </main>
+  <footer>
+    <p>built by <a href="https://benlirio.com/">ben lirio</a> &middot; source on <a href="https://github.com/BenLirio/entertainment-factory">github</a></p>
+  </footer>
+  <script>
+    (function () {
+      const endpoint = document.body.dataset.endpoint;
+      const disabled = document.body.dataset.disabled === "true";
+
+      function setStatus(card, msg) {
+        const el = card.querySelector(".status");
+        if (el) el.textContent = msg;
+      }
+
+      function lockCard(card) {
+        card.querySelectorAll("button").forEach(b => { b.disabled = true; });
+      }
+
+      function fadeCard(card) {
+        card.classList.add("done");
+      }
+
+      document.querySelectorAll("article.idea").forEach(card => {
+        if (disabled) {
+          lockCard(card);
+          return;
+        }
+        const slug = card.dataset.slug;
+        card.querySelectorAll("button[data-action]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const action = btn.dataset.action;
+            if (action === "reject" && !confirm("Reject this idea? It won't be built.")) return;
+            lockCard(card);
+            setStatus(card, action === "promote" ? "queued for build…" : "rejecting…");
+            try {
+              const resp = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, slug })
+              });
+              if (!resp.ok) throw new Error("http " + resp.status);
+              setStatus(card, action === "promote" ? "queued — will appear on /apps when built" : "rejected");
+              fadeCard(card);
+            } catch (err) {
+              setStatus(card, "failed: " + err.message);
+              card.querySelectorAll("button").forEach(b => { b.disabled = false; });
+            }
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
