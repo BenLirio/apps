@@ -8,6 +8,9 @@
   const visibleCount = document.getElementById('visible-count');
   const tabs = Array.from(document.querySelectorAll('.tab'));
   const endpoint = document.body.dataset.endpoint;
+  const spawnEndpoint = document.body.dataset.spawnEndpoint;
+  const ideasActions = document.getElementById('ideas-actions');
+  const newIdeaBtn = document.getElementById('new-idea-btn');
 
   // Restore stage from hash (e.g. #archived) or default to "prototype".
   const initialStage = (location.hash || '').replace('#', '') || 'prototype';
@@ -36,10 +39,20 @@
       t.classList.toggle('is-active', active);
       t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
+    if (ideasActions) ideasActions.hidden = (s !== 'idea');
     render();
   }
 
   tabs.forEach(t => t.addEventListener('click', () => setStage(t.dataset.stage)));
+
+  if (newIdeaBtn) {
+    if (!spawnEndpoint) {
+      newIdeaBtn.disabled = true;
+      newIdeaBtn.title = 'Spawn endpoint not configured';
+    } else {
+      newIdeaBtn.addEventListener('click', onNewIdea);
+    }
+  }
 
   search.addEventListener('input', () => {
     query = search.value.trim().toLowerCase();
@@ -164,9 +177,15 @@
     const slug = a.slug;
     let reason = '';
     if (action === 'reject' || action === 'archive') {
-      const result = await openReasonModal(action, a.name);
+      const verb = action.charAt(0).toUpperCase() + action.slice(1);
+      const result = await openTextModal({
+        title: `${verb} “${a.name}”?`,
+        label: 'Reason (optional)',
+        placeholder: `why are you ${action}ing this app?`,
+        confirmLabel: verb,
+      });
       if (!result.confirmed) return;
-      reason = result.reason;
+      reason = result.text;
     }
 
     setStatus(card, msgFor(action) + '…');
@@ -186,40 +205,95 @@
     }
   }
 
-  // In-page modal that returns {confirmed, reason}. Resolves on Confirm/Cancel,
-  // Escape key, or backdrop click.
-  function openReasonModal(action, name) {
+  async function onNewIdea() {
+    const result = await openTextModal({
+      title: 'Generate a new idea',
+      label: 'Steering prompt (optional)',
+      placeholder: 'Optional: nudge it toward a theme, mechanic, or vibe…',
+      confirmLabel: 'Generate',
+      confirmKind: 'positive',
+      asyncSubmit: async (text) => {
+        const resp = await fetch(spawnEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: 'apps', prompt: text })
+        });
+        if (!resp.ok) throw new Error('http ' + resp.status);
+        return 'Queued — the factory will pick it up.';
+      },
+    });
+    void result;
+  }
+
+  // Parameterized in-page modal. If `asyncSubmit` is provided the modal stays
+  // open while the request runs and shows status; otherwise it resolves
+  // immediately on confirm with {confirmed, text}.
+  function openTextModal({ title, label, placeholder, confirmLabel, confirmKind, asyncSubmit }) {
     return new Promise(resolve => {
       const backdrop = document.createElement('div');
       backdrop.className = 'modal-backdrop';
-      const verb = action.charAt(0).toUpperCase() + action.slice(1);
+      const confirmCls = 'confirm' + (confirmKind === 'positive' ? ' is-positive' : '');
       backdrop.innerHTML = `
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <h3 id="modal-title">${escapeHtml(verb)} &ldquo;${escapeHtml(name)}&rdquo;?</h3>
-          <label for="modal-reason">Reason (optional)</label>
-          <textarea id="modal-reason" placeholder="why are you ${escapeHtml(action)}ing this app?"></textarea>
+          <h3 id="modal-title">${escapeHtml(title)}</h3>
+          <label for="modal-text">${escapeHtml(label)}</label>
+          <textarea id="modal-text" placeholder="${escapeAttr(placeholder)}"></textarea>
+          <p class="modal-status" aria-live="polite"></p>
           <div class="modal-actions">
             <button type="button" class="cancel">Cancel</button>
-            <button type="button" class="confirm">${escapeHtml(verb)}</button>
+            <button type="button" class="${confirmCls}">${escapeHtml(confirmLabel)}</button>
           </div>
         </div>
       `;
-      const close = (confirmed) => {
-        const reason = (backdrop.querySelector('#modal-reason').value || '').trim();
+      const ta = backdrop.querySelector('#modal-text');
+      const status = backdrop.querySelector('.modal-status');
+      const cancelBtn = backdrop.querySelector('.cancel');
+      const confirmBtn = backdrop.querySelector('.confirm');
+
+      let busy = false;
+      const finish = (confirmed) => {
+        if (busy) return;
+        const text = (ta.value || '').trim();
         document.removeEventListener('keydown', onKey);
         backdrop.remove();
-        resolve({ confirmed, reason: confirmed ? reason : '' });
+        resolve({ confirmed, text: confirmed ? text : '' });
+      };
+      const onConfirm = async () => {
+        if (busy) return;
+        const text = (ta.value || '').trim();
+        if (!asyncSubmit) { finish(true); return; }
+        busy = true;
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        const origLabel = confirmBtn.textContent;
+        confirmBtn.textContent = 'Working…';
+        status.textContent = '';
+        try {
+          const msg = await asyncSubmit(text);
+          status.textContent = msg || 'Done.';
+          setTimeout(() => {
+            document.removeEventListener('keydown', onKey);
+            backdrop.remove();
+            resolve({ confirmed: true, text });
+          }, 1100);
+        } catch (err) {
+          busy = false;
+          confirmBtn.disabled = false;
+          cancelBtn.disabled = false;
+          confirmBtn.textContent = origLabel;
+          status.textContent = 'Failed: ' + (err && err.message || 'try again');
+        }
       };
       const onKey = (e) => {
-        if (e.key === 'Escape') close(false);
-        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) close(true);
+        if (e.key === 'Escape') finish(false);
+        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onConfirm();
       };
-      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(false); });
-      backdrop.querySelector('.cancel').addEventListener('click', () => close(false));
-      backdrop.querySelector('.confirm').addEventListener('click', () => close(true));
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) finish(false); });
+      cancelBtn.addEventListener('click', () => finish(false));
+      confirmBtn.addEventListener('click', onConfirm);
       document.addEventListener('keydown', onKey);
       document.body.appendChild(backdrop);
-      backdrop.querySelector('#modal-reason').focus();
+      ta.focus();
     });
   }
 

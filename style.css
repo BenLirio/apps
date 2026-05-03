@@ -180,6 +180,46 @@ a { color: inherit; text-decoration: none; }
   color: #fff;
 }
 
+.ideas-actions {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.ideas-actions[hidden] { display: none; }
+
+.btn-new-idea {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -.005em;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background .15s ease, transform .1s ease, box-shadow .15s ease;
+}
+
+.btn-new-idea:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow);
+}
+
+.btn-new-idea:active { transform: scale(.99); }
+
+.btn-new-idea:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .search-row {
   position: relative;
   display: flex;
@@ -610,6 +650,23 @@ footer a:hover { border-bottom-color: var(--accent); }
 .modal-actions .confirm:hover {
   background: #991b1b;
   border-color: #991b1b;
+}
+
+.modal-actions .confirm.is-positive {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.modal-actions .confirm.is-positive:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.modal-status {
+  margin: 10px 0 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 /* ---------- Mobile tweaks ---------- */

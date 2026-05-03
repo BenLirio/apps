@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="style.css">
   <script src="feedback.js" defer></script>
 </head>
-<body data-endpoint="https://5c99bazuj0.execute-api.us-east-1.amazonaws.com/idea-action">
+<body data-endpoint="https://5c99bazuj0.execute-api.us-east-1.amazonaws.com/idea-action" data-spawn-endpoint="https://5c99bazuj0.execute-api.us-east-1.amazonaws.com/spawn">
   <header class="site-header">
     <div class="brand">
       <h1>Entertainment Factory</h1>
@@ -41,6 +41,11 @@
           <span class="tab-count">62</span>
         </button>
       </nav>
+      <div id="ideas-actions" class="ideas-actions" hidden>
+        <button id="new-idea-btn" class="btn-new-idea" type="button" aria-label="Generate a new idea">
+          <span aria-hidden="true">+</span> New Idea
+        </button>
+      </div>
       <div class="search-row">
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="search" type="search" placeholder="Search by name, category, mechanic…" autocomplete="off" aria-label="Search apps">
