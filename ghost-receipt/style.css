@@ -1,0 +1,438 @@
+/* Aesthetic: thermal-receipt monospace + dark bar-counter — VT323 + Special Elite,
+   crumpled CVS-slip paper floating on a dim wood-grain background. Mock-bureaucratic
+   stance per shareability-design "Output as meme template"; receipt-form earns its
+   keep as a self-sufficient artifact (not a collectible). */
+
+:root {
+  --paper: #f3ecd9;
+  --paper-shade: #ddd2b6;
+  --paper-deep: #c9bb96;
+  --ink: #181612;
+  --ink-fade: #4a4339;
+  --ink-mis: #6c5d44;
+  --counter: #1a130d;
+  --counter-2: #100a06;
+  --accent: #c8472b;
+  --accent-2: #f0b400;
+}
+
+html { background: var(--counter-2); }
+
+body {
+  background:
+    radial-gradient(ellipse at 50% -10%, #2a1d12 0%, var(--counter) 45%, var(--counter-2) 100%);
+  color: var(--paper);
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 18px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 520px;
+  padding-top: max(28px, env(safe-area-inset-top));
+  padding-bottom: max(80px, env(safe-area-inset-bottom));
+}
+
+/* ============ HEADER ============ */
+.venue-head {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.venue-name {
+  font-family: 'Special Elite', 'VT323', monospace;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  margin: 0 0 6px;
+  color: var(--accent-2);
+  text-shadow: 0 0 18px rgba(240, 180, 0, 0.18);
+}
+.venue-sub {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  color: #9c8f78;
+  letter-spacing: 0.04em;
+}
+
+/* ============ COUNTER (background plane behind receipt) ============ */
+.counter {
+  position: relative;
+  padding: 24px 6px 30px;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      rgba(0,0,0,0.0) 0px,
+      rgba(0,0,0,0.0) 14px,
+      rgba(255,255,255,0.012) 14px,
+      rgba(255,255,255,0.012) 28px
+    ),
+    linear-gradient(180deg, #2a1d12 0%, #19110a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 -22px 40px rgba(0,0,0,0.55),
+    0 18px 50px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+/* faint condensation-ring on the counter */
+.counter::before {
+  content: "";
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.04);
+  top: 18px;
+  right: 26px;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+.counter::after {
+  content: "";
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.03);
+  bottom: 36px;
+  left: 18px;
+  pointer-events: none;
+}
+.counter-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,0.25) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
+  opacity: 0.55;
+}
+
+/* ============ RECEIPT ============ */
+.receipt {
+  position: relative;
+  margin: 0 auto;
+  width: min(100%, 360px);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  transform: rotate(-0.6deg);
+  transition: transform 0.18s ease;
+  will-change: transform;
+}
+.receipt:active { transform: rotate(-0.6deg) scale(0.992); }
+.receipt:focus-visible { outline: 2px dashed var(--accent-2); outline-offset: 4px; }
+
+/* curl: the perforated/torn edges */
+.receipt-perf {
+  position: relative;
+  height: 14px;
+  background:
+    radial-gradient(circle at 6px 7px, var(--counter) 3px, transparent 3.5px) 0 0/12px 14px repeat-x,
+    var(--paper);
+}
+.receipt-perf-top {
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 -6px 12px rgba(0,0,0,0.5);
+}
+.receipt-perf-bottom {
+  border-radius: 0 0 3px 3px;
+  transform: rotateX(180deg);
+}
+
+/* the actual paper face */
+.receipt-paper {
+  position: relative;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.012) 0px,
+      rgba(0,0,0,0.012) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    linear-gradient(180deg, var(--paper) 0%, #ede4cb 60%, var(--paper-shade) 100%);
+  color: var(--ink);
+  padding: 18px 16px 14px;
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 18px;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,0.04),
+    inset 0 -28px 30px rgba(150,120,70,0.18),
+    inset 0 22px 24px rgba(255,250,235,0.4),
+    0 22px 36px rgba(0,0,0,0.55);
+}
+/* extra grain & a couple of crumple shadows */
+.receipt-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 30% 12%, rgba(0,0,0,0.06), transparent 70%),
+    radial-gradient(50% 20% at 80% 70%, rgba(0,0,0,0.05), transparent 70%),
+    radial-gradient(40% 24% at 20% 88%, rgba(0,0,0,0.06), transparent 70%);
+  mix-blend-mode: multiply;
+}
+.receipt-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(0,0,0,0.08) 1px, transparent 1.6px);
+  background-size: 11px 11px;
+  background-position: 3px 5px;
+  opacity: 0.32;
+}
+
+/* ============ STAMP HEADER ============ */
+.receipt-stamp {
+  text-align: center;
+  margin: 2px 0 8px;
+  color: var(--ink);
+}
+.stamp-row {
+  font-family: 'Special Elite', 'VT323', monospace;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  margin: 1px 0;
+  color: var(--ink-fade);
+}
+.stamp-row-loud {
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  text-shadow: 0.5px 0 0 rgba(0,0,0,0.05);
+}
+.stamp-rule {
+  letter-spacing: 0;
+  color: var(--ink-mis);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* ============ LINES ============ */
+.receipt-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 19px;
+  line-height: 1.32;
+}
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 1px 0;
+  color: var(--ink);
+  animation: print-in 280ms cubic-bezier(.2, .9, .2, 1);
+  position: relative;
+}
+.receipt-line .line-text {
+  flex: 1 1 auto;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.receipt-line .line-dots {
+  flex: 0 1 auto;
+  color: var(--ink-mis);
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 6px;
+  margin: 0 2px;
+}
+.receipt-line .line-amt {
+  flex: 0 0 auto;
+  font-family: 'VT323', monospace;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--ink);
+}
+/* misprint flicker on a sprinkle of lines */
+.receipt-line.misprint .line-text::first-letter,
+.receipt-line.misprint .line-amt {
+  color: var(--ink-fade);
+  filter: blur(0.3px);
+}
+
+@keyframes print-in {
+  0%   { opacity: 0; transform: translateY(-4px); filter: blur(1.4px); }
+  60%  { opacity: 1; transform: translateY(0); filter: blur(0); }
+  100% { opacity: 1; }
+}
+
+/* ============ TOTALS BLOCK ============ */
+.receipt-totals {
+  margin-top: 6px;
+  color: var(--ink);
+  animation: stamp-in 380ms ease-out;
+}
+.totals-rule {
+  text-align: center;
+  color: var(--ink-mis);
+  font-size: 14px;
+  margin: 4px 0 2px;
+  letter-spacing: 0;
+}
+.totals-rule-double { color: var(--ink-fade); }
+.totals-extras {
+  margin: 4px 0 6px;
+}
+.totals-extras .receipt-line {
+  font-size: 17px;
+  color: var(--ink-fade);
+}
+.totals-final {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 6px 0 4px;
+  font-family: 'Special Elite', 'VT323', monospace;
+}
+.totals-label {
+  font-size: 19px;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+}
+.totals-amount {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-shadow: 0.6px 0 0 rgba(0,0,0,0.15);
+}
+.totals-fine {
+  text-align: center;
+  color: var(--ink-mis);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  margin-top: 8px;
+  font-family: 'Special Elite', 'VT323', monospace;
+  white-space: pre-line;
+}
+.totals-stamp {
+  margin-top: 10px;
+  text-align: center;
+  font-family: 'Special Elite', 'VT323', monospace;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  padding: 6px 8px;
+  border: 1.5px dashed var(--accent);
+  color: var(--accent);
+  display: inline-block;
+  width: 100%;
+  transform: rotate(-1.4deg);
+  background: rgba(200, 71, 43, 0.04);
+}
+
+@keyframes stamp-in {
+  0%   { opacity: 0; transform: scale(0.96) translateY(6px); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* ============ TAP HINT / COUNTER ============ */
+.tap-hint {
+  margin-top: 14px;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  color: var(--accent-2);
+  opacity: 0.85;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.tap-hint.hidden { display: none; }
+.tap-counter {
+  margin-top: 6px;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  letter-spacing: 0.18em;
+  color: #6f6552;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.95; }
+}
+
+/* small wobble when receipt is closed and user keeps tapping */
+.receipt.wobble { animation: wobble 360ms ease; }
+@keyframes wobble {
+  0%, 100% { transform: rotate(-0.6deg); }
+  20%      { transform: rotate(-1.7deg); }
+  50%      { transform: rotate(0.6deg); }
+  80%      { transform: rotate(-1.1deg); }
+}
+
+/* ============ SHARE ROW ============ */
+.share-row {
+  margin-top: 28px;
+  padding: 0 6px;
+}
+.btn-primary, .btn-secondary {
+  font-family: 'Special Elite', 'VT323', monospace;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 13px 18px;
+  border: 2px solid var(--accent-2);
+  background: var(--accent-2);
+  color: #1a1306;
+  border-radius: 0;
+  cursor: pointer;
+  min-height: 48px;
+  transition: transform 0.12s ease, background 0.16s ease, color 0.16s ease;
+}
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
+.btn-secondary {
+  background: transparent;
+  color: var(--accent-2);
+}
+.btn-secondary:hover { background: var(--accent-2); color: #1a1306; }
+
+.btn-primary.copied {
+  background: #2c3a18;
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+/* ============ FOOTER ============ */
+.footer-note {
+  margin-top: 30px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: #5d5343;
+  font-family: 'Special Elite', 'VT323', monospace;
+}
+
+/* ============ DESKTOP TWEAKS ============ */
+@media (min-width: 640px) {
+  .receipt-paper { font-size: 20px; padding: 22px 22px 18px; }
+  .receipt-lines { font-size: 21px; }
+  .totals-amount { font-size: 30px; }
+  .receipt { width: 400px; }
+}
+
+/* ============ REDUCED MOTION ============ */
+@media (prefers-reduced-motion: reduce) {
+  .receipt-line { animation: none; }
+  .tap-hint { animation: none; opacity: 0.85; }
+  .receipt-totals { animation: none; }
+  .receipt.wobble { animation: none; }
+}

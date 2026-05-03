@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ghost Receipt — itemized regrets from a night that got away from you</title>
+<meta name="description" content="Tap a curling thermal-paper napkin and absurd line items materialize one by one — wrong taxis, sentences you never finished, apologies you owed yourself. Twelve taps prints your final NIGHT OUT total.">
+
+<!-- Share-preview meta -->
+<meta property="og:title" content="Ghost Receipt">
+<meta property="og:description" content="Tap to print itemized regrets. Twelve taps later you get a NIGHT OUT total signed by the Former Self Tavern.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/ghost-receipt/">
+<meta property="og:image" content="https://benlirio.com/apps/ghost-receipt/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="675">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ghost Receipt">
+<meta name="twitter:description" content="Tap to print itemized regrets. Twelve taps later you get a NIGHT OUT total signed by the Former Self Tavern.">
+<meta name="twitter:image" content="https://benlirio.com/apps/ghost-receipt/og.jpg">
+
+<link rel="icon" type="image/jpeg" href="favicon.jpg">
+<link rel="apple-touch-icon" href="favicon.jpg">
+<meta name="theme-color" content="#101013">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Special+Elite&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="venue-head">
+    <h1 class="venue-name">FORMER SELF TAVERN</h1>
+    <p class="venue-sub">tap the receipt to itemize the night.<br>twelve items prints the total.</p>
+  </header>
+
+  <div class="counter">
+    <div class="counter-grain" aria-hidden="true"></div>
+
+    <article class="receipt" id="receipt" role="button" tabindex="0" aria-label="Tap to print the next line item">
+      <div class="receipt-perf receipt-perf-top" aria-hidden="true"></div>
+
+      <div class="receipt-paper" id="receiptPaper">
+        <div class="receipt-stamp" id="receiptStamp">
+          <div class="stamp-row stamp-row-loud">FORMER SELF TAVERN</div>
+          <div class="stamp-row">— ledger of a night —</div>
+          <div class="stamp-row" id="stampMeta">1:47 AM · TABLE NIL · srv: NOBODY</div>
+          <div class="stamp-row stamp-rule" aria-hidden="true">— — — — — — — — — — — — — —</div>
+        </div>
+
+        <ol class="receipt-lines" id="receiptLines" aria-live="polite"></ol>
+
+        <div class="receipt-totals" id="receiptTotals" hidden>
+          <div class="totals-rule" aria-hidden="true">— — — — — — — — — — — — — —</div>
+          <div class="totals-extras" id="totalsExtras"></div>
+          <div class="totals-rule totals-rule-double" aria-hidden="true">═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═</div>
+          <div class="totals-final">
+            <span class="totals-label">NIGHT OUT TOTAL</span>
+            <span class="totals-amount" id="totalsAmount">$—</span>
+          </div>
+          <div class="totals-rule totals-rule-double" aria-hidden="true">═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═ ═</div>
+          <div class="totals-fine" id="totalsFine"></div>
+          <div class="totals-stamp" id="totalsStamp">RECEIPT CLOSED · keep it</div>
+        </div>
+      </div>
+
+      <div class="receipt-perf receipt-perf-bottom" aria-hidden="true"></div>
+    </article>
+
+    <div class="tap-hint" id="tapHint">tap the receipt</div>
+    <div class="tap-counter" id="tapCounter" aria-live="polite">0 / 12</div>
+  </div>
+
+  <div class="share-row" id="shareRow" hidden>
+    <button class="btn-primary" id="shareBtn" type="button" onclick="share()">copy receipt link</button>
+    <button class="btn-secondary" id="newBtn" type="button" onclick="newReceipt()">a different night</button>
+  </div>
+
+  <p class="footer-note">no accounts. no tracking. just receipts.</p>
+</div>
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</body>
+</html>
