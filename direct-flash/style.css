@@ -1,0 +1,397 @@
+/* Aesthetic: late-2000s digicam paparazzi — hot-flash washout, magenta + teal,
+   off-center compositions, date stamps, low-detail silhouettes, faux-EXIF chrome.
+   Type: Antonio (display, condensed sans), Share Tech Mono (chrome/EXIF),
+   VT323 (orange seven-seg date stamp). Background: smoky charcoal so the
+   white flash + magenta + teal stay punchy. */
+
+:root {
+  --bg-0: #0d0c10;
+  --bg-1: #15131a;
+  --ink: #f5f1e8;
+  --ink-mute: #b9b1a3;
+  --hot: #ff2bd6;        /* hot magenta — flash bounce on skin */
+  --teal: #18e0d0;       /* nightclub teal */
+  --amber: #ffb14a;       /* date-stamp orange */
+  --warn: #ff5544;
+  --grime: #2a2530;
+  --grime-2: #1c1922;
+  --paper: #f1ece1;       /* developed photo paper tint */
+}
+
+html { background: var(--bg-0); }
+body {
+  background:
+    radial-gradient(ellipse at 50% -10%, #1a1424 0%, var(--bg-0) 55%),
+    var(--bg-0);
+  color: var(--ink);
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  letter-spacing: 0.01em;
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- Brand header ---------- */
+
+.brand { padding: 6px 0 14px; }
+.brand-line {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Antonio', sans-serif; font-weight: 700;
+  font-size: 22px; letter-spacing: 0.18em;
+}
+.brand-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 12px var(--warn), 0 0 2px #fff inset;
+  animation: rec-blink 1.2s ease-in-out infinite;
+}
+.brand-name { color: var(--ink); }
+.brand-tag { color: var(--teal); font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.18em; margin-left: auto; }
+.brand-sub {
+  margin: 8px 0 0;
+  color: var(--ink-mute);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 38ch;
+}
+.brand-sub b { color: var(--hot); font-weight: 700; letter-spacing: 0.05em; }
+
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+/* ---------- Stage / panels ---------- */
+
+.stage { position: relative; }
+.panel { display: none; }
+.panel[data-active="true"] { display: block; }
+
+.panel-bar {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 0.32em;
+  color: var(--teal);
+  border-bottom: 1px solid #333;
+  padding: 6px 0;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+/* ---------- Calibration gate ---------- */
+
+.panel-calibrate {
+  background: var(--grime-2);
+  border: 1px solid #2c2535;
+  padding: 18px 18px 22px;
+  position: relative;
+}
+.panel-calibrate::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -1px;
+  height: 3px; background: linear-gradient(90deg, var(--hot), var(--teal));
+}
+.panel-prose {
+  font-family: 'Antonio', sans-serif;
+  font-size: 22px; line-height: 1.25;
+  color: var(--ink);
+  margin: 6px 0 18px;
+  letter-spacing: 0.01em;
+}
+.panel-prose b { color: var(--hot); }
+.panel-foot {
+  font-size: 11px; color: var(--ink-mute);
+  letter-spacing: 0.06em;
+  margin-top: 12px;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  font-family: 'Antonio', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 0;
+  padding: 14px 20px;
+  background: #2a2434;
+  color: var(--ink);
+  font-size: 16px;
+  border-radius: 0;
+  transition: transform 80ms ease, background 120ms ease;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-prime {
+  width: 100%;
+  background: linear-gradient(180deg, var(--hot) 0%, #c91aa6 100%);
+  color: #fff;
+  box-shadow: 0 0 0 1px #fff inset, 0 4px 0 #6e0d59;
+  font-size: 18px;
+  padding: 18px 20px;
+}
+.btn-prime:hover { background: linear-gradient(180deg, #ff52df, #b51896); }
+
+.btn-flash {
+  flex: 1 1 60%;
+  background: #fff;
+  color: #15131a;
+  font-size: 22px;
+  padding: 18px 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: 0 0 0 2px var(--hot) inset, 0 0 22px rgba(255,43,214,0.45), 0 4px 0 #6e0d59;
+  position: relative;
+}
+.btn-flash:hover { background: #fff8f4; }
+.flash-icon { font-size: 22px; line-height: 1; }
+.btn-flash[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.btn-recal, .btn-help {
+  background: transparent;
+  color: var(--ink-mute);
+  border: 1px solid #3a3243;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  padding: 12px 14px;
+  min-width: 56px;
+}
+.btn-help { font-family: 'Share Tech Mono', monospace; font-size: 14px; }
+
+.btn-again {
+  background: var(--teal);
+  color: #06201f;
+  box-shadow: 0 0 0 1px #06201f inset, 0 4px 0 #0a635c;
+  flex: 1 1 35%;
+}
+.btn-save {
+  background: var(--amber);
+  color: #2a1700;
+  box-shadow: 0 0 0 1px #2a1700 inset, 0 4px 0 #7a4a05;
+  flex: 1 1 30%;
+}
+.btn-share {
+  background: var(--hot);
+  color: #fff;
+  box-shadow: 0 0 0 1px #fff inset, 0 4px 0 #6e0d59;
+  flex: 1 1 30%;
+}
+.btn-close { background: var(--ink); color: #15131a; padding: 12px 22px; }
+
+/* ---------- Viewfinder ---------- */
+
+.panel-view { padding-bottom: 6px; }
+.viewfinder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: #000;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  border: 1px solid #2a2434;
+}
+#preview {
+  width: 100%; height: 100%;
+  display: block;
+  filter: contrast(1.05) saturate(1.1);
+}
+
+.vf-chrome {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--teal);
+  text-shadow: 0 0 4px rgba(24,224,208,0.5);
+}
+.vf-corner {
+  position: absolute; width: 22px; height: 22px;
+  border-color: var(--teal); border-style: solid; border-width: 0;
+}
+.vf-corner.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+.vf-corner.tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+.vf-corner.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+.vf-corner.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.vf-readout {
+  position: absolute; top: 12px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 8px;
+  padding: 0 30px;
+  font-size: 11px;
+}
+.rd-pill {
+  background: rgba(0,0,0,0.5);
+  padding: 4px 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  border: 1px solid rgba(24,224,208,0.4);
+  backdrop-filter: blur(2px);
+}
+.rd-pill.rd-iso { color: var(--amber); border-color: rgba(255,177,74,0.4); }
+
+.vf-bottom {
+  position: absolute; bottom: 12px; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+  padding: 0 14px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.rd-tilt { color: var(--ink-mute); background: rgba(0,0,0,0.45); padding: 3px 6px; }
+.rd-blink {
+  color: var(--warn);
+  background: rgba(0,0,0,0.45);
+  padding: 3px 6px;
+  animation: rec-blink 1.4s ease-in-out infinite;
+}
+
+.vf-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 33.33% 33.33%;
+}
+
+.controls-row {
+  display: flex; gap: 10px;
+  margin-top: 14px;
+  align-items: stretch;
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--ink-mute);
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+.hint kbd {
+  font-family: 'Share Tech Mono', monospace;
+  background: #1c1922; color: var(--teal);
+  padding: 1px 6px; border: 1px solid #3a3243; border-radius: 2px;
+}
+.hint-warn { color: var(--warn); }
+
+/* ---------- Flash overlay ---------- */
+
+.flash-overlay {
+  position: fixed; inset: 0;
+  background: #fff;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 50;
+}
+.flash-overlay.firing {
+  animation: flash-burst 700ms ease-out forwards;
+}
+@keyframes flash-burst {
+  0%   { opacity: 0; }
+  4%   { opacity: 1; }
+  20%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- Developed card ---------- */
+
+.panel-card {
+  padding-top: 6px;
+}
+.developed {
+  width: 100%;
+  background: var(--paper);
+  padding: 10px 10px 12px;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.15) inset,
+    0 12px 0 -6px rgba(0,0,0,0.4),
+    0 22px 36px -10px rgba(0,0,0,0.6);
+  position: relative;
+  transform-origin: 50% 30%;
+}
+.developed.developing {
+  animation: develop 900ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes develop {
+  0%   { transform: scale(0.92); filter: brightness(2.4) contrast(0.6) saturate(0); }
+  35%  { filter: brightness(1.4) contrast(0.85) saturate(0.4); }
+  100% { transform: scale(1); filter: brightness(1) contrast(1) saturate(1); }
+}
+#card-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.card-actions {
+  display: flex; gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Modal ---------- */
+
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(8,6,12,0.78);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  z-index: 60;
+  backdrop-filter: blur(3px);
+}
+.modal-card {
+  background: var(--bg-1);
+  border: 1px solid #2c2535;
+  padding: 18px;
+  max-width: 380px; width: 100%;
+}
+.modal-bar {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 0.32em;
+  color: var(--hot);
+  border-bottom: 1px solid #333;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.legend {
+  list-style: none; padding: 0; margin: 0 0 14px;
+}
+.legend li {
+  display: flex; gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed #2c2535;
+  font-size: 13px;
+}
+.legend li:last-child { border-bottom: 0; }
+.leg-key {
+  flex: 0 0 38%;
+  font-family: 'Antonio', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--teal);
+  text-transform: uppercase;
+}
+.leg-val { color: var(--ink-mute); flex: 1 1 auto; }
+
+/* ---------- Misc ---------- */
+
+.best-on-mobile {
+  margin: 28px auto 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-mute);
+  letter-spacing: 0.08em;
+  border-top: 1px dashed #2c2535;
+  padding-top: 12px;
+}
+
+.screen-edge {
+  pointer-events: none;
+  position: fixed; inset: 0;
+  box-shadow: inset 0 0 80px rgba(0,0,0,0.55);
+  z-index: 5;
+}
+
+/* Smaller phones */
+@media (max-width: 380px) {
+  .brand-line { font-size: 18px; }
+  .panel-prose { font-size: 18px; }
+  .btn-flash { font-size: 18px; padding: 14px 16px; }
+}

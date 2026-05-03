@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Direct Flash — tilt your phone, blast the flash</title>
+  <meta name="description" content="Hold up your phone, tilt to compose, hit FLASH — get a 2008-digicam-paparazzi shot of whatever the tilt caught.">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Direct Flash — tilt your phone, blast the flash">
+  <meta property="og:description" content="Hold up your phone, tilt to compose, hit FLASH — get a 2008-digicam-paparazzi shot of whatever the tilt caught.">
+  <meta property="og:url" content="https://benlirio.com/apps/direct-flash/">
+  <meta property="og:image" content="https://benlirio.com/apps/direct-flash/og.jpg">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="720">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Direct Flash — tilt your phone, blast the flash">
+  <meta name="twitter:description" content="Hold up your phone, tilt to compose, hit FLASH — get a 2008-digicam-paparazzi shot of whatever the tilt caught.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/direct-flash/og.jpg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="brand">
+      <div class="brand-line">
+        <span class="brand-dot"></span>
+        <span class="brand-name">DIRECT&nbsp;FLASH</span>
+        <span class="brand-tag">// digicam · 2008</span>
+      </div>
+      <p class="brand-sub">tilt your phone like you're taking the shot. hit <b>FLASH</b>. develop a paparazzi portrait of whatever the tilt caught.</p>
+    </header>
+
+    <!-- Stage holds the camera viewfinder, the flash overlay, the developed card. Single canvas surface, multiple modes. -->
+    <main class="stage" id="stage">
+      <div class="screen-edge"></div>
+
+      <!-- Calibrate gate -->
+      <section class="panel panel-calibrate" id="panel-calibrate" data-active="true">
+        <div class="panel-bar">CAL · POSE&nbsp;ZERO</div>
+        <p class="panel-prose">
+          hold the phone <b>how you'd actually take the photo</b>.<br>
+          this is your neutral pose. tilt up, down, left, right from here to compose.
+        </p>
+        <button class="btn btn-prime" id="btn-permit">ENABLE TILT &amp; CALIBRATE</button>
+        <div class="panel-foot" id="cal-foot">desktop? we'll use mouse + arrows. iOS? this asks for motion permission.</div>
+      </section>
+
+      <!-- Live viewfinder -->
+      <section class="panel panel-view" id="panel-view" hidden>
+        <div class="viewfinder" id="viewfinder">
+          <canvas id="preview" width="640" height="800" aria-label="live tilt preview"></canvas>
+          <div class="vf-chrome">
+            <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+            <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+            <div class="vf-readout">
+              <span class="rd-pill" id="scene-name">— scanning —</span>
+              <span class="rd-pill rd-iso">ISO 1600</span>
+            </div>
+            <div class="vf-bottom">
+              <span class="rd-tilt" id="tilt-readout">P 0° · R 0°</span>
+              <span class="rd-blink">REC</span>
+            </div>
+            <div class="vf-grid"></div>
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <button class="btn btn-recal" id="btn-recal" type="button">re-cal</button>
+          <button class="btn btn-flash" id="btn-flash" type="button">
+            <span class="flash-icon">⚡</span><span>FLASH</span>
+          </button>
+          <button class="btn btn-help" id="btn-help" type="button" aria-label="help">?</button>
+        </div>
+
+        <p class="hint" id="desktop-hint" hidden>desktop fallback · drag the viewfinder, or arrow keys to tilt. <kbd>space</kbd> = flash.</p>
+        <p class="hint hint-warn" id="perm-hint" hidden>motion permission denied — falling back to drag/keys.</p>
+      </section>
+
+      <!-- Flash white-out overlay -->
+      <div class="flash-overlay" id="flash-overlay" aria-hidden="true"></div>
+
+      <!-- Developed card -->
+      <section class="panel panel-card" id="panel-card" hidden>
+        <div class="developed" id="developed">
+          <canvas id="card-canvas" width="900" height="1125" aria-label="developed photo card"></canvas>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-again" id="btn-again" type="button">TAKE ANOTHER</button>
+          <button class="btn btn-save" id="btn-save" type="button">SAVE CARD</button>
+          <button class="btn btn-share" id="btn-share" type="button" onclick="share()">SHARE</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Help / scene legend modal -->
+    <div class="modal" id="modal-help" hidden>
+      <div class="modal-card">
+        <div class="modal-bar">SCENE LEGEND</div>
+        <ul class="legend">
+          <li><span class="leg-key">tilt UP</span><span class="leg-val">ceiling shot · popcorn + halogen halo</span></li>
+          <li><span class="leg-key">tilt DOWN</span><span class="leg-val">shoes on tile · the floor classic</span></li>
+          <li><span class="leg-key">vertical, slight roll</span><span class="leg-val">club portrait · magenta + teal</span></li>
+          <li><span class="leg-key">tilt HARD LEFT</span><span class="leg-val">wall accident · stranger's shoulder</span></li>
+          <li><span class="leg-key">tilt HARD RIGHT</span><span class="leg-val">DJ booth blur · stage light bloom</span></li>
+          <li><span class="leg-key">slight UP + ROLL</span><span class="leg-val">selfie miss · half a face, mostly forehead</span></li>
+          <li><span class="leg-key">slight DOWN + ROLL</span><span class="leg-val">drink in hand · ice + condensation</span></li>
+        </ul>
+        <button class="btn btn-close" id="btn-close-help" type="button">got it</button>
+      </div>
+    </div>
+
+    <p class="best-on-mobile" id="best-on-mobile" hidden>
+      best on mobile (real tilt). desktop fallback works too — drag to tilt.
+    </p>
+  </div>
+
+  <script type="module" src="app.js"></script>
+  <script src="feedback.js" defer></script>
+</body>
+</html>
