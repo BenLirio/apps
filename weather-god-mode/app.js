@@ -214,7 +214,9 @@
     if (L >= 2 && R >= 4) return VERDICTS.find(v => v.id === 'stormbringer_apol');
     if (L >= 1 && R >= 2) return VERDICTS.find(v => v.id === 'tempest_chef');
 
-    if (sustained >= 18 && cov < 0.5) return VERDICTS.find(v => v.id === 'micromanager');
+    // sustained_pressure_seconds is roughly avg cloud_count * play_seconds,
+    // typically 200-1200 over a 60s session. >800 means heavy continuous tinkering.
+    if (sustained >= 800 && cov < 0.5 && T >= 12) return VERDICTS.find(v => v.id === 'micromanager');
     if (cov >= 0.75) return VERDICTS.find(v => v.id === 'cumulus_anarchist');
     if (cov >= 0.5) return VERDICTS.find(v => v.id === 'carpet_bomber');
 
@@ -1093,7 +1095,7 @@
       ['LIGHTNING STRUCK',  stats.lightning_count],
       ['RAIN VOLUME',       stats.rain_volume_units.toFixed(1) + ' units'],
       ['DROUGHT WINDOW',    Math.round(stats.drought_seconds) + 's'],
-      ['CLOUD-MASS HOURS',  stats.sustained_pressure_seconds.toFixed(1) + 's'],
+      ['PRESSURE INDEX',    Math.round(stats.sustained_pressure_seconds)],
       ['TOWN AFFECTED',     Math.round(stats.percent_townsfolk_affected * 100) + '%'],
       ['ROOFS / CROPS LIT', stats.fires_started],
       ['LIGHTHOUSE WAVE',   stats.keeper_waved ? 'YES' : 'no'],
