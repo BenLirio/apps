@@ -1,5 +1,21 @@
 (function () {
   var FEEDBACK_ENDPOINT = 'https://5c99bazuj0.execute-api.us-east-1.amazonaws.com/feedback';
+  var GA_MEASUREMENT_ID = 'G-DZ37BB6T3L';
+
+  // Inject Google Analytics if it isn't already present (apps generated after
+  // the GA rollout include the snippet inline in <head>; older apps rely on
+  // this injection). Idempotent: bails when gtag is already defined.
+  function installAnalytics() {
+    if (typeof window.gtag === 'function') return;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    window.gtag('config', GA_MEASUREMENT_ID);
+  }
 
   function detectSlug() {
     var seg = location.pathname.split('/').filter(Boolean);
@@ -52,6 +68,8 @@
   }
 
   function mount() {
+    installAnalytics();
+
     if (document.getElementById('ef-fb-style')) return;
     var style = document.createElement('style');
     style.id = 'ef-fb-style';
