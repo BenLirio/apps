@@ -200,6 +200,7 @@
 
     setStatus(card, msgFor(action) + '…');
     card.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    const priorUpdatedAt = a.updated_at || '';
     try {
       const resp = await fetch(endpoint, {
         method: 'POST',
@@ -209,11 +210,38 @@
       if (!resp.ok) throw new Error('http ' + resp.status);
       setStatus(card, doneMsg(action));
       card.classList.add('fading');
+      pollUntilLanded(slug, priorUpdatedAt);
     } catch (err) {
       setStatus(card, 'failed: ' + err.message);
       card.querySelectorAll('button').forEach(b => { b.disabled = false; });
     }
   }
+
+  // Pages redeploy + factory queue can take ~30–120s. Poll apps.json until the
+  // slug's updated_at advances (or it disappears, e.g. unknown slug edge case),
+  // then swap the in-memory apps[] and re-render so the card lands in its new
+  // tab without a manual reload.
+  async function pollUntilLanded(slug, priorUpdatedAt) {
+    const deadline = Date.now() + 180000;
+    while (Date.now() < deadline) {
+      await sleep(5000);
+      let next;
+      try {
+        const resp = await fetch('apps.json', { cache: 'no-store' });
+        if (!resp.ok) continue;
+        next = await resp.json();
+      } catch (_) { continue; }
+      const updated = next.find(x => x.slug === slug);
+      if (!updated || (updated.updated_at || '') > priorUpdatedAt) {
+        apps = next;
+        apps.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+        render();
+        return;
+      }
+    }
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   async function onNewIdea() {
     const result = await openTextModal({
