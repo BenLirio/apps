@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tonight's Sky — overhead, in twelve lenses</title>
+  <meta name="description" content="The sky directly above you, computed for tonight in twelve toggleable lenses. No accounts. No tracking. Pure-client astronomy.">
+  <meta property="og:title" content="Tonight's Sky">
+  <meta property="og:description" content="The sky directly above you, computed for tonight in twelve toggleable lenses.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/tonights-sky/">
+  <meta property="og:image" content="https://benlirio.com/apps/tonights-sky/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Tonight's Sky">
+  <meta name="twitter:description" content="The sky directly above you, computed for tonight in twelve toggleable lenses.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/tonights-sky/og.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main id="app">
+    <header class="masthead">
+      <div class="masthead-l">
+        <div class="brand">// TONIGHT'S SKY</div>
+        <div class="kicker" id="kicker">computing overhead conditions…</div>
+      </div>
+      <div class="masthead-r">
+        <button id="locBtn" class="loc-btn" type="button" aria-label="Set location">
+          <span class="loc-dot"></span><span id="locLabel">— · —</span>
+        </button>
+      </div>
+    </header>
+
+    <section class="hero" aria-label="Sky dome">
+      <div class="dome-wrap">
+        <canvas id="dome" width="800" height="800"></canvas>
+        <div class="dome-cardinals" aria-hidden="true">
+          <span class="card n">N</span><span class="card e">E</span>
+          <span class="card s">S</span><span class="card w">W</span>
+        </div>
+        <div class="dome-stamp" id="domeStamp">// LENS · VISIBLE</div>
+      </div>
+      <div class="caption" id="caption">— scanning · pinning to local sidereal time —</div>
+    </section>
+
+    <nav class="lenses" aria-label="Lens selector">
+      <div class="lens-strip" id="lensStrip" role="tablist"></div>
+    </nav>
+
+    <section class="readout" id="readout">
+      <div class="readout-cell"><span class="rl">jd</span><span class="rv" id="rvJd">—</span></div>
+      <div class="readout-cell"><span class="rl">lst</span><span class="rv" id="rvLst">—</span></div>
+      <div class="readout-cell"><span class="rl">moon</span><span class="rv" id="rvMoon">—</span></div>
+      <div class="readout-cell"><span class="rl">sun</span><span class="rv" id="rvSun">—</span></div>
+      <div class="readout-cell"><span class="rl">bortle</span><span class="rv" id="rvBortle">—</span></div>
+      <div class="readout-cell"><span class="rl">visible</span><span class="rv" id="rvVisible">—</span></div>
+    </section>
+
+    <section class="cal" aria-label="Sixty-night calendar">
+      <h2 class="cal-h"># SIXTY NIGHTS</h2>
+      <div class="cal-sub">moon phase + best target per night · today highlighted</div>
+      <div class="cal-grid" id="calGrid"></div>
+    </section>
+
+    <footer class="foot">
+      <p class="creed">no accounts · no tracking · no analytics · free forever</p>
+      <p class="creed-sub">all positions computed in your browser from Meeus and Schlyter algorithms · J2000 catalog · accurate to ~0.5° for naked-eye targets</p>
+      <p class="permalink-row">
+        <button id="copyLink" class="link-btn" type="button">copy permalink ↩</button>
+        <span id="copyStatus" class="link-status"></span>
+      </p>
+    </footer>
+
+    <dialog id="locDialog" class="loc-dialog">
+      <form method="dialog" id="locForm">
+        <h3 class="dlg-h">// SET OBSERVER</h3>
+        <p class="dlg-sub">your latitude/longitude is used only in your browser, never transmitted</p>
+        <button id="geoBtn" class="dlg-act" type="button">use my location ↗</button>
+        <div class="dlg-or">— or pick a city —</div>
+        <select id="cityPick" class="dlg-input">
+          <option value="">choose a city</option>
+        </select>
+        <div class="dlg-or">— or enter coordinates —</div>
+        <div class="dlg-row">
+          <input id="latIn" class="dlg-input" type="number" step="0.001" min="-90" max="90" placeholder="lat">
+          <input id="lonIn" class="dlg-input" type="number" step="0.001" min="-180" max="180" placeholder="lon">
+        </div>
+        <div class="dlg-actions">
+          <button class="dlg-cancel" type="button" id="dlgCancel">cancel</button>
+          <button class="dlg-ok" id="dlgOk">apply</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+</body>
+</html>
