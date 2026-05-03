@@ -1,11 +1,11 @@
 // Sketch Trial — Bureau of Forensic Sketch Evaluation
-// Deterministic stroke-geometry analysis → archetype verdict → riso wanted poster
+// AI vision analyzes the user's actual sketch → bureau wanted-poster verdict
 
 const SLUG = 'sketch-trial';
-const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
+const VISION_ENDPOINT = 'https://sm3y7y9t2a.execute-api.us-east-1.amazonaws.com/vision';
 
 // ------------------------------------------------------------------
-// Crime catalog (16 absurd-but-petty crimes; each chosen by daily-rotating seed)
+// Crime catalog (absurd-but-petty crimes; chosen by daily-rotating seed)
 // ------------------------------------------------------------------
 const CRIMES = [
   "stole the last bagel",
@@ -30,44 +30,34 @@ const CRIMES = [
 ];
 
 // ------------------------------------------------------------------
-// 30-archetype catalog. Each has the bureau-poster fixings.
-// The verdict is deterministic — we map metrics + crime-seed onto this list.
+// Fallback archetype catalog — used only when vision fails or sketch is empty.
+// The vision model produces its own archetype name normally.
 // ------------------------------------------------------------------
-const ARCHETYPES = [
-  { name: "The Lateral Brunch Bandit",      age: [28, 36], wear: "performative running shoes", aka: "the Avocado Ghost" },
-  { name: "The Petty Cash Phantom",         age: [42, 58], wear: "a beige half-zip",           aka: "Receipts McGraw" },
-  { name: "The Open-Plan Ogre",             age: [34, 47], wear: "noise-canceling headphones", aka: "He Who Heats Salmon" },
-  { name: "The Carpool Lane Cassanova",     age: [26, 38], wear: "wraparound sunglasses",      aka: "The Solo Diamond" },
-  { name: "The Inbox Incendiary",           age: [29, 44], wear: "a lanyard from a 2019 conference", aka: "Two-Sigma Dave" },
-  { name: "The Spice Rack Vigilante",       age: [31, 49], wear: "a pristine apron with no stains", aka: "The Cumin Auditor" },
-  { name: "The Costco Counterfeiter",       age: [33, 52], wear: "a flour-dusted cardigan (suspect)", aka: "Rotisserie Pete" },
-  { name: "The Fruit Bowl Hostage-Taker",   age: [25, 39], wear: "an HR-issued employee-of-the-month pin", aka: "The Ninth-Day Grape" },
-  { name: "The Single-Floor Elevator Sphinx", age: [37, 55], wear: "leather loafers and a sigh", aka: "The Atrium Whisperer" },
-  { name: "The Office Pen Pilgrim",         age: [22, 33], wear: "three pens in one pocket",   aka: "The Bic Migrator" },
-  { name: "The Trial Subscription Houdini", age: [19, 29], wear: "a hoodie and a free t-shirt", aka: "The 14-Day Ghost" },
-  { name: "The Matcha Skeptic",             age: [24, 35], wear: "a tote bag with one earnest book", aka: "The Counter-Lurker" },
-  { name: "The One-Star Avenger",           age: [33, 51], wear: "a Bluetooth earpiece in 2026", aka: "The Napkin Inspector" },
-  { name: "The Metal Fork Marauder",        age: [27, 45], wear: "a slightly-too-clean tupperware", aka: "Tines McGee" },
-  { name: "The Printer Tray Defector",      age: [30, 48], wear: "a clip-on badge dangling at the wrong angle", aka: "Out-of-Toner Toni" },
-  { name: "The Pedestrian-Mall Motorist",   age: [40, 60], wear: "a polo and a confident misunderstanding", aka: "The Bollard Tester" },
-  { name: "The No-Agenda Calendar Goblin",  age: [35, 52], wear: "a Patagonia fleece dating to 2017", aka: "Sync-Up Steve" },
-  { name: "The Yoga Mat Reverser",          age: [29, 41], wear: "a bamboo-fiber tank top",    aka: "The Wrong-Way Warrior" },
-  { name: "The Wake Double-Dipper",         age: [44, 62], wear: "a tie chosen for the buffet", aka: "Black-Tie Crouton" },
-  { name: "The Rotisserie Reaper",          age: [36, 54], wear: "a tote stained with rosemary", aka: "The Plastic Bag Smuggler" },
-  { name: "The Library Book Returner-of-Doom", age: [29, 43], wear: "a cardigan with a coffee horizon", aka: "Spine-Cracker Sue" },
-  { name: "The Polite Tailgater",           age: [31, 47], wear: "a knit beanie indoors",       aka: "Two-Foot Tony" },
-  { name: "The Quiet Loud-Talker",          age: [38, 52], wear: "a hands-free earpiece, on",   aka: "Decibel Dan" },
-  { name: "The Punctuation Outlaw",         age: [21, 31], wear: "a thrifted blazer over a meme tee", aka: "The Comma Splicer" },
-  { name: "The Aggressively Polite Driver", age: [55, 70], wear: "driving gloves in spring",    aka: "Mr. After-You" },
-  { name: "The Fluorescent-Light Whisperer", age: [27, 38], wear: "a pencil skirt and conviction", aka: "The Bulb Inspector" },
-  { name: "The Tip-Jar Architect",          age: [23, 34], wear: "an apron with three button pins", aka: "Round-Up Rita" },
-  { name: "The Group Chat Necromancer",     age: [26, 39], wear: "a soft hoodie at 11:43pm",    aka: "The 'remember when' Reviver" },
-  { name: "The Salad Bar Strategist",       age: [33, 50], wear: "a slightly-bowed plate",      aka: "The Topping Triangulator" },
-  { name: "The Espresso Window Loiterer",   age: [28, 42], wear: "a denim jacket and 2.5 dogs", aka: "Macchiato Mike" }
+const FALLBACK_ARCHETYPES = [
+  { name: "The Lateral Brunch Bandit",       age: [28, 36], wear: "performative running shoes",         aka: "the Avocado Ghost" },
+  { name: "The Petty Cash Phantom",          age: [42, 58], wear: "a beige half-zip",                   aka: "Receipts McGraw" },
+  { name: "The Open-Plan Ogre",              age: [34, 47], wear: "noise-canceling headphones",          aka: "He Who Heats Salmon" },
+  { name: "The Carpool Lane Cassanova",      age: [26, 38], wear: "wraparound sunglasses",               aka: "The Solo Diamond" },
+  { name: "The Inbox Incendiary",            age: [29, 44], wear: "a 2019 conference lanyard",           aka: "Two-Sigma Dave" },
+  { name: "The Spice Rack Vigilante",        age: [31, 49], wear: "a pristine apron with no stains",     aka: "The Cumin Auditor" },
+  { name: "The Costco Counterfeiter",        age: [33, 52], wear: "a flour-dusted cardigan",             aka: "Rotisserie Pete" },
+  { name: "The Fruit Bowl Hostage-Taker",    age: [25, 39], wear: "an employee-of-the-month pin",        aka: "The Ninth-Day Grape" },
+  { name: "The Single-Floor Elevator Sphinx",age: [37, 55], wear: "leather loafers and a sigh",          aka: "The Atrium Whisperer" },
+  { name: "The Office Pen Pilgrim",          age: [22, 33], wear: "three pens in one pocket",            aka: "The Bic Migrator" },
+  { name: "The Trial Subscription Houdini",  age: [19, 29], wear: "a hoodie and a free t-shirt",         aka: "The 14-Day Ghost" },
+  { name: "The Matcha Skeptic",              age: [24, 35], wear: "a tote bag with one earnest book",    aka: "The Counter-Lurker" },
+  { name: "The One-Star Avenger",            age: [33, 51], wear: "a Bluetooth earpiece in 2026",        aka: "The Napkin Inspector" },
+  { name: "The Metal Fork Marauder",         age: [27, 45], wear: "a slightly-too-clean tupperware",     aka: "Tines McGee" },
+  { name: "The Printer Tray Defector",       age: [30, 48], wear: "a clip-on badge at the wrong angle",  aka: "Out-of-Toner Toni" },
+  { name: "The Pedestrian-Mall Motorist",    age: [40, 60], wear: "a polo and a confident misunderstanding", aka: "The Bollard Tester" },
+  { name: "The No-Agenda Calendar Goblin",   age: [35, 52], wear: "a Patagonia fleece dating to 2017",   aka: "Sync-Up Steve" },
+  { name: "The Yoga Mat Reverser",           age: [29, 41], wear: "a bamboo-fiber tank top",             aka: "The Wrong-Way Warrior" },
+  { name: "The Wake Double-Dipper",          age: [44, 62], wear: "a tie chosen for the buffet",         aka: "Black-Tie Crouton" },
+  { name: "The Library Book Returner-of-Doom",age: [29, 43], wear: "a cardigan with a coffee horizon",   aka: "Spine-Cracker Sue" }
 ];
 
 // ------------------------------------------------------------------
-// Hash + seeded RNG (deterministic given drawing + crime)
+// Hash + seeded RNG
 // ------------------------------------------------------------------
 function hashStr(s) {
   let h = 2166136261 >>> 0;
@@ -85,9 +75,6 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-function pickSeeded(arr, seed) { return arr[seed % arr.length]; }
-
-// Daily-rotating crime: today's date hashed into the crimes list
 function todaysCrimeIndex() {
   const d = new Date();
   const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -98,12 +85,11 @@ function todaysCrimeIndex() {
 // State
 // ------------------------------------------------------------------
 const state = {
-  strokes: [],          // [{points: [{x,y,t}], color}]
+  strokes: [],
   current: null,
   crimeIdx: 0,
   caseNo: '',
-  metrics: null,
-  archetype: null
+  verdict: null
 };
 
 // ------------------------------------------------------------------
@@ -122,7 +108,7 @@ function bindEls() {
 }
 
 // ------------------------------------------------------------------
-// Canvas (HiDPI-aware via offscreen-render scale)
+// Canvas (HiDPI-aware)
 // ------------------------------------------------------------------
 let ctx, dpr = 1, cw = 600, ch = 600;
 function setupCanvas() {
@@ -139,23 +125,19 @@ function setupCanvas() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     redraw();
   }
-  // Use rAF after first layout to dodge first-load stretch
   requestAnimationFrame(resize);
-  // Re-size on viewport changes
   window.addEventListener('resize', resize);
   if ('ResizeObserver' in window) {
     const ro = new ResizeObserver(resize);
     ro.observe(canvas.parentElement);
   }
 
-  // Pointer events — covers mouse + touch + pen uniformly
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointercancel', onPointerUp);
   canvas.addEventListener('pointerleave', onPointerUp);
 
-  // Suppress gestures / context-menu hijacks on the drawing surface
   ['touchstart','touchmove','touchend','gesturestart','gesturechange','gestureend','contextmenu']
     .forEach(ev => canvas.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
 }
@@ -183,14 +165,12 @@ function onPointerMove(ev) {
   ev.preventDefault();
   const p = pointFromEvent(ev);
   const last = state.current.points[state.current.points.length - 1];
-  // Skip jitter
   if (last && Math.hypot(p.x - last.x, p.y - last.y) < 0.6) return;
   state.current.points.push(p);
   drawStroke(state.current, true);
 }
 function onPointerUp(ev) {
   if (!state.current) return;
-  // Drop empty/dot strokes that only have one point — convert to a small dot
   if (state.current.points.length === 1) {
     const p = state.current.points[0];
     state.current.points.push({ x: p.x + 0.6, y: p.y + 0.6, t: p.t + 1 });
@@ -201,7 +181,6 @@ function onPointerUp(ev) {
 
 function drawStroke(stroke, partial) {
   if (partial) {
-    // Append the last segment to whatever's on the canvas
     const pts = stroke.points;
     if (pts.length < 2) return;
     const a = pts[pts.length - 2], b = pts[pts.length - 1];
@@ -268,8 +247,7 @@ function bindToolbar() {
   els['submit'].addEventListener('click', onSubmit);
   els['retry']?.addEventListener('click', () => {
     state.strokes = [];
-    state.metrics = null;
-    state.archetype = null;
+    state.verdict = null;
     redraw();
     updateStrokeCount();
     els['canvas-overlay'].classList.remove('gone');
@@ -280,219 +258,121 @@ function bindToolbar() {
 }
 
 // ------------------------------------------------------------------
-// Stroke geometry: deterministic feature extraction
+// Vision call: send the sketch + crime to the bureau, get a JSON verdict
 // ------------------------------------------------------------------
-function computeMetrics(strokes, W, H) {
-  // Degenerate input → minimal metrics
-  if (!strokes || strokes.length === 0) {
-    return null;
-  }
+async function bureauAnalyze(sketchDataUrl, crime) {
+  const prompt =
+`You are the Bureau of Forensic Sketch Evaluation, a fictional deadpan-bureaucratic agency. A citizen has hand-drawn the suspect they imagine for an absurdly petty crime. Look carefully at the actual sketch and produce a wanted-poster verdict that REACTS to what you literally see in the drawing.
 
-  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-  let totalLen = 0;
-  let totalPts = 0;
-  let inkPx = 0;
-  let xSum = 0, ySum = 0;
-  let xSumWeighted = 0;
-  let strokeLengths = [];
-  let strokeCount = 0;
-  let angleChanges = 0;
-  let sharpAngles = 0;
+Crime under investigation: "${crime}".
 
-  for (const s of strokes) {
-    const pts = s.points;
-    if (!pts || pts.length < 2) continue;
-    strokeCount++;
-    let len = 0;
-    let prevAngle = null;
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i];
-      if (p.x < xMin) xMin = p.x;
-      if (p.x > xMax) xMax = p.x;
-      if (p.y < yMin) yMin = p.y;
-      if (p.y > yMax) yMax = p.y;
-      xSum += p.x;
-      ySum += p.y;
-      totalPts++;
-      if (i > 0) {
-        const dx = p.x - pts[i-1].x;
-        const dy = p.y - pts[i-1].y;
-        const seg = Math.hypot(dx, dy);
-        len += seg;
-        inkPx += seg * 3; // approx pen width 3
-        if (seg > 0.2) {
-          const ang = Math.atan2(dy, dx);
-          if (prevAngle !== null) {
-            let d = ang - prevAngle;
-            // wrap to [-pi, pi]
-            while (d > Math.PI) d -= 2 * Math.PI;
-            while (d < -Math.PI) d += 2 * Math.PI;
-            const ad = Math.abs(d);
-            angleChanges += ad;
-            if (ad > Math.PI / 3) sharpAngles++;
-          }
-          prevAngle = ang;
-        }
-      }
-    }
-    strokeLengths.push(len);
-    totalLen += len;
-  }
-
-  if (totalPts === 0) return null;
-
-  const cx = xSum / totalPts;
-  const cy = ySum / totalPts;
-  const bbW = Math.max(1, xMax - xMin);
-  const bbH = Math.max(1, yMax - yMin);
-  const aspect = bbW / bbH; // > 1 wide; < 1 tall
-  const inkDensity = Math.min(1, inkPx / (bbW * bbH + 1));
-  const avgStrokeLen = totalLen / Math.max(1, strokeCount);
-  const verticalAsymmetry = ((cy - (yMin + bbH / 2)) / bbH); // - = top-heavy, + = bottom-heavy
-  const horizontalAsymmetry = ((cx - (xMin + bbW / 2)) / bbW);
-  const spikiness = sharpAngles / Math.max(1, totalPts);
-  const centroidOffset = Math.hypot((cx - W/2) / W, (cy - H/2) / H);
-
-  return {
-    strokeCount,
-    totalPts,
-    totalLen: Math.round(totalLen),
-    avgStrokeLen: Math.round(avgStrokeLen),
-    aspect: round2(aspect),
-    bbW: Math.round(bbW),
-    bbH: Math.round(bbH),
-    inkDensity: round3(inkDensity),
-    verticalAsymmetry: round3(verticalAsymmetry),
-    horizontalAsymmetry: round3(horizontalAsymmetry),
-    spikiness: round3(spikiness),
-    centroidOffset: round3(centroidOffset),
-    angleSum: Math.round(angleChanges * 10) / 10,
-    canvasW: W,
-    canvasH: H
-  };
-}
-const round2 = (n) => Math.round(n * 100) / 100;
-const round3 = (n) => Math.round(n * 1000) / 1000;
-
-// Compress geometry into a stable digest used as the seed
-function metricsDigest(m) {
-  if (!m) return 0;
-  const s = [
-    m.strokeCount, m.totalLen, m.avgStrokeLen,
-    Math.round(m.aspect * 100),
-    Math.round(m.inkDensity * 1000),
-    Math.round(m.verticalAsymmetry * 1000),
-    Math.round(m.horizontalAsymmetry * 1000),
-    Math.round(m.spikiness * 1000),
-    Math.round(m.centroidOffset * 1000)
-  ].join('|');
-  return hashStr(s);
+Output strict JSON with EXACTLY these keys (no extra keys, no commentary, no markdown fences):
+{
+  "archetype_name": "<grand bureaucratic suspect name, 4-7 words, beginning with 'The'. Match the energy of what you see AND the absurd crime. Examples: 'The Lateral Brunch Bandit', 'The Petty Cash Phantom', 'The Open-Plan Ogre'.>",
+  "aka": "<street alias, 2-4 words. Examples: 'the Avocado Ghost', 'Receipts McGraw', 'Tines McGee'.>",
+  "age": <integer 19-72 that fits the drawn suspect's vibe>,
+  "wear": "<short clothing/accessory description, 3-7 words. Examples: 'performative running shoes', 'a beige half-zip'.>",
+  "forensic_notes": [<exactly 4 strings>],
+  "last_seen": "<ONE sentence beginning 'last seen', max 22 words, mentioning an oddly specific location or behavior. Don't name the suspect or the crime.>"
 }
 
-// ------------------------------------------------------------------
-// Verdict mapping (deterministic): combine metrics digest with crime
-// ------------------------------------------------------------------
-function pickArchetype(metrics, crimeIdx) {
-  if (!metrics) {
-    // Fallback for "submitted with no drawing" — pick by crime alone
-    return ARCHETYPES[crimeIdx % ARCHETYPES.length];
-  }
-  const seed = (metricsDigest(metrics) ^ hashStr('crime:' + crimeIdx)) >>> 0;
-  return ARCHETYPES[seed % ARCHETYPES.length];
-}
+forensic_notes rules:
+- Each entry is a SINGLE deadpan-bureaucratic observation (8-14 words) about something you actually see in the sketch — features present or missing, asymmetries, expression, posture, distinctive marks, or the geometry of the drawing itself. Frame as bureau evidence.
+- Tone examples: "subject's left eyebrow set materially higher than the right", "minimal facial structure suggests decisive avoidance of accountability", "asymmetric grin consistent with light-to-moderate smug behavior", "no visible ears; the bureau finds this concerning".
+- No emojis. No quotes inside the strings. No hashtags.
 
-function buildExhibits(m) {
-  if (!m) return [];
-  const aspectLabel = m.aspect > 1.15 ? 'wide-set' : m.aspect < 0.85 ? 'narrow' : 'symmetrical';
-  const inkLabel = m.inkDensity > 0.18 ? 'heavy-handed' : m.inkDensity > 0.07 ? 'measured' : 'restrained';
-  const spikeLabel = m.spikiness > 0.06 ? 'severe' : m.spikiness > 0.025 ? 'tense' : 'soft';
-  const vertLabel = m.verticalAsymmetry > 0.08 ? 'low-set jaw' : m.verticalAsymmetry < -0.08 ? 'high brow' : 'balanced';
-
-  return [
-    { k: `bounding aspect`,         v: `${m.aspect}  (${aspectLabel})` },
-    { k: `ink density`,             v: `${(m.inkDensity * 100).toFixed(1)}%  (${inkLabel})` },
-    { k: `stroke count`,            v: `${m.strokeCount}` },
-    { k: `avg stroke length`,       v: `${m.avgStrokeLen}px` },
-    { k: `vertical asymmetry`,      v: `${m.verticalAsymmetry}  (${vertLabel})` },
-    { k: `eyebrow spikiness index`, v: `${m.spikiness}  (${spikeLabel})` },
-    { k: `centroid offset`,         v: `${m.centroidOffset}` }
-  ];
-}
-
-// ------------------------------------------------------------------
-// Last-seen line: optional one LLM call, with deterministic fallback
-// ------------------------------------------------------------------
-function deterministicLastSeen(arch, crime, m, seed) {
-  const rng = mulberry32(seed);
-  const places = [
-    "near the cold-brew tap of an unfamiliar kitchen",
-    "lurking by a public-library return slot at 4:51pm",
-    "approaching a shared spice rack with intent",
-    "exiting an elevator one floor below their stated destination",
-    "reaching toward an unattended fruit bowl",
-    "loitering near a printer with no paper in tray 2",
-    "merging without signaling at moderate speeds",
-    "queueing for matcha with apparent unease",
-    "circling the breakroom in a clockwise pattern",
-    "stationed at a buffet, hovering over the dip",
-    "browsing greeting cards with no recipient in mind",
-    "asking the barista a clarifying question of low yield",
-    "watching the printer warm up like it owes them money",
-    "making aggressive eye contact with a self-checkout screen"
-  ];
-  const tells = [
-    "no apparent remorse",
-    "a half-empty stainless water bottle, sweating",
-    "a confident misunderstanding of office hours",
-    "earpods in, conversing audibly with no one",
-    "a slightly bowed posture suggesting a recent buffet",
-    "knowingly broken Bluetooth earpiece",
-    "an air of professional vagueness",
-    "fingertips faintly stained with whatever they touched last"
-  ];
-  const place = places[Math.floor(rng() * places.length)];
-  const tell = tells[Math.floor(rng() * tells.length)];
-  const ageMin = arch.age[0], ageMax = arch.age[1];
-  const ageRange = ageMax - ageMin + 1;
-  const age = ageMin + Math.floor(rng() * ageRange);
-  return { age, line: `last seen ${place} wearing ${arch.wear}, ${tell}.` };
-}
-
-async function maybeLLMLine(arch, crime, m, seed) {
-  // Deterministic baseline (used as fallback + age source)
-  const det = deterministicLastSeen(arch, crime, m, seed);
+Output ONLY the JSON object.`;
 
   try {
-    const res = await fetch(AI_ENDPOINT, {
+    const res = await fetch(VISION_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         slug: SLUG,
-        max_tokens: 80,
-        messages: [
-          {
-            role: 'system',
-            content: 'You write a single "last seen" line for a fake wanted-poster. ONE sentence, max 22 words. Start with "last seen". Mention an oddly specific location or behavior. Do not name the suspect. Do not name the crime. No emojis. No quotes. No hashtags. Tone: deadpan-bureaucratic, faintly absurd.'
-          },
-          {
-            role: 'user',
-            content: `Suspect archetype: ${arch.name}. Known to wear: ${arch.wear}. Crime under investigation: ${crime}. Write the "last seen" line.`
-          }
-        ]
+        image: sketchDataUrl,
+        prompt,
+        response_format: 'json_object'
       })
     });
     if (!res.ok) throw new Error('http_' + res.status);
     const data = await res.json();
-    let line = (data.content || '').trim();
-    // Sanitize: strip leading/trailing quotes, trim length, ensure starts lowercase 'last seen'
-    line = line.replace(/^["'\s]+|["'\s]+$/g, '');
-    if (line && line.length < 240) {
-      // Ensure it begins "last seen" or close
-      if (!/^last seen/i.test(line)) line = 'last seen ' + line.replace(/^[a-z]/, c => c.toLowerCase());
-      return { age: det.age, line };
-    }
-  } catch (_) { /* fall through */ }
-  return det;
+    const text = (data.text || '').trim();
+    if (!text) throw new Error('no_text');
+    return normalizeVerdict(JSON.parse(text));
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeVerdict(v) {
+  if (!v || typeof v !== 'object') return null;
+  const name = String(v.archetype_name || '').trim();
+  if (!name) return null;
+  const notes = Array.isArray(v.forensic_notes)
+    ? v.forensic_notes.filter(s => typeof s === 'string' && s.trim()).slice(0, 5).map(s => s.trim())
+    : [];
+  if (notes.length < 2) return null;
+  return {
+    name: name.toUpperCase(),
+    aka: String(v.aka || '').trim() || 'unknown',
+    age: clampInt(v.age, 19, 72, 32),
+    wear: String(v.wear || '').trim() || 'nondescript clothing',
+    forensic_notes: notes,
+    last_seen: String(v.last_seen || '').trim() || 'last seen leaving the area without explanation.'
+  };
+}
+function clampInt(n, lo, hi, def) {
+  const x = parseInt(n, 10);
+  if (!Number.isFinite(x)) return def;
+  return Math.max(lo, Math.min(hi, x));
+}
+
+// ------------------------------------------------------------------
+// Deterministic fallback verdict — used if vision fails or no strokes
+// ------------------------------------------------------------------
+function fallbackVerdict(crime, strokeCount) {
+  const seed = (hashStr(crime) ^ Math.imul(strokeCount + 1, 2654435761)) >>> 0;
+  const rng = mulberry32(seed);
+  const arch = FALLBACK_ARCHETYPES[seed % FALLBACK_ARCHETYPES.length];
+  const ageRange = arch.age[1] - arch.age[0] + 1;
+  const age = arch.age[0] + Math.floor(rng() * ageRange);
+  const places = [
+    "near the cold-brew tap of an unfamiliar kitchen",
+    "lurking by a public-library return slot at 4:51pm",
+    "exiting an elevator one floor below their stated destination",
+    "queueing for matcha with apparent unease",
+    "hovering over a self-checkout screen",
+    "loitering near a printer with no paper in tray 2"
+  ];
+  const tells = [
+    "no apparent remorse",
+    "an air of professional vagueness",
+    "earpods in, conversing audibly with no one",
+    "fingertips faintly stained with whatever they touched last"
+  ];
+  const place = places[Math.floor(rng() * places.length)];
+  const tell  = tells[Math.floor(rng() * tells.length)];
+  const notes = strokeCount === 0
+    ? [
+        "no sketch on file; the suspect's likeness remains pending",
+        "absence of evidence considered, on this occasion, evidence of avoidance",
+        "case advanced regardless, per Bureau Protocol 14-B",
+        "subject described in archives as 'remarkably unremarkable'"
+      ]
+    : [
+        "submitted sketch reviewed by on-call bureau examiner",
+        "preliminary evidence consistent with prior incidents in this docket",
+        "facial features inconclusive but match the cataloged archetype",
+        "case advanced to wanted-poster stage pending no further appeal"
+      ];
+  return {
+    name: arch.name.toUpperCase(),
+    aka: arch.aka,
+    age,
+    wear: arch.wear,
+    forensic_notes: notes,
+    last_seen: `last seen ${place} wearing ${arch.wear}, ${tell}.`
+  };
 }
 
 // ------------------------------------------------------------------
@@ -502,70 +382,92 @@ function showStage(id) {
   ['brief-stage','loading-stage','poster-stage'].forEach(s => {
     els[s].hidden = (s !== id);
   });
-  // Scroll to top of stage
   window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
 }
 
 const LOADING_LINES = [
-  "measuring eyebrow severity…",
-  "indexing jaw set against the catalog…",
-  "running stroke geometry through the archetype filter…",
-  "cross-referencing with prior offenders…",
-  "consulting the senior sketch artist…",
+  "examining the suspect's likeness…",
+  "consulting the bureau's archives…",
+  "comparing against prior offenders…",
+  "convening the panel of senior sketch artists…",
   "stamping case file CONFIDENTIAL…",
-  "verifying centroid offset…"
+  "drafting the wanted poster…",
+  "verifying chain of custody on Exhibit A…"
 ];
 
 async function onSubmit() {
-  // If they truly drew nothing, still allow it (deterministic verdict by crime)
-  const m = computeMetrics(state.strokes, cw, ch);
-  state.metrics = m;
   const crime = CRIMES[state.crimeIdx];
-  const arch = pickArchetype(m, state.crimeIdx);
-  state.archetype = arch;
 
   showStage('loading-stage');
-  // Cycle loading lines
   let i = 0;
   els['loading-line'].textContent = LOADING_LINES[i];
   const ticker = setInterval(() => {
     i = (i + 1) % LOADING_LINES.length;
     els['loading-line'].textContent = LOADING_LINES[i];
-  }, 600);
+  }, 700);
 
-  // Capture sketch before LLM call (so it's ready regardless of network)
-  const sketchDataUrl = renderPosterSketchPNG();
+  // Render the decorated version for the poster (always)
+  const sketchForPoster = renderPosterSketchPNG();
 
-  // Seed for deterministic last-seen fallback
-  const seed = (metricsDigest(m || {}) ^ hashStr('lastseen:' + crime)) >>> 0;
-  const lastSeenP = maybeLLMLine(arch, crime, m, seed);
+  // Skip the vision call entirely if there's nothing drawn
+  let visionVerdict = null;
+  if (state.strokes.length > 0) {
+    const cleanForVision = renderCleanSketchForVision();
+    const visionP = bureauAnalyze(cleanForVision, crime);
+    const minDwell = new Promise(r => setTimeout(r, 1500));
+    [visionVerdict] = await Promise.all([visionP, minDwell]);
+  } else {
+    await new Promise(r => setTimeout(r, 1500));
+  }
 
-  // Min loading dwell: 1500ms — long enough to read at least 2 lines
-  const minDwell = new Promise(r => setTimeout(r, 1500));
-  const [lastSeen] = await Promise.all([lastSeenP, minDwell]);
+  const verdict = visionVerdict || fallbackVerdict(crime, state.strokes.length);
+  state.verdict = verdict;
 
   clearInterval(ticker);
-  renderPoster(arch, lastSeen, m, crime, sketchDataUrl);
+  renderPoster(verdict, crime, sketchForPoster);
   showStage('poster-stage');
   els['share'].classList.add('show');
 }
 
-// Render the user's actual sketch as a PNG at a reasonable size
+// Clean white-bg sketch for the vision model (no decorations to confuse it)
+function renderCleanSketchForVision(edge = 768) {
+  const out = document.createElement('canvas');
+  out.width = edge;
+  out.height = edge;
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, edge, edge);
+  const sx = edge / cw, sy = edge / ch;
+  octx.strokeStyle = '#000000';
+  octx.lineWidth = 4;
+  octx.lineCap = 'round';
+  octx.lineJoin = 'round';
+  for (const s of state.strokes) {
+    const pts = s.points;
+    if (!pts || pts.length < 2) continue;
+    octx.beginPath();
+    octx.moveTo(pts[0].x * sx, pts[0].y * sy);
+    for (let i = 1; i < pts.length; i++) {
+      octx.lineTo(pts[i].x * sx, pts[i].y * sy);
+    }
+    octx.stroke();
+  }
+  return out.toDataURL('image/jpeg', 0.85);
+}
+
+// Decorated sketch that goes onto the wanted poster
 function renderPosterSketchPNG() {
   const out = document.createElement('canvas');
   const W = 800, H = 800;
   out.width = W;
   out.height = H;
   const octx = out.getContext('2d');
-  // Paper background
   octx.fillStyle = '#fffaf0';
   octx.fillRect(0, 0, W, H);
-  // Light cross-hairs
   octx.strokeStyle = 'rgba(20,33,61,0.08)';
   octx.lineWidth = 1;
   octx.beginPath(); octx.moveTo(0, H/2); octx.lineTo(W, H/2); octx.stroke();
   octx.beginPath(); octx.moveTo(W/2, 0); octx.lineTo(W/2, H); octx.stroke();
-  // Suspect strokes (scaled)
   const sx = W / cw, sy = H / ch;
   octx.strokeStyle = '#14213d';
   octx.lineWidth = 4;
@@ -581,11 +483,9 @@ function renderPosterSketchPNG() {
     }
     octx.stroke();
   }
-  // Border + label
   octx.strokeStyle = '#14213d';
   octx.lineWidth = 6;
   octx.strokeRect(3, 3, W - 6, H - 6);
-  // Pink "EXHIBIT A" stamp
   octx.save();
   octx.translate(W - 100, 80);
   octx.rotate(-0.15);
@@ -600,38 +500,33 @@ function renderPosterSketchPNG() {
   return out.toDataURL('image/png');
 }
 
-function renderPoster(arch, lastSeen, m, crime, sketchDataUrl) {
-  els['poster-name'].textContent = arch.name.toUpperCase();
-  els['poster-meta'].textContent = `aka "${arch.aka}"  ·  age ${lastSeen.age}`;
+function renderPoster(verdict, crime, sketchDataUrl) {
+  els['poster-name'].textContent = verdict.name;
+  els['poster-meta'].textContent = `aka "${verdict.aka}"  ·  age ${verdict.age}  ·  ${verdict.wear}`;
   els['poster-charge'].textContent = `CHARGE: ${crime}`;
-  els['poster-lastseen'].textContent = lastSeen.line;
+  els['poster-lastseen'].textContent = verdict.last_seen;
   els['poster-sketch'].src = sketchDataUrl;
 
-  // Geometric exhibits list
   const list = els['poster-exhibits'];
   list.innerHTML = '';
-  for (const ex of buildExhibits(m)) {
+  for (const note of verdict.forensic_notes) {
     const li = document.createElement('li');
-    const k = document.createElement('span'); k.className = 'ex-key'; k.textContent = ex.k;
-    const v = document.createElement('span'); v.className = 'ex-val'; v.textContent = ex.v;
-    li.appendChild(k);
-    li.appendChild(v);
+    li.className = 'note';
+    li.textContent = note;
     list.appendChild(li);
   }
-  // File / date
   els['poster-file'].textContent = state.caseNo;
   const d = new Date();
   els['poster-date'].textContent = d.toISOString().slice(0, 10);
 }
 
 // ------------------------------------------------------------------
-// Crime prominence
+// Crime prominence / case number
 // ------------------------------------------------------------------
 function setCrime() {
   els['crime-text'].textContent = CRIMES[state.crimeIdx];
 }
 function setCaseNo() {
-  // Stable per-session case number for narrative anchoring
   const n = (Math.floor(Math.random() * 9000) + 1000);
   state.caseNo = `BFSE-${new Date().getFullYear()}-${n}`;
   els['case-no'].textContent = `CASE NO. ${state.caseNo}`;
@@ -641,9 +536,9 @@ function setCaseNo() {
 // Share
 // ------------------------------------------------------------------
 function share() {
-  const arch = state.archetype;
-  const text = arch
-    ? `the bureau identified me as ${arch.name}.`
+  const v = state.verdict;
+  const text = v
+    ? `the bureau identified me as ${toTitleCase(v.name)}.`
     : `the bureau is reviewing my sketch.`;
   if (navigator.share) {
     navigator.share({ title: document.title, text, url: location.href }).catch(() => {});
@@ -655,6 +550,9 @@ function share() {
     alert(location.href);
   }
 }
+function toTitleCase(s) {
+  return s.toLowerCase().replace(/(^|\s)\S/g, t => t.toUpperCase());
+}
 window.share = share;
 
 // ------------------------------------------------------------------
@@ -662,7 +560,6 @@ window.share = share;
 // ------------------------------------------------------------------
 function init() {
   bindEls();
-  // Daily-rotating crime, but allow re-roll
   state.crimeIdx = todaysCrimeIndex();
   setCrime();
   setCaseNo();

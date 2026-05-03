@@ -411,6 +411,26 @@ body::before {
 .exhibit-list .ex-key { color: var(--ink-soft); }
 .exhibit-list .ex-val { font-weight: 700; color: var(--ink); }
 
+/* AI-generated forensic notes — full-width, bullet-prefixed */
+.exhibit-list .note {
+  display: block;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+  padding: 7px 0 7px 18px;
+  position: relative;
+  letter-spacing: 0;
+}
+.exhibit-list .note::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  color: var(--pink-deep);
+  font-weight: 700;
+}
+
 .poster-bottom {
   border-top: 3px double var(--ink);
   padding-top: 10px;
