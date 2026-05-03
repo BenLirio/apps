@@ -2,13 +2,24 @@
 // One declaration at a time (no scrolling form). 10 questions chosen to feel
 // like things that quietly affect your health/wellbeing but you don't usually
 // audit yourself for — sunlight, hydration timing, the call you didn't make,
-// the breath you held, the hug you didn't ask for. Core arithmetic is fully
+// the laugh you missed, the hug you didn't ask for. Core arithmetic is fully
 // deterministic; an LLM generates only the closing signature line. Inputs +
 // signature are encoded into the URL fragment so shared links re-hydrate the
 // exact receipt without spending an LLM call.
+//
+// Every line item is capped at LINE_CAP regret units so no single declaration
+// can drown out the others; the receipt's formula text says "maximum penalty
+// applied" when the cap kicks in.
 
 const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
 const SLUG = 'ministry-of-minor-regrets';
+const LINE_CAP = 250;
+
+function capUnits(raw, formula) {
+  const r = Math.round(raw);
+  if (r > LINE_CAP) return { units: LINE_CAP, formula: 'maximum penalty applied' };
+  return { units: r, formula };
+}
 
 // ---------- Ministry benchmarks & per-line metadata ----------
 
@@ -21,7 +32,7 @@ const BENCHMARKS = {
   bed:     { benchmark: 0,  unitLabel: 'night', code: 'SLP-309', itemName: 'Bedside Device Encroachment Fee' },
   meal:    { benchmark: 0,  unitLabel: 'meal',  code: 'NUT-180', itemName: 'Distracted Mastication Surcharge' },
   outside: { benchmark: 1,  unitLabel: 'days',  code: 'OUT-444', itemName: 'Unmediated Air Deficit' },
-  breath:  { benchmark: 0,  unitLabel: 'time',  code: 'BRE-616', itemName: 'Parasympathetic Negligence' },
+  laugh:   { benchmark: 4,  unitLabel: 'hrs',   code: 'MTH-211', itemName: 'Mirth Deficit Citation' },
   hugs:    { benchmark: 4,  unitLabel: 'hug',   code: 'TCH-808', itemName: 'Touch-Quota Shortfall' },
 };
 
@@ -93,12 +104,12 @@ const STEPS = [
     inputmode: 'numeric',
   },
   {
-    key: 'breath',
-    label: 'Times today you noticed yourself holding your breath',
-    hint: 'Ministry benchmark: 0',
-    placeholder: 'e.g. 3',
-    step: 1, min: 0, max: 99,
-    inputmode: 'numeric',
+    key: 'laugh',
+    label: 'Hours since you last laughed out loud',
+    hint: 'Ministry benchmark: 4 hrs — registered mirth allotment',
+    placeholder: 'e.g. 9',
+    step: 0.5, min: 0, max: 168,
+    inputmode: 'decimal',
   },
   {
     key: 'hugs',
@@ -116,17 +127,19 @@ function computeSun(min) {
   // Below 60 min = solar deficit. Above 240 min = excess (peeling clerk).
   const deficit = Math.max(0, 60 - min);
   const excess = Math.max(0, min - 240);
-  const units = Math.round(deficit * 0.9 + excess * 0.4);
+  const raw = deficit * 0.9 + excess * 0.4;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 60-min daily allotment × 0.9`
+    : excess > 0
+      ? `${excess} min above 240-min ceiling × 0.4`
+      : 'within solar tolerance';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'sun',
     name: BENCHMARKS.sun.itemName,
     code: BENCHMARKS.sun.code,
     inputText: `${min} min sun`,
-    formula: deficit > 0
-      ? `${deficit} min below 60-min daily allotment × 0.9`
-      : excess > 0
-        ? `${excess} min above 240-min ceiling × 0.4`
-        : 'within solar tolerance',
+    formula,
     units,
   };
 }
@@ -134,22 +147,23 @@ function computeSun(min) {
 function computeCalled(days) {
   const b = BENCHMARKS.called.benchmark;
   const excess = Math.max(0, days - b);
-  let units = excess * 14;
-  if (days > 30) units += (days - 30) * 18;
-  if (days > 90) units += (days - 90) * 22;
-  units = Math.round(units);
+  let raw = excess * 14;
+  if (days > 30) raw += (days - 30) * 18;
+  if (days > 90) raw += (days - 90) * 22;
+  const baseFormula = days > 90
+    ? `${excess}d × 14, +escalation 30+ and 90+`
+    : days > 30
+      ? `${excess}d × 14, +escalation 30+`
+      : excess > 0
+        ? `${excess}d past 7-day benchmark × 14`
+        : 'filial contact current';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'called',
     name: BENCHMARKS.called.itemName,
     code: BENCHMARKS.called.code,
     inputText: `${days} day${days === 1 ? '' : 's'} since calling`,
-    formula: days > 90
-      ? `${excess}d × 14, +escalation 30+ and 90+`
-      : days > 30
-        ? `${excess}d × 14, +escalation 30+`
-        : excess > 0
-          ? `${excess}d past 7-day benchmark × 14`
-          : 'filial contact current',
+    formula,
     units,
   };
 }
@@ -158,15 +172,17 @@ function computeWater(hrs) {
   const b = BENCHMARKS.water.benchmark;
   const excess = Math.max(0, hrs - b);
   // 38 units per hour past 2-hour reach window.
-  const units = Math.round(excess * 38);
+  const raw = excess * 38;
+  const baseFormula = excess > 0
+    ? `${stripZeros(excess)}h past 2-hour reach window × 38`
+    : 'hydration current';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'water',
     name: BENCHMARKS.water.itemName,
     code: BENCHMARKS.water.code,
     inputText: `${stripZeros(hrs)}h since glass`,
-    formula: excess > 0
-      ? `${stripZeros(excess)}h past 2-hour reach window × 38`
-      : 'hydration current',
+    formula,
     units,
   };
 }
@@ -176,17 +192,18 @@ function computeSit(min) {
   const excess = Math.max(0, min - b);
   let raw = excess * 1.6;
   if (min > 120) raw += (min - 120) * 1.2;
-  const units = Math.min(Math.round(raw), 280);
+  const baseFormula = excess > 0
+    ? min > 120
+      ? `${excess} min past 60 × 1.6, +escalation 120+`
+      : `${excess} min past 60 × 1.6`
+    : 'posture rotation acceptable';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'sit',
     name: BENCHMARKS.sit.itemName,
     code: BENCHMARKS.sit.code,
     inputText: `${min} min unbroken sit`,
-    formula: excess > 0
-      ? min > 120
-        ? `${excess} min past 60 × 1.6, +escalation 120+`
-        : `${excess} min past 60 × 1.6`
-      : 'posture rotation acceptable',
+    formula,
     units,
   };
 }
@@ -194,15 +211,17 @@ function computeSit(min) {
 function computeQuiet(min) {
   // Reverse — fewer minutes of silence = more regret.
   const deficit = Math.max(0, BENCHMARKS.quiet.benchmark - min);
-  const units = Math.round(deficit * 8);
+  const raw = deficit * 8;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 15-min daily quiet allotment × 8`
+    : 'sufficient ambient quiet logged';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'quiet',
     name: BENCHMARKS.quiet.itemName,
     code: BENCHMARKS.quiet.code,
     inputText: `${min} min silence`,
-    formula: deficit > 0
-      ? `${deficit} min below 15-min daily quiet allotment × 8`
-      : 'sufficient ambient quiet logged',
+    formula,
     units,
   };
 }
@@ -211,32 +230,35 @@ function computeBed(nights) {
   // Each phone-at-pillow night: 26 units, +12 escalation past 3 nights.
   let raw = nights * 26;
   if (nights > 3) raw += (nights - 3) * 12;
-  const units = Math.round(raw);
+  const baseFormula = nights > 3
+    ? `${nights} × 26, +escalation past 3 nights`
+    : nights > 0
+      ? `${nights} × 26`
+      : 'bedside device-free';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'bed',
     name: BENCHMARKS.bed.itemName,
     code: BENCHMARKS.bed.code,
     inputText: `${nights} night${nights === 1 ? '' : 's'} phone-at-pillow`,
-    formula: nights > 3
-      ? `${nights} × 26, +escalation past 3 nights`
-      : nights > 0
-        ? `${nights} × 26`
-        : 'bedside device-free',
+    formula,
     units,
   };
 }
 
 function computeMeal(n) {
   // Each distracted meal: 35 units flat.
-  const units = Math.round(n * 35);
+  const raw = n * 35;
+  const baseFormula = n > 0
+    ? `${n} meal${n === 1 ? '' : 's'} eaten distracted × 35`
+    : 'mealtime attention undivided';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'meal',
     name: BENCHMARKS.meal.itemName,
     code: BENCHMARKS.meal.code,
     inputText: `${n} distracted meal${n === 1 ? '' : 's'}`,
-    formula: n > 0
-      ? `${n} meal${n === 1 ? '' : 's'} eaten distracted × 35`
-      : 'mealtime attention undivided',
+    formula,
     units,
   };
 }
@@ -246,36 +268,41 @@ function computeOutside(days) {
   const excess = Math.max(0, days - b);
   let raw = excess * 22;
   if (days > 7) raw += (days - 7) * 16;
-  const units = Math.round(raw);
+  const baseFormula = days > 7
+    ? `${excess}d past 1-day allowance × 22, +escalation 7+`
+    : excess > 0
+      ? `${excess}d past 1-day allowance × 22`
+      : 'outdoor exposure current';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'outside',
     name: BENCHMARKS.outside.itemName,
     code: BENCHMARKS.outside.code,
     inputText: `${days} day${days === 1 ? '' : 's'} unmediated air`,
-    formula: days > 7
-      ? `${excess}d past 1-day allowance × 22, +escalation 7+`
-      : excess > 0
-        ? `${excess}d past 1-day allowance × 22`
-        : 'outdoor exposure current',
+    formula,
     units,
   };
 }
 
-function computeBreath(n) {
-  // Each noticed held breath: 24 units, log escalation past 4.
-  let raw = n * 24;
-  if (n > 4) raw += 30 * Math.log10(1 + (n - 4));
-  const units = Math.min(Math.round(raw), 240);
+function computeLaugh(hrs) {
+  // Hours since last laugh. 18 units per hour past 4-hr benchmark,
+  // +12/hr escalation past the 12-hour mark.
+  const b = BENCHMARKS.laugh.benchmark;
+  const excess = Math.max(0, hrs - b);
+  let raw = excess * 18;
+  if (hrs > 12) raw += (hrs - 12) * 12;
+  const baseFormula = hrs > 12
+    ? `${stripZeros(excess)}h past 4-hr mirth allotment × 18, +escalation 12+`
+    : excess > 0
+      ? `${stripZeros(excess)}h past 4-hr mirth allotment × 18`
+      : 'mirth allotment current';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
-    key: 'breath',
-    name: BENCHMARKS.breath.itemName,
-    code: BENCHMARKS.breath.code,
-    inputText: `${n} held breath${n === 1 ? '' : 's'}`,
-    formula: n > 0
-      ? n > 4
-        ? `${n} × 24, +escalation past 4`
-        : `${n} × 24`
-      : 'autonomic equilibrium maintained',
+    key: 'laugh',
+    name: BENCHMARKS.laugh.itemName,
+    code: BENCHMARKS.laugh.code,
+    inputText: `${stripZeros(hrs)}h since laughter`,
+    formula,
     units,
   };
 }
@@ -283,15 +310,17 @@ function computeBreath(n) {
 function computeHugs(n) {
   // Reverse — fewer hugs = more regret. Benchmark 4.
   const deficit = Math.max(0, BENCHMARKS.hugs.benchmark - n);
-  const units = Math.round(deficit * 28);
+  const raw = deficit * 28;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 4-hug daily allotment × 28`
+    : 'tactile quota satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'hugs',
     name: BENCHMARKS.hugs.itemName,
     code: BENCHMARKS.hugs.code,
     inputText: `${n} hug${n === 1 ? '' : 's'}`,
-    formula: deficit > 0
-      ? `${deficit} short of 4-hug daily allotment × 28`
-      : 'tactile quota satisfied',
+    formula,
     units,
   };
 }
@@ -305,7 +334,7 @@ const FIELD_COMPUTE = {
   bed:     computeBed,
   meal:    computeMeal,
   outside: computeOutside,
-  breath:  computeBreath,
+  laugh:   computeLaugh,
   hugs:    computeHugs,
 };
 
@@ -376,10 +405,10 @@ function pickArchetype(items) {
       'The Earbudded Observer of the Untouched Park',
       'The Indoor Plant of Sub-Basement 4',
     ],
-    breath: [
-      'The Caught-Breath Bureaucrat of the Daily Inbox',
-      'The Held-Lung Notary of the Unread Memo',
-      'The Stilled-Diaphragm Diplomat of the Group Chat',
+    laugh: [
+      'The Mirth-Deficient Magistrate of the Long Tuesday',
+      'The Unsmiling Notary of the Conference Room',
+      'The Solemn Custodian of the Unlaughing Hour',
     ],
     hugs: [
       'The Touch-Starved Undersecretary of the Side Hug',
@@ -391,18 +420,20 @@ function pickArchetype(items) {
   const PAIR_OVERRIDES = {
     'called+hugs':    'The Estranged Embrace-Keeper of an Unmade Phone Call',
     'sit+sun':        'The Petrified Pale Magistrate of the Inner Window',
-    'bed+breath':     'The Caught-Breath Bedside Sentry of the Notification Glow',
+    'bed+laugh':      'The Unsmiling Bedside Sentry of the Notification Glow',
     'outside+quiet':  'The Indoor Plant of the Always-On Soundtrack',
     'meal+sit':       'The Stationary Diner of the Lit Lunchtime Screen',
-    'breath+water':   'The Parched, Held-Lung Clerk of the Late Memo',
+    'laugh+water':    'The Parched, Solemn Clerk of the Late Memo',
     'called+outside': 'The Estranged Indoor Diplomat of the Long Silence',
     'hugs+quiet':     'The Touch-Starved Audio Refugee of the Always-On Headphone',
-    'breath+sit':     'The Held-Breath Stationary Steward of the Forgotten Posture',
+    'laugh+sit':      'The Unsmiling Stationary Steward of the Forgotten Posture',
     'sun+water':      'The Pale, Parched Cartographer of the Inner Office',
     'bed+meal':       'The Bedside Diner of the Glowing Late Snack',
     'hugs+outside':   'The Touch-Starved Indoor Observer of the Untouched Park',
     'called+meal':    'The Distracted Forkkeeper of an Unmade Phone Call',
     'sun+outside':    'The Pale Indoor Plant of Sub-Basement 4',
+    'hugs+laugh':     'The Unembraced Magistrate of the Joyless Tuesday',
+    'called+laugh':   'The Estranged Notary of an Unringing Phone',
   };
 
   if (PAIR_OVERRIDES[pair] && top.units > 0 && second.units > 0) {
@@ -424,19 +455,20 @@ function pickArchetype(items) {
 }
 
 // ---------- URL fragment encode/decode ----------
-// v=3 schema: one short key per line item + sig.
+// v=4 schema: one short key per line item + sig.
 //   sn=sun, cl=called, wt=water, st=sit, qt=quiet, bd=bed,
-//   ml=meal, ot=outside, br=breath, hg=hugs, sig=base64(signature)
-// (v=2 was the previous question set — incompatible, intentionally not parsed.)
+//   ml=meal, ot=outside, lg=laugh, hg=hugs, sig=base64(signature)
+// (v=3 used br=breath; v=4 swapped breath for laugh + universal LINE_CAP.
+// Older fragments fall through and the user starts a fresh declaration.)
 
 const FRAG_KEYS = {
   sun: 'sn', called: 'cl', water: 'wt', sit: 'st', quiet: 'qt',
-  bed: 'bd', meal: 'ml', outside: 'ot', breath: 'br', hugs: 'hg',
+  bed: 'bd', meal: 'ml', outside: 'ot', laugh: 'lg', hugs: 'hg',
 };
 
 function encodeFragment(inputs, signature) {
   const p = new URLSearchParams();
-  p.set('v', '3');
+  p.set('v', '4');
   for (const k of Object.keys(FRAG_KEYS)) {
     p.set(FRAG_KEYS[k], String(inputs[k]));
   }
@@ -453,7 +485,7 @@ function decodeFragment(frag) {
   if (!frag || frag.length < 2) return null;
   const raw = frag.startsWith('#') ? frag.slice(1) : frag;
   const p = new URLSearchParams(raw);
-  if (p.get('v') !== '3') return null;
+  if (p.get('v') !== '4') return null;
   const num = (k) => {
     const v = p.get(k);
     if (v === null || v === '') return null;
@@ -486,7 +518,7 @@ const FALLBACK_SIG = {
   bed:     'Your phone slept beside you again, and now both of you are tired in slightly different ways.',
   meal:    'A meal occurred, the Ministry confirms, but no one in the room can describe the flavor.',
   outside: 'The doorway has filed a missing-person report on your behalf; please respond to the open air at your earliest.',
-  breath:  'You held a breath today and forgot to release it on the proper form, and the Ministry has noticed.',
+  laugh:   'A registered laugh has not crossed your lips in some time, and the Ministry has formally noted the silence.',
   hugs:    'A small backlog of unembraced hellos has accumulated; the Ministry recommends gentle correction.',
 };
 
