@@ -58,6 +58,11 @@ export class TiltControls {
         this.beta0 = e.beta;
         this.gamma0 = e.gamma;
         this.calibrated = true;
+        // Desktop Chrome/Firefox expose DeviceOrientationEvent but never fire
+        // it. Only declare authoritative tilt mode once a real event arrives;
+        // otherwise the keyboard/drag fallback (gated by mode !== "tilt")
+        // would be locked out and the app would feel broken on desktop.
+        this.mode = "tilt";
       }
       const dBeta = e.beta - this.beta0;
       const dGamma = e.gamma - this.gamma0;
@@ -69,7 +74,6 @@ export class TiltControls {
 
     window.addEventListener("deviceorientation", onOrient, true);
     this.handlers.push(["deviceorientation", onOrient]);
-    this.mode = "tilt";
     return "ok";
   }
 
