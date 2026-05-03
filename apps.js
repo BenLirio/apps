@@ -26,7 +26,6 @@
   // Sort: most-recently-updated first within each filter.
   apps.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
 
-  // Stable bucketing for fast filter.
   const inStage = (a, st) => st === 'archived' ? a.archived : (!a.archived && a.stage === st);
 
   function setStage(s) {
@@ -90,54 +89,52 @@
     const tsRaw = a.archived ? a.archived_at : (a.promoted_to_published_at || a.promoted_to_prototype_at || a.created_at);
     const tsDate = (tsRaw || '').slice(0, 10);
 
+    const isLive = !a.archived;
+    const showHero = isLive && (a.stage === 'prototype' || a.stage === 'published') && !!a.logo;
+
+    // Hero (only for prototype/published with a logo image)
+    let hero = '';
+    if (showHero) {
+      const img = `<img class="logo" src="${escapeAttr(a.logo)}" alt="${escapeAttr(a.name)} logo" loading="lazy">`;
+      hero = a.github_pages_url
+        ? `<a class="logo-link" href="${escapeAttr(a.github_pages_url)}"><div class="logo-wrap">${img}</div></a>`
+        : `<div class="logo-wrap">${img}</div>`;
+    }
+
+    // Title (always linked when there's a github_pages_url and not archived)
     const titleInner = `<h2>${escapeHtml(a.name)}</h2>`;
-    const titleHtml = a.github_pages_url && !a.archived
+    const titleHtml = (a.github_pages_url && !a.archived)
       ? `<a class="title-link" href="${escapeAttr(a.github_pages_url)}">${titleInner}</a>`
       : titleInner;
 
-    // Body shape varies by stage:
-    //   idea       -> full pitch + full rationale, no truncation
-    //   prototype  -> logo (if any) + name only, no description
-    //   published  -> same as prototype
-    //   archived   -> existing behavior: short blurb (description/pitch)
-    let body = '';
-    const isLive = !a.archived;
+    // Body content varies by stage
+    let bodyParts = [titleHtml];
     if (isLive && a.stage === 'idea') {
-      if (a.pitch) body += `<p class="pitch">${escapeHtml(a.pitch)}</p>`;
+      if (a.pitch) bodyParts.push(`<p class="pitch">${escapeHtml(a.pitch)}</p>`);
       if (a.rationale) {
-        body += `<p class="rationale"><span class="rationale-label">RATIONALE</span>${escapeHtml(a.rationale)}</p>`;
+        bodyParts.push(`<p class="rationale"><span class="rationale-label">Rationale</span>${escapeHtml(a.rationale)}</p>`);
       }
-    } else if (isLive && (a.stage === 'prototype' || a.stage === 'published')) {
-      if (a.logo) {
-        card.classList.add('has-logo');
-        const img = `<img class="logo" src="${escapeAttr(a.logo)}" alt="${escapeAttr(a.name)} logo" loading="lazy">`;
-        body += a.github_pages_url
-          ? `<a class="title-link" href="${escapeAttr(a.github_pages_url)}">${img}</a>`
-          : img;
-      }
-      // No description: title alone (or title + logo) is the whole identity here.
-    } else {
-      // archived
+    } else if (!isLive) {
       const blurb = a.description || a.pitch || '';
-      if (blurb) body += `<p class="blurb">${escapeHtml(blurb)}</p>`;
+      if (blurb) bodyParts.push(`<p class="blurb">${escapeHtml(blurb)}</p>`);
     }
+    // prototype/published live: title alone; the hero (above) carries the visual identity.
 
-    // For prototype/published, render the logo BEFORE the title so it reads
-    // top-to-bottom as logo → name. For idea, the title comes first then body.
-    let inner;
-    if (isLive && (a.stage === 'prototype' || a.stage === 'published')) {
-      inner = `${body}${titleHtml}`;
-    } else {
-      inner = `${titleHtml}${body}`;
-    }
+    // Meta line
+    const metaParts = [stagePill];
+    if (tags) metaParts.push(`<span class="tags">${tags}</span>`);
+    if (tsDate) metaParts.push(`<time datetime="${escapeAttr(tsRaw || '')}">${escapeHtml(tsDate)}</time>`);
+    bodyParts.push(`<div class="meta">${metaParts.join('')}</div>`);
+
+    const buttonsHtml = actionButtons(a);
 
     card.innerHTML = `
-      ${inner}
-      ${tags ? `<p class="tags">${tags}</p>` : ''}
-      <p class="meta">${stagePill}${tsDate ? `<time datetime="${escapeAttr(tsRaw || '')}">${escapeHtml(tsDate)}</time>` : ''}</p>
-      <div class="actions">${actionButtons(a)}</div>
+      ${hero}
+      <div class="body">${bodyParts.join('')}</div>
+      ${buttonsHtml ? `<div class="actions">${buttonsHtml}</div>` : ''}
       <p class="status" aria-live="polite"></p>
     `;
+
     card.querySelectorAll('button[data-action]').forEach(btn => {
       btn.addEventListener('click', () => onAction(card, a, btn.dataset.action));
     });
@@ -147,18 +144,18 @@
   function actionButtons(a) {
     if (!endpoint) return '';
     if (a.archived) {
-      return `<button class="restore" data-action="restore" type="button">RESTORE</button>`;
+      return `<button class="btn btn-neutral" data-action="restore" type="button">Restore</button>`;
     }
     if (a.stage === 'idea') {
-      return `<button class="promote" data-action="promote" type="button">PROMOTE</button>` +
-             `<button class="reject" data-action="reject" type="button">REJECT</button>`;
+      return `<button class="btn btn-success" data-action="promote" type="button">Promote</button>` +
+             `<button class="btn btn-danger" data-action="reject" type="button">Reject</button>`;
     }
     if (a.stage === 'prototype') {
-      return `<button class="publish" data-action="publish" type="button">PUBLISH</button>` +
-             `<button class="archive" data-action="archive" type="button">ARCHIVE</button>`;
+      return `<button class="btn btn-success" data-action="publish" type="button">Publish</button>` +
+             `<button class="btn btn-danger" data-action="archive" type="button">Archive</button>`;
     }
     if (a.stage === 'published') {
-      return `<button class="archive" data-action="archive" type="button">ARCHIVE</button>`;
+      return `<button class="btn btn-danger" data-action="archive" type="button">Archive</button>`;
     }
     return '';
   }
@@ -166,7 +163,6 @@
   async function onAction(card, a, action) {
     const slug = a.slug;
     let reason = '';
-    // Destructive actions get a confirmation modal with a reason field.
     if (action === 'reject' || action === 'archive') {
       const result = await openReasonModal(action, a.name);
       if (!result.confirmed) return;
@@ -191,7 +187,7 @@
   }
 
   // In-page modal that returns {confirmed, reason}. Resolves on Confirm/Cancel,
-  // Escape key, or backdrop click. Supports a single open modal at a time.
+  // Escape key, or backdrop click.
   function openReasonModal(action, name) {
     return new Promise(resolve => {
       const backdrop = document.createElement('div');
@@ -203,8 +199,8 @@
           <label for="modal-reason">Reason (optional)</label>
           <textarea id="modal-reason" placeholder="why are you ${escapeHtml(action)}ing this app?"></textarea>
           <div class="modal-actions">
-            <button type="button" class="cancel">CANCEL</button>
-            <button type="button" class="confirm">${escapeHtml(verb).toUpperCase()}</button>
+            <button type="button" class="cancel">Cancel</button>
+            <button type="button" class="confirm">${escapeHtml(verb)}</button>
           </div>
         </div>
       `;
