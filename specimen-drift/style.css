@@ -1,0 +1,213 @@
+/* Aesthetic: engraved Victorian naturalist field plate, riso-sepia print — cream paper, ink-stipple textures, IM Fell display serif, hand-set binomial italics, 1880s expedition log */
+
+:root {
+  --paper: #efe6cf;
+  --paper-deep: #e6d9b8;
+  --ink: #1f1408;
+  --ink-soft: #3d2912;
+  --sepia: #6e3a16;
+  --sepia-deep: #4a2206;
+  --rust: #963a1c;
+  --abyss: #060403;
+  --abyss-soft: #18110a;
+  --plate-cream: #f4ecd5;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--paper);
+}
+
+html, body {
+  overscroll-behavior-y: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IM Fell English', 'IM Fell DW Pica', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  background-image:
+    radial-gradient(circle at 12% 20%, rgba(110,58,22,0.06) 0 1px, transparent 2px),
+    radial-gradient(circle at 80% 70%, rgba(74,34,6,0.05) 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 50%, rgba(31,20,8,0.04) 0 1px, transparent 2px);
+  background-size: 7px 9px, 11px 6px, 5px 5px;
+}
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 18px 16px 40px;
+}
+
+/* Masthead */
+#masthead { text-align: center; padding: 8px 0 4px; }
+#masthead h1 {
+  font-family: 'IM Fell English SC', 'IM Fell English', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  font-size: 36px;
+  margin: 6px 0 4px;
+  color: var(--ink);
+}
+#masthead .sub {
+  font-style: italic;
+  color: var(--sepia-deep);
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.rule {
+  height: 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  margin: 6px 0;
+}
+.rule.thin { border-top: 1px solid var(--ink); border-bottom: 0; }
+
+/* Intro */
+#intro { padding: 14px 4px; }
+.prose { margin: 8px 0 10px; color: var(--ink-soft); }
+.prose em { color: var(--rust); font-style: italic; }
+.prose.tiny { font-size: 14px; color: var(--sepia-deep); }
+
+/* Buttons */
+button {
+  font-family: 'IM Fell English SC', 'IM Fell English', Georgia, serif;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  padding: 12px 18px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  min-height: 44px;
+  border-radius: 0;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+button:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+button.primary { background: var(--ink); color: var(--paper); }
+button.primary:hover { background: var(--sepia-deep); }
+button.secondary { background: var(--paper-deep); }
+
+/* Aquarium */
+#aquarium { padding: 4px 0 10px; }
+#canvas-wrap {
+  position: relative;
+  width: 100%;
+  border: 2px solid var(--ink);
+  background: var(--abyss);
+  box-shadow: 3px 3px 0 var(--ink);
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  max-height: calc(100svh - 220px);
+}
+#sea { display: block; width: 100%; height: 100%; touch-action: manipulation; cursor: crosshair; }
+
+#hud {
+  position: absolute;
+  top: 8px; left: 8px; right: 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  font-family: 'IM Fell English SC', 'IM Fell English', serif;
+  color: var(--paper);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
+.hud-line .lab { color: rgba(239,230,207,0.55); margin-right: 4px; font-size: 11px; text-transform: uppercase; }
+
+#freeze-flash {
+  position: absolute; inset: 0;
+  background: var(--paper);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+#freeze-flash.flashing { opacity: 0.85; transition: opacity 60ms ease-in; }
+
+/* Card strip — small thumbnails of captured plates as the user goes */
+#card-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: 8px;
+}
+.strip-slot {
+  aspect-ratio: 3 / 4;
+  border: 1.5px solid var(--ink);
+  background: var(--plate-cream);
+  position: relative;
+  overflow: hidden;
+}
+.strip-slot.empty::after {
+  content: '';
+  position: absolute; inset: 6px;
+  border: 1px dashed var(--sepia);
+  opacity: 0.4;
+}
+.strip-slot canvas { width: 100%; height: 100%; display: block; }
+
+.hint {
+  text-align: center;
+  font-size: 13px;
+  color: var(--sepia-deep);
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* Logbook page */
+#logbook { padding: 4px 0; }
+#logbook h2 {
+  font-family: 'IM Fell English SC', serif;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-align: center;
+  font-size: 26px;
+  margin: 10px 0 4px;
+}
+#log-page {
+  background: var(--plate-cream);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 12px;
+  margin: 12px 0;
+  position: relative;
+}
+#log-page canvas { width: 100%; height: auto; display: block; }
+
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* Footer */
+footer { margin-top: 20px; }
+.colophon {
+  text-align: center;
+  font-size: 12px;
+  color: var(--sepia-deep);
+  font-style: italic;
+  margin: 4px 0;
+}
+
+/* Mobile tweaks */
+@media (max-width: 380px) {
+  body { font-size: 16px; }
+  #masthead h1 { font-size: 30px; }
+  #canvas-wrap { aspect-ratio: 2 / 3; }
+  #hud { font-size: 11px; }
+}

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Specimen Drift — Abyssal Field Notes</title>
+  <meta name="description" content="An ambient deep-sea expedition. Tap drifting creatures to freeze them as engraved Victorian specimen cards. Curate a 6-card field log.">
+  <meta property="og:title" content="Specimen Drift">
+  <meta property="og:description" content="Tap drifting abyssal creatures to freeze them as engraved Victorian specimen cards. Build a 6-card expedition log.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/specimen-drift/">
+  <meta property="og:image" content="https://benlirio.com/apps/specimen-drift/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Specimen Drift">
+  <meta name="twitter:description" content="Tap drifting abyssal creatures to freeze them as engraved Victorian specimen cards. Build a 6-card expedition log.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/specimen-drift/og.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=IM+Fell+DW+Pica:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header id="masthead">
+      <div class="rule"></div>
+      <h1>Specimen Drift</h1>
+      <p class="sub">Notes from the Abyssal Survey, vol. <span id="vol-num">I</span> — exped. <span id="exp-num">001</span></p>
+      <div class="rule"></div>
+    </header>
+
+    <section id="intro">
+      <p class="prose">A small black ocean has opened on this page. Thirty creatures from the lightless zones drift through it. <em>Touch any specimen to freeze it.</em> The instrument will engrave a plate: name, depth band, behaviour, catalog number.</p>
+      <p class="prose tiny">Six plates make a complete expedition log. The collection is yours.</p>
+      <button id="begin-btn" class="primary">Lower the instrument</button>
+    </section>
+
+    <section id="aquarium" hidden>
+      <div id="canvas-wrap">
+        <canvas id="sea"></canvas>
+        <div id="hud">
+          <div class="hud-line"><span class="lab">Plate</span> <span id="plate-count">0</span> / 6</div>
+          <div class="hud-line"><span class="lab">Depth</span> <span id="depth-readout">— m</span></div>
+        </div>
+        <div id="freeze-flash"></div>
+      </div>
+      <div id="card-strip"></div>
+      <p class="hint" id="hint">Tap any drifter to capture a plate.</p>
+    </section>
+
+    <section id="logbook" hidden>
+      <div class="rule"></div>
+      <h2>The Expedition Log</h2>
+      <p class="prose">Six plates, in the order curated. This page is the artefact.</p>
+      <div id="log-page"></div>
+      <div id="share" class="share-row">
+        <button id="export-btn" class="primary">Export plate (PNG)</button>
+        <button id="link-btn" class="secondary">Copy share link</button>
+        <button id="restart-btn" class="secondary">New expedition</button>
+      </div>
+      <p id="share-status" class="hint"></p>
+    </section>
+
+    <footer>
+      <div class="rule thin"></div>
+      <p class="colophon">Pressed in sepia ink &middot; abyssal survey, no creature was harmed &middot; <span id="seed-readout">seed —</span></p>
+    </footer>
+  </div>
+</body>
+</html>
