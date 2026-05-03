@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Phantom Putt · today's pen-and-paper hole</title>
+<meta name="description" content="A daily pen-on-graph-paper mini-golf hole. Tilt your phone to roll the ball, count strokes, share the grid. Same hole for everyone today.">
+
+<meta property="og:title" content="Phantom Putt · today's pen-and-paper hole">
+<meta property="og:description" content="A daily pen-on-graph-paper mini-golf hole. Tilt to roll. Same hole for everyone today.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/phantom-putt/">
+<meta property="og:image" content="https://benlirio.com/apps/phantom-putt/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="675">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Phantom Putt">
+<meta name="twitter:description" content="Daily mini-golf, drawn in pen on graph paper. Tilt to roll. Share the grid.">
+<meta name="twitter:image" content="https://benlirio.com/apps/phantom-putt/og.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Special+Elite&display=swap">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <header class="hdr">
+    <h1 class="title">Phantom Putt</h1>
+    <div class="hole-meta">
+      <span id="hole-number">Hole #—</span>
+      <span class="dot">·</span>
+      <span id="hole-name">today's draft</span>
+      <span class="dot">·</span>
+      <span id="hole-par">Par —</span>
+    </div>
+  </header>
+
+  <div class="board" id="board">
+    <canvas id="course" aria-label="hand-drawn graph-paper mini-golf hole"></canvas>
+
+    <div class="hud" id="hud">
+      <div class="hud-pill">strokes <strong id="strokes">0</strong></div>
+      <div class="hud-pill" id="best-pill" hidden>best today <strong id="best">—</strong></div>
+    </div>
+
+    <div class="splash" id="splash">
+      <div class="splash-card">
+        <p class="kicker">today's draft</p>
+        <h2 class="splash-name" id="splash-name">— —</h2>
+        <p class="splash-par" id="splash-par">Par —</p>
+        <p class="splash-howto" id="splash-howto">Tilt your phone to roll the ball into the hole.</p>
+        <p class="splash-fallback" id="splash-fallback" hidden>No tilt sensor? Use the arrow keys (or drag the page) to nudge gravity.</p>
+        <button id="start-btn" class="btn btn-primary" type="button">Start the round</button>
+        <p class="splash-foot">A new hole every day at midnight UTC.</p>
+      </div>
+    </div>
+
+    <div class="result" id="result" hidden>
+      <div class="result-card">
+        <p class="kicker">round complete</p>
+        <p class="strokes-big"><strong id="strokes-big">—</strong><span class="unit">strokes</span></p>
+        <h2 class="verdict" id="verdict-name">— —</h2>
+        <p class="verdict-line" id="verdict-line">— —</p>
+        <pre class="grid" id="grid">⛳</pre>
+        <div class="share-row">
+          <button id="share-btn" class="btn btn-primary" type="button" onclick="share()">Share the grid</button>
+          <button id="replay-btn" class="btn btn-ghost" type="button">Replay this hole</button>
+        </div>
+        <p class="result-foot">Tomorrow's hole drops at midnight UTC.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ftr">
+    <p class="ftr-line">drawn in pen · rolled by gravity · scored by stroke</p>
+  </footer>
+</div>
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</body>
+</html>
