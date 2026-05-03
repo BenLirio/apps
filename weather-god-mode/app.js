@@ -13,6 +13,12 @@
   const GROUND_Y = 196;             // top of grass in virtual coords (after beach)
   const SKY_BAND_TOP = 8;
   const SKY_BAND_BOTTOM = 130;
+  // Cloud growth caps. Escalation goes puff → cloud → thunderhead.
+  // Past STORM_THRESHOLD a cloud locks into stormForm: anvil shape, thunder
+  // on hold-lightning, hail on double-tap (instead of rain).
+  const MAX_TARGET_SIZE = 2.4;
+  const MAX_CLOUD_R = 18;
+  const STORM_THRESHOLD = 2.2;
 
   const PALETTE = {
     skyTop:    '#f3c46a',
@@ -178,12 +184,33 @@
     { id: 'beach_redeemer',
       name: 'Redeemer of the Beach Day',
       caption: 'Skipped the storms. Skipped the smiting. The picnic concluded uninterrupted. The town is suspicious.',
-      stamp: 'PARDONED' }
+      stamp: 'PARDONED' },
+
+    // -- Hail / thunderhead specialists (post-escalation tier) --
+    { id: 'hail_marshal',
+      name: 'Marshal of Sudden Hail',
+      caption: 'Skipped warning, skipped rain, went straight to ice. Tomatoes flattened, picnic dignity reduced to gravel.',
+      stamp: 'PELTED' },
+    { id: 'thunderhead_diva',
+      name: 'Thunderhead Diva, Encore Demanded',
+      caption: 'Every spare cloud became a thunderhead. The sky cracked on cue. The town has begun praying selectively.',
+      stamp: 'RUMBLED' },
+    { id: 'apocalyptic_combo',
+      name: 'Quartermaster of the Apocalypse',
+      caption: 'Lightning, hail, rain — the full sampler platter. The town would like a word, possibly several.',
+      stamp: 'OBLITERATED' },
+    { id: 'restraint_thunderhead',
+      name: 'The Thunderhead That Thought Better Of It',
+      caption: 'Massed a storm. Held the storm. Dispersed the storm. Townsfolk will not stop thanking the wind.',
+      stamp: 'MERCIFUL' }
   ];
 
   function pickVerdict(stats) {
     const L = stats.lightning_count;
     const R = stats.rain_volume_units;
+    const H = stats.hail_volume_units;
+    const Th = stats.thunder_pulses;
+    const Hd = stats.thunderheads_summoned;
     const T = stats.taps_count;
     const D = stats.drought_seconds;
     const cov = stats.percent_townsfolk_affected; // 0..1
@@ -193,6 +220,13 @@
     const picnicSurvived = stats.picnic_survived;
 
     // Priority decision tree — most specific first.
+
+    // Escalation-tier verdicts (hail / thunderhead) — most specific.
+    if (H >= 3 && L >= 2 && R >= 3) return VERDICTS.find(v => v.id === 'apocalyptic_combo');
+    if (H >= 4 && L <= 1 && R < 4) return VERDICTS.find(v => v.id === 'hail_marshal');
+    if (Th >= 4) return VERDICTS.find(v => v.id === 'thunderhead_diva');
+    if (Hd >= 2 && Th === 0 && H === 0 && L === 0) return VERDICTS.find(v => v.id === 'restraint_thunderhead');
+
     if (T < 4 && L === 0 && R < 2) return VERDICTS.find(v => v.id === 'absentee');
     if (L === 0 && R === 0 && T >= 4) return VERDICTS.find(v => v.id === 'lightning_shy');
 
@@ -242,6 +276,7 @@
 
   let clouds = [];
   let raindrops = [];
+  let hailstones = [];
   let bolts = [];
   let fires = [];
   let smokes = [];
@@ -249,6 +284,7 @@
   let crops = [];
   let stars = [];
   let lighthouseFlash = 0;
+  let thunderRumble = 0; // 0..1, decays over ~0.6s, drives screen shake + dim
 
   // Stats
   let stats = freshStats();
@@ -271,6 +307,10 @@
       taps_count: 0,
       lightning_count: 0,
       rain_volume_units: 0,
+      hail_volume_units: 0,
+      thunder_pulses: 0,
+      thunderheads_summoned: 0,
+      crops_hailed: 0,
       drought_seconds: 0,
       sustained_pressure_seconds: 0,
       percent_townsfolk_affected: 0,
@@ -354,6 +394,7 @@
     }
 
     raindrops = [];
+    hailstones = [];
     bolts = [];
     fires = [];
     smokes = [];
@@ -361,6 +402,7 @@
     driedSecondsAccum = 0;
     pressureAccum = 0;
     lighthouseFlash = 0;
+    thunderRumble = 0;
     stats = freshStats();
   }
 
@@ -377,6 +419,9 @@
       r: 10 + rng() * 6,   // base radius
       raining: false,
       rainAccum: 0,
+      hailing: false,
+      hailExpire: 0,
+      stormForm: false,    // becomes true when targetSize >= STORM_THRESHOLD
       lifeMs: 0,
       seedOffset,
       darkening: 0,        // 0..1, increases with size
@@ -457,6 +502,22 @@
         if (nowMs > c.rainExpire) c.raining = false;
       }
 
+      // Hail mechanics — thunderheads only. Heavier, slower, bigger than rain.
+      if (c.hailing) {
+        const stonesThisFrame = Math.floor(c.size * 5 * dt + rng() * 0.6);
+        for (let i = 0; i < stonesThisFrame; i++) {
+          hailstones.push({
+            x: c.x + (rng() - 0.5) * c.r * c.size * 1.4,
+            y: c.y + 6,
+            vy: 70 + rng() * 30,
+            r: 1.2 + rng() * 0.8,
+            life: 0
+          });
+        }
+        stats.hail_volume_units += stonesThisFrame * 0.07;
+        if (nowMs > c.hailExpire) c.hailing = false;
+      }
+
       totalMass += c.size;
       if (c.size > 1.0) cloudsCovering++;
     }
@@ -489,6 +550,25 @@
         raindrops.splice(i, 1);
       }
     }
+
+    // Hailstones — heavier, gravity-accelerated, damaging on impact
+    for (let i = hailstones.length - 1; i >= 0; i--) {
+      const h = hailstones[i];
+      h.vy += 60 * dt; // gravity
+      h.y += h.vy * dt;
+      h.life += dt;
+      if (h.y >= GROUND_Y - 2) {
+        affectByHail(h.x, h.y);
+        hailstones.splice(i, 1);
+      } else if (h.y >= HORIZON_Y && h.y < GROUND_Y - 2) {
+        if (rng() < 0.5) hailstones.splice(i, 1);
+      } else if (h.life > 6) {
+        hailstones.splice(i, 1);
+      }
+    }
+
+    // Thunder rumble decay
+    if (thunderRumble > 0) thunderRumble = Math.max(0, thunderRumble - dt * 1.6);
 
     // Bolts decay
     for (let i = bolts.length - 1; i >= 0; i--) {
@@ -575,11 +655,49 @@
     }
   }
 
+  function affectByHail(x, y) {
+    // Hail is brutal — umbrellas don't help, picnickers flee, crops crushed.
+    for (const p of townsfolk) {
+      if (Math.abs(p.x - x) < 9 && Math.abs(p.y - y) < 18) {
+        affectedTownsfolk.add(p.id);
+        if (p.kind === 'picnicker') {
+          p.fled = true;
+          p.x += (p.x < VIRTUAL_W / 2) ? -8 : 8;
+        }
+        if (p.kind === 'farmer' && rng() < 0.4) {
+          p.fled = true;
+          p.x += (rng() - 0.5) * 10;
+        }
+      }
+    }
+    for (const c of crops) {
+      if (Math.abs(c.x - x) < 5 && !c.burned) {
+        // Crush — knocks growth back, ripe crops get flattened outright
+        if (c.ripe || c.growth > 0.6) {
+          c.burned = true;
+          c.ripe = false;
+          stats.crops_hailed++;
+        } else {
+          c.growth = Math.max(0, c.growth - 0.25);
+        }
+      }
+    }
+  }
+
   function spawnLightning(cloud, nowMs) {
     stats.lightning_count++;
     bumpInterventionsHud();
+    // Lightning drains cloud — but storm clouds keep their stormForm flag,
+    // they just shrink back to threshold so re-tapping re-arms quickly.
     cloud.size = Math.max(0.6, cloud.size - 0.3);
     cloud.targetSize = Math.max(0.6, cloud.targetSize - 0.3);
+    if (cloud.targetSize < STORM_THRESHOLD) cloud.stormForm = false;
+
+    const isThunder = cloud.stormForm || cloud.size >= STORM_THRESHOLD;
+    if (isThunder) {
+      stats.thunder_pulses++;
+      thunderRumble = 1.0;
+    }
 
     // Build jagged bolt path from cloud to ground
     const sx = cloud.x;
@@ -594,7 +712,7 @@
       segments.push({ x1: cx, y1: cy, x2: nx, y2: Math.min(ey, ny) });
       cx = nx; cy = ny;
     }
-    bolts.push({ segments, life: 0, x: ex, y: ey });
+    bolts.push({ segments, life: 0, x: ex, y: ey, thunder: isThunder });
 
     // Effects on impact
     handleLightningImpact(ex, ey);
@@ -682,13 +800,14 @@
       holdActive: false
     };
 
-    // Detect double-tap on a cloud → release rain
+    // Detect double-tap on a cloud → release rain (or hail if it's a thunderhead)
     const now = performance.now();
     if (cloud && lastTapPos && (now - lastTapMs) < DOUBLE_TAP_MS) {
       const dx = v.x - lastTapPos.x;
       const dy = v.y - lastTapPos.y;
       if (dx * dx + dy * dy < DOUBLE_TAP_DIST * DOUBLE_TAP_DIST) {
-        triggerRain(cloud, now);
+        if (cloud.stormForm) triggerHail(cloud, now);
+        else triggerRain(cloud, now);
         lastTapMs = 0; // consume
         lastTapPos = null;
         return;
@@ -743,8 +862,14 @@
   }
 
   function growCloud(c) {
-    c.targetSize = Math.min(3.4, c.targetSize + 0.45);
-    c.r += 0.2;
+    c.targetSize = Math.min(MAX_TARGET_SIZE, c.targetSize + 0.45);
+    c.r = Math.min(MAX_CLOUD_R, c.r + 0.2);
+    if (!c.stormForm && c.targetSize >= STORM_THRESHOLD) {
+      c.stormForm = true;
+      stats.thunderheads_summoned++;
+      // Visual cue: a brief charged flash on transformation
+      thunderRumble = Math.max(thunderRumble, 0.4);
+    }
   }
 
   function triggerRain(c, nowMs) {
@@ -755,6 +880,13 @@
     c.raining = true;
     // Bigger clouds rain longer
     c.rainExpire = nowMs + 1200 + c.size * 800;
+    bumpInterventionsHud();
+  }
+
+  function triggerHail(c, nowMs) {
+    // Only thunderheads drop hail. Caller (double-tap handler) decides routing.
+    c.hailing = true;
+    c.hailExpire = nowMs + 1300 + c.size * 600;
     bumpInterventionsHud();
   }
 
@@ -772,6 +904,15 @@
     for (const c of clouds) avgDark += c.darkening;
     avgDark = clouds.length ? Math.min(0.7, avgDark / Math.max(1, clouds.length)) : 0;
 
+    // Thunder shake — translate the whole scene a few pixels.
+    const shakeMag = thunderRumble * thunderRumble * 7;
+    const shakeX = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
+    const shakeY = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
+    if (shakeMag) {
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+    }
+
     // Background sky
     drawSky(avgDark);
     drawStars(avgDark);
@@ -784,6 +925,7 @@
 
     // Rain (drawn over town but under bolts)
     drawRain();
+    drawHail();
 
     // Clouds
     drawClouds();
@@ -801,11 +943,19 @@
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    // Thunder dim flash (independent of cloud cover — felt during rumble)
+    if (thunderRumble > 0.05) {
+      ctx.fillStyle = `rgba(20, 22, 48, ${thunderRumble * 0.22})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
     // Lighthouse flash overlay
     if (lighthouseFlash > 0.02) {
       ctx.fillStyle = `rgba(255, 245, 184, ${lighthouseFlash * 0.18})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
+
+    if (shakeMag) ctx.restore();
   }
 
   // helper: draw a virtual rect
@@ -955,6 +1105,19 @@
     }
   }
 
+  function drawHail() {
+    if (!hailstones.length) return;
+    for (const h of hailstones) {
+      const r = Math.max(1, Math.round(h.r * scaleX));
+      // White core
+      ctx.fillStyle = PALETTE.cloudHi;
+      ctx.fillRect(Math.round((h.x - h.r) * scaleX), Math.round((h.y - h.r) * scaleY), r * 2, r * 2);
+      // Cool blue rim hint
+      ctx.fillStyle = PALETTE.rain;
+      ctx.fillRect(Math.round((h.x - h.r) * scaleX), Math.round((h.y + h.r * 0.4) * scaleY), r * 2, Math.max(1, Math.round(scaleY * 0.6)));
+    }
+  }
+
   function drawClouds() {
     for (const c of clouds) {
       drawCloud(c);
@@ -966,11 +1129,20 @@
     const cy = c.y;
     const r = c.r * c.size;
     const dark = c.darkening;
-    const baseColor = dark > 0.5 ? PALETTE.cloudLo : (dark > 0.2 ? PALETTE.cloudMid : PALETTE.cloudHi);
-    const shadow = dark > 0.5 ? PALETTE.cloudDark : PALETTE.cloudLo;
+    const isStorm = c.stormForm;
+    const baseColor = isStorm ? PALETTE.cloudLo : (dark > 0.5 ? PALETTE.cloudLo : (dark > 0.2 ? PALETTE.cloudMid : PALETTE.cloudHi));
+    const shadow = isStorm ? PALETTE.cloudDark : (dark > 0.5 ? PALETTE.cloudDark : PALETTE.cloudLo);
 
-    // Build pixel-art cloud from a deterministic blob pattern
-    const blobs = [
+    // Build pixel-art cloud from a deterministic blob pattern.
+    // Thunderheads get an anvil top — wider blobs above the base.
+    const blobs = isStorm ? [
+      { dx: 0, dy: 0, rr: r * 1.0 },
+      { dx: -r * 0.8, dy: 2, rr: r * 0.75 },
+      { dx: r * 0.8, dy: 2, rr: r * 0.75 },
+      { dx: -r * 1.0, dy: -3, rr: r * 0.6 },
+      { dx: r * 1.0, dy: -3, rr: r * 0.6 },
+      { dx: 0, dy: -5, rr: r * 0.7 },
+    ] : [
       { dx: 0, dy: 0, rr: r * 1.0 },
       { dx: -r * 0.7, dy: 1, rr: r * 0.7 },
       { dx: r * 0.7, dy: 1, rr: r * 0.7 },
@@ -1009,8 +1181,10 @@
   function drawBolts() {
     for (const b of bolts) {
       const intensity = 1 - (b.life / 0.4);
+      const coreScale = b.thunder ? 1.8 : 1.2;
+      const glowScale = b.thunder ? 4.0 : 2.4;
       ctx.strokeStyle = `rgba(255, 245, 184, ${Math.max(0, intensity)})`;
-      ctx.lineWidth = Math.max(1, Math.round(scaleX * 1.2));
+      ctx.lineWidth = Math.max(1, Math.round(scaleX * coreScale));
       ctx.beginPath();
       for (const seg of b.segments) {
         ctx.moveTo(seg.x1 * scaleX, seg.y1 * scaleY);
@@ -1018,8 +1192,8 @@
       }
       ctx.stroke();
       // Glow
-      ctx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0, intensity * 0.4)})`;
-      ctx.lineWidth = Math.max(2, Math.round(scaleX * 2.4));
+      ctx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0, intensity * (b.thunder ? 0.55 : 0.4))})`;
+      ctx.lineWidth = Math.max(2, Math.round(scaleX * glowScale));
       ctx.beginPath();
       for (const seg of b.segments) {
         ctx.moveTo(seg.x1 * scaleX, seg.y1 * scaleY);
@@ -1093,11 +1267,15 @@
     statsBox.innerHTML = '';
     const rows = [
       ['LIGHTNING STRUCK',  stats.lightning_count],
+      ['THUNDER PULSES',    stats.thunder_pulses],
       ['RAIN VOLUME',       stats.rain_volume_units.toFixed(1) + ' units'],
+      ['HAIL VOLUME',       stats.hail_volume_units.toFixed(1) + ' units'],
+      ['THUNDERHEADS',      stats.thunderheads_summoned],
       ['DROUGHT WINDOW',    Math.round(stats.drought_seconds) + 's'],
       ['PRESSURE INDEX',    Math.round(stats.sustained_pressure_seconds)],
       ['TOWN AFFECTED',     Math.round(stats.percent_townsfolk_affected * 100) + '%'],
       ['ROOFS / CROPS LIT', stats.fires_started],
+      ['CROPS HAILED',      stats.crops_hailed],
       ['LIGHTHOUSE WAVE',   stats.keeper_waved ? 'YES' : 'no'],
       ['PICNIC SURVIVED',   stats.picnic_survived ? 'yes' : 'NO']
     ];
