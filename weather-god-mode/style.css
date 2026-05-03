@@ -1,0 +1,376 @@
+/* Aesthetic: pixel-art cartography + mock-bureaucratic stamp — chunky 8-bit coast for the play surface, government-issued audit paper for the verdict. */
+
+:root {
+  --bg-sky: #f3c46a;
+  --bg-sky-deep: #e08a3c;
+  --bg-night: #142035;
+  --paper: #f4ecd8;
+  --paper-line: #c8b58a;
+  --ink: #1a1410;
+  --ink-soft: #4a3b28;
+  --stamp-red: #c0392b;
+  --stamp-blue: #1f4d8a;
+  --hud-bg: #0d1117;
+  --hud-fg: #f4ecd8;
+  --accent: #ffd166;
+  --grass: #67a04a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0d1117;
+  color: var(--hud-fg);
+  font-family: 'VT323', 'Courier New', monospace;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100svh;
+}
+
+#stage {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* HUD */
+#hud {
+  position: relative;
+  z-index: 5;
+  padding: 10px 12px 6px;
+  background: var(--hud-bg);
+  border-bottom: 2px solid #000;
+  box-shadow: 0 2px 0 #2a3144;
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+}
+
+#hud-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+}
+
+.hud-label {
+  font-size: 7px;
+  color: #8a93a8;
+  letter-spacing: 1px;
+}
+
+.hud-value {
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.hud-timer .hud-value { color: #fff; }
+
+.hud-timer.warn .hud-value { color: var(--stamp-red); animation: blink 0.6s steps(2, end) infinite; }
+
+@keyframes blink { 50% { opacity: 0.45; } }
+
+#hud-hint {
+  margin-top: 6px;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #c8c5b8;
+  line-height: 1;
+}
+
+#hud-hint .dot { color: #5a6378; margin: 0 4px; }
+
+/* Canvas — fills remaining vertical space */
+#sky {
+  flex: 1 1 auto;
+  width: 100%;
+  display: block;
+  background: var(--bg-sky);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  touch-action: none;
+  -webkit-user-drag: none;
+  cursor: crosshair;
+}
+
+/* Overlay shared */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 18px;
+  background: rgba(8, 12, 22, 0.78);
+  backdrop-filter: none;
+}
+
+/* Splash */
+.splash-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 #000;
+  padding: 18px 18px 22px;
+  position: relative;
+  font-family: 'VT323', monospace;
+}
+
+.splash-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--paper-line);
+  pointer-events: none;
+}
+
+.splash-stamp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--stamp-blue);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.splash-card h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 18px;
+  margin: 4px 0 12px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.splash-pitch {
+  font-size: 22px;
+  margin: 0 0 12px;
+  line-height: 1.15;
+}
+
+.splash-pitch strong { color: var(--stamp-red); }
+
+.splash-rules {
+  list-style: none;
+  padding: 0 0 0 6px;
+  margin: 0 0 14px;
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+.splash-rules li::before {
+  content: "› ";
+  color: var(--stamp-blue);
+}
+
+.splash-rules .g {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  background: var(--ink);
+  color: var(--accent);
+  padding: 2px 5px;
+  margin-right: 4px;
+}
+
+.splash-warn {
+  font-size: 17px;
+  margin: 0 0 16px;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+
+.splash-warn strong { color: var(--stamp-red); }
+
+#begin-btn, #share-btn, #replay-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 14px 18px;
+  background: var(--ink);
+  color: var(--accent);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--stamp-red);
+  cursor: pointer;
+  width: 100%;
+  min-height: 50px;
+  transition: transform 0.05s ease;
+}
+
+#begin-btn:active, #share-btn:active, #replay-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--stamp-red);
+}
+
+.splash-foot {
+  text-align: center;
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+/* Verdict */
+.verdict-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 #000;
+  padding: 16px 16px 14px;
+  position: relative;
+  font-family: 'VT323', monospace;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 24px, rgba(120, 100, 60, 0.08) 24px 25px);
+}
+
+.verdict-card::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed var(--paper-line);
+  pointer-events: none;
+}
+
+.verdict-letterhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.seal {
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  color: var(--stamp-blue);
+}
+
+.letterhead-text { line-height: 1; }
+
+.lt-line {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+
+.lt-sub {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.verdict-body { position: relative; }
+
+.verdict-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.verdict-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 6px 0 10px;
+}
+
+.verdict-caption {
+  font-size: 21px;
+  line-height: 1.25;
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-style: italic;
+}
+
+.verdict-stats {
+  border: 1px solid var(--ink);
+  background: rgba(255, 255, 255, 0.35);
+  padding: 8px 10px;
+  margin: 10px 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.verdict-stats .stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.verdict-stats .stat-row span:first-child { color: var(--ink-soft); }
+
+.verdict-stamp {
+  position: absolute;
+  top: 8px;
+  right: -4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--stamp-red);
+  border: 3px solid var(--stamp-red);
+  padding: 5px 8px;
+  letter-spacing: 1px;
+  transform: rotate(8deg);
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0.92;
+}
+
+.verdict-foot {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px dashed var(--paper-line);
+  padding-top: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  font-family: 'VT323', monospace;
+}
+
+#verdict-actions {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#replay-btn {
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--stamp-blue);
+}
+
+@media (min-height: 740px) {
+  .splash-card h1 { font-size: 22px; }
+  .verdict-name { font-size: 18px; }
+}
