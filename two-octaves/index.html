@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TWO OCTAVES // psychoacoustic field test</title>
+
+<!-- Share-preview meta block -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Two Octaves — psychoacoustic field test">
+<meta property="og:description" content="Three rising tones. Tap when each has climbed exactly one octave. Get your verdict — Perfect Pitch, Trained Ear, Civilian, or Tone Deaf, Affectionately.">
+<meta property="og:url" content="https://benlirio.com/apps/two-octaves/">
+<meta property="og:image" content="https://benlirio.com/apps/two-octaves/og.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Two Octaves — psychoacoustic field test">
+<meta name="twitter:description" content="Three rising tones. Tap when each has climbed exactly one octave. Get your verdict.">
+<meta name="twitter:image" content="https://benlirio.com/apps/two-octaves/og.jpg">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</head>
+<body>
+<div class="app">
+
+  <header class="hdr">
+    <div class="hdr-line">// PSYCHOACOUSTIC FIELD TEST · v1</div>
+    <h1 class="title">TWO<br>OCTAVES</h1>
+    <p class="brief">A sine tone climbs upward. Tap when you think it has risen <em>exactly one octave</em> from where it started. Three rounds. We measure your deviation in cents and tell you what kind of ear you have.</p>
+    <dl class="specs">
+      <dt>// SUBJECT</dt><dd id="subject-id">subject_<span id="sid">—</span></dd>
+      <dt>// ROUNDS</dt><dd>3</dd>
+      <dt>// METRIC</dt><dd>|Δ| cents from f×2</dd>
+    </dl>
+  </header>
+
+  <!-- Audio unlock screen — shown first; required for iOS silent-switch / Web Audio gesture rule -->
+  <section id="screen-unlock" class="screen">
+    <div class="instrument">
+      <div class="dial-row">
+        <span class="pill"># AUDIO LOCK</span>
+        <span class="pill">PENDING</span>
+      </div>
+      <p class="lede">This test is sound-only. Take phone off silent if you can. If not, AirPods and Bluetooth still work — only the speaker is silenced.</p>
+      <p class="check">Tap below to unlock the audio engine and play a 0.6-second calibration tone. If you hear it, you are ready.</p>
+      <button id="btn-unlock" class="primary">UNLOCK &amp; PLAY TEST TONE</button>
+      <p class="check small" id="unlock-status">// status: idle</p>
+    </div>
+  </section>
+
+  <!-- Ready / how-it-works screen — shown after unlock confirmed -->
+  <section id="screen-ready" class="screen" hidden>
+    <div class="instrument">
+      <div class="dial-row">
+        <span class="pill"># READY</span>
+        <span class="pill" id="round-pill">ROUND 1 / 3</span>
+      </div>
+      <p class="lede">When you press <em>BEGIN</em>, a tone starts at the baseline frequency and climbs continuously upward. Tap <em>OCTAVE</em> the instant you think it has doubled. Listen for the <em>relationship</em>, not the loudness.</p>
+      <ul class="rounds-list" id="rounds-preview">
+        <li><span class="rk">R1</span><span class="rv" id="rl-1">low baseline · easy glide</span></li>
+        <li><span class="rk">R2</span><span class="rv" id="rl-2">mid baseline · medium glide</span></li>
+        <li><span class="rk">R3</span><span class="rv" id="rl-3">high baseline · fast glide</span></li>
+      </ul>
+      <button id="btn-begin" class="primary">BEGIN ROUND <span id="begin-round">1</span></button>
+    </div>
+  </section>
+
+  <!-- Live round screen — primary action is the OCTAVE tap -->
+  <section id="screen-listen" class="screen" hidden>
+    <div class="instrument live">
+      <div class="dial-row">
+        <span class="pill" id="live-round-pill">ROUND 1 / 3</span>
+        <span class="pill mono" id="live-freq">— Hz</span>
+      </div>
+      <div class="meter" aria-hidden="true">
+        <div class="meter-track"></div>
+        <div class="meter-fill" id="meter-fill"></div>
+        <div class="meter-tick start"></div>
+        <div class="meter-tick octave"></div>
+        <div class="meter-label start-label">f</div>
+        <div class="meter-label octave-label">2f</div>
+      </div>
+      <p class="check">Listen. The tone is climbing. Tap when you think you've heard exactly one octave of rise.</p>
+      <button id="btn-tap" class="primary big">OCTAVE.</button>
+      <p class="check small" id="live-status">// status: tone climbing</p>
+    </div>
+  </section>
+
+  <!-- Per-round result screen — shows deviation, advances rounds -->
+  <section id="screen-round-result" class="screen" hidden>
+    <div class="instrument">
+      <div class="dial-row">
+        <span class="pill" id="rr-round-pill">ROUND 1 / 3</span>
+        <span class="pill" id="rr-tag">— OCTAVE</span>
+      </div>
+      <div class="rr-readout">
+        <div class="rr-row"><span class="rr-k">// you tapped</span><span class="rr-v mono" id="rr-tap-hz">— Hz</span></div>
+        <div class="rr-row"><span class="rr-k">// true octave</span><span class="rr-v mono" id="rr-true-hz">— Hz</span></div>
+        <div class="rr-row big"><span class="rr-k">// deviation</span><span class="rr-v mono" id="rr-cents">— ¢</span></div>
+      </div>
+      <p class="check" id="rr-flavor">—</p>
+      <button id="btn-next" class="primary">NEXT ROUND</button>
+    </div>
+  </section>
+
+  <!-- Final verdict screen — share card lives here -->
+  <section id="screen-verdict" class="screen" hidden>
+    <div class="result-card" id="card">
+      <div class="card-strip">
+        <span class="pill"># VERDICT</span>
+        <span class="pill mono" id="card-pct">—th percentile</span>
+      </div>
+      <h2 class="verdict" id="card-verdict">—</h2>
+      <p class="verdict-sub" id="card-sub">—</p>
+      <div class="card-rounds" id="card-rounds"></div>
+      <svg class="card-wave" id="wave" viewBox="0 0 600 160" aria-hidden="true"></svg>
+      <div class="card-foot">
+        <span class="mono">// two-octaves · benlirio.com</span>
+      </div>
+    </div>
+    <div class="share-row">
+      <button id="btn-share" class="primary" onclick="share()">SHARE VERDICT</button>
+      <button id="btn-replay" class="ghost">PLAY AGAIN</button>
+    </div>
+  </section>
+
+  <footer class="ftr">
+    <p class="mono small">// 100 cents = 1 semitone · 1200 cents = 1 octave · reference distribution n=400 anonymous prior runs</p>
+  </footer>
+
+</div>
+</body>
+</html>
