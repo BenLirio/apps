@@ -59,9 +59,32 @@
         <span class="pill">PENDING</span>
       </div>
       <p class="lede">This test is sound-only. Take phone off silent if you can. If not, AirPods and Bluetooth still work — only the speaker is silenced.</p>
-      <p class="check">Tap below to unlock the audio engine and play a 0.6-second calibration tone. If you hear it, you are ready.</p>
+      <p class="check">Tap below to unlock the audio engine and play a 0.6-second calibration tone.</p>
       <button id="btn-unlock" class="primary">UNLOCK &amp; PLAY TEST TONE</button>
       <p class="check small" id="unlock-status">// status: idle</p>
+
+      <!-- Confirmation gate — shown only after the test tone finishes playing.
+           Without this, an iPhone with the silent switch on (or any other audio
+           failure) silently advances into a sound-only test. -->
+      <div id="unlock-confirm" class="confirm-row" hidden>
+        <p class="check"><strong>Did you hear the tone?</strong></p>
+        <div class="confirm-btns">
+          <button id="btn-heard-yes" class="primary">YES — BEGIN TEST</button>
+          <button id="btn-heard-no" class="ghost">NO SOUND</button>
+        </div>
+      </div>
+
+      <!-- Troubleshooting block — revealed when user reports no sound. -->
+      <div id="unlock-help" class="help-block" hidden>
+        <p class="check small mono">// no-sound checklist</p>
+        <ul class="help-list">
+          <li><strong>iPhone:</strong> flip the silent switch off (small toggle on the left edge of the phone). Web Audio respects it.</li>
+          <li><strong>Volume:</strong> turn media volume up — not just ringer.</li>
+          <li><strong>Headphones:</strong> AirPods / wired / Bluetooth all bypass the silent switch — connect a pair if you can't toggle it.</li>
+          <li><strong>Browser:</strong> if you're in an in-app browser (Instagram, Twitter), tap the share menu and open in Safari / Chrome.</li>
+        </ul>
+        <button id="btn-replay-tone" class="primary">PLAY TEST TONE AGAIN</button>
+      </div>
     </div>
   </section>
 

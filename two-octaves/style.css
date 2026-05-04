@@ -332,6 +332,23 @@ button.ghost:hover { border-color: var(--ink-dim); color: var(--accent); }
   color: var(--ink-faint);
 }
 
+/* unlock confirmation gate + help block */
+.confirm-row { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); }
+.confirm-row .check { margin: 0 0 10px; color: var(--ink); }
+.confirm-row .check strong { color: var(--accent); font-weight: 600; }
+.confirm-btns { display: flex; flex-direction: column; gap: 8px; }
+.confirm-btns .ghost { width: 100%; text-align: center; }
+
+.help-block { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); }
+.help-list {
+  list-style: none; padding: 0; margin: 8px 0 14px;
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+.help-list li { padding: 6px 0; border-bottom: 1px dotted var(--rule); }
+.help-list li:last-child { border-bottom: none; }
+.help-list strong { color: var(--accent); font-weight: 600; }
+
 /* state-change attention only — no decoration-only fades */
 @keyframes flash-good {
   0% { background: rgba(75,227,164,0.12); }

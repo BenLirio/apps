@@ -21,7 +21,8 @@ import {
 const COPY = Object.freeze({
   unlockIdle:     "// status: idle",
   unlockTrying:   "// status: requesting audio context…",
-  unlockTone:     "// status: playing 0.6s @ 440 Hz · A4 · if you heard it, you are unlocked",
+  unlockTone:     "// status: playing 0.6s @ 440 Hz · A4",
+  unlockTonePlayed: "// status: tone played · confirm below",
   unlockOk:       "// status: unlocked. tap below to begin round 1.",
   unlockFail:     "// status: audio engine refused. try a different browser or remove silent-mode.",
   liveListening:  "// status: tone climbing. listen for the doubling.",
@@ -73,27 +74,55 @@ export function startJourney(root) {
 
   // -------- unlock screen --------
 
-  const btnUnlock = $("btn-unlock");
-  const unlockStatus = $("unlock-status");
+  const btnUnlock     = $("btn-unlock");
+  const unlockStatus  = $("unlock-status");
+  const unlockConfirm = $("unlock-confirm");
+  const unlockHelp    = $("unlock-help");
+  const btnHeardYes   = $("btn-heard-yes");
+  const btnHeardNo    = $("btn-heard-no");
+  const btnReplayTone = $("btn-replay-tone");
 
-  btnUnlock.addEventListener("click", async () => {
+  // Run the unlock + test-tone + reveal the "did you hear it?" gate.
+  // Synchronous start: createEngine() is sync, so unlock() creates the
+  // AudioContext synchronously inside this user-gesture frame before any
+  // await; iOS Safari needs that to bind the gesture to the context.
+  async function runUnlockAndTone() {
     btnUnlock.disabled = true;
+    btnReplayTone.disabled = true;
+    unlockHelp.setAttribute("hidden", "");
+    unlockConfirm.setAttribute("hidden", "");
     unlockStatus.textContent = COPY.unlockTrying;
     try {
       await engine.unlock();
       unlockStatus.textContent = COPY.unlockTone;
       await engine.testTone();
-      unlockStatus.textContent = COPY.unlockOk;
-      // brief delay so the user reads the confirmation
-      setTimeout(() => {
-        show("ready");
-        $("begin-round").textContent = String(session.roundIdx + 1);
-        $("round-pill").textContent = `ROUND ${session.roundIdx + 1} / 3`;
-      }, 350);
+      unlockStatus.textContent = COPY.unlockTonePlayed;
+      // Reveal the confirmation gate. We do NOT auto-advance — the user
+      // must affirm they heard the tone, otherwise they get help.
+      unlockConfirm.removeAttribute("hidden");
     } catch (e) {
       unlockStatus.textContent = COPY.unlockFail;
+      // Treat exceptions as a no-sound case so the user has a path forward.
+      unlockHelp.removeAttribute("hidden");
+    } finally {
       btnUnlock.disabled = false;
+      btnReplayTone.disabled = false;
     }
+  }
+
+  btnUnlock.addEventListener("click", runUnlockAndTone);
+  btnReplayTone.addEventListener("click", runUnlockAndTone);
+
+  btnHeardYes.addEventListener("click", () => {
+    unlockStatus.textContent = COPY.unlockOk;
+    show("ready");
+    $("begin-round").textContent = String(session.roundIdx + 1);
+    $("round-pill").textContent = `ROUND ${session.roundIdx + 1} / 3`;
+  });
+
+  btnHeardNo.addEventListener("click", () => {
+    unlockConfirm.setAttribute("hidden", "");
+    unlockHelp.removeAttribute("hidden");
   });
 
   // -------- ready screen --------
