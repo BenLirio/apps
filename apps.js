@@ -79,11 +79,9 @@
 
   function matchesQuery(a, q) {
     return (a.name || '').toLowerCase().includes(q)
-      || (a.category || '').toLowerCase().includes(q)
-      || (a.mechanic || '').toLowerCase().includes(q)
-      || (a.output_form || '').toLowerCase().includes(q)
       || (a.pitch || '').toLowerCase().includes(q)
       || (a.description || '').toLowerCase().includes(q)
+      || (a.rationale || '').toLowerCase().includes(q)
       || (a.slug || '').toLowerCase().includes(q);
   }
 
@@ -98,7 +96,6 @@
       ? `<span class="stage-pill archived">archived${a.archived_from_stage ? ' · ' + escapeHtml(a.archived_from_stage) : ''}</span>`
       : `<span class="stage-pill ${a.stage}">${escapeHtml(a.stage)}</span>`;
 
-    const tags = [a.category, a.mechanic, a.output_form].filter(Boolean).map(escapeHtml).join(' · ');
     const tsRaw = a.archived ? a.archived_at : (a.promoted_to_published_at || a.promoted_to_prototype_at || a.created_at);
     const tsDate = (tsRaw || '').slice(0, 10);
 
@@ -135,7 +132,6 @@
 
     // Meta line
     const metaParts = [stagePill];
-    if (tags) metaParts.push(`<span class="tags">${tags}</span>`);
     if (tsDate) metaParts.push(`<time datetime="${escapeAttr(tsRaw || '')}">${escapeHtml(tsDate)}</time>`);
     bodyParts.push(`<div class="meta">${metaParts.join('')}</div>`);
 

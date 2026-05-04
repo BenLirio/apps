@@ -409,11 +409,6 @@ main {
   color: var(--text-subtle);
 }
 
-.card .tags {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
 .stage-pill {
   display: inline-flex;
   align-items: center;
