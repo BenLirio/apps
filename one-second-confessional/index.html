@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>1-Second Confessional</title>
+
+<meta name="description" content="Hold a button for as close to 1.000 seconds as you can. The button knows.">
+
+<meta property="og:title" content="1-Second Confessional">
+<meta property="og:description" content="Hold a button for one second. The button has decided what to confess on your behalf.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/one-second-confessional/">
+<meta property="og:image" content="https://benlirio.com/apps/one-second-confessional/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="1-Second Confessional">
+<meta name="twitter:description" content="Hold a button for one second. The button has decided what to confess on your behalf.">
+<meta name="twitter:image" content="https://benlirio.com/apps/one-second-confessional/og.jpg">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet">
+
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</head>
+<body>
+<div class="app" x-data="oneSecondConfessional()" x-init="init()" x-cloak>
+
+  <header class="masthead">
+    <h1 class="title">1-Second<br><span class="title-emph">Confessional</span></h1>
+    <p class="tagline">the button knows.</p>
+  </header>
+
+  <!-- INTRO -->
+  <section class="screen" x-show="screen==='intro'" x-transition.opacity>
+    <div class="brief">
+      <p>Hold the button for as close to <strong>1.000 seconds</strong> as you can.</p>
+      <p>Don't peek at a clock. The button reads your duration to three decimals and stamps you with one of two hundred confessions, deterministically pinned to your bin.</p>
+      <p class="brief-sub">Three holds. The button has the floor.</p>
+    </div>
+    <button class="primary" @click="startSession()">Approach the button</button>
+    <p class="footnote">framed explicitly as a fortune-draw keyed by your tap, not an interpretation.</p>
+  </section>
+
+  <!-- HOLD -->
+  <section class="screen hold-screen" x-show="screen==='hold'" x-transition.opacity>
+    <div class="hold-counter">
+      hold <span x-text="holdNumber"></span> of 3
+    </div>
+    <div class="press-instruction">press &amp; hold</div>
+
+    <button
+      class="oracle-button"
+      :class="{ 'is-pressed': pressing, 'is-armed': !pressing }"
+      @pointerdown="onPress($event)"
+      @pointerup="onRelease($event)"
+      @pointercancel="onCancel($event)"
+      @lostpointercapture="onCancel($event)"
+      @contextmenu.prevent
+      aria-label="Hold this button for one second"
+    >
+      <span class="oracle-label" x-text="pressing ? 'HOLD…' : 'HOLD'"></span>
+    </button>
+
+    <p class="hold-aside">no timer is shown. the button is the timer.</p>
+  </section>
+
+  <!-- RESULT -->
+  <section class="screen result-screen" x-show="screen==='result'" x-transition.opacity>
+    <div class="result-card">
+      <div class="duration-display" x-text="current && current.durationStr"></div>
+      <div class="bin-line">
+        <span class="bin-range" x-text="current && current.binRangeStr"></span>
+        <span class="bin-sep">·</span>
+        <span class="bin-tier" x-text="current && current.tier"></span>
+      </div>
+      <div class="confession-card">
+        <div class="quote-mark">&ldquo;</div>
+        <p class="confession-text" x-text="current && current.confession"></p>
+        <div class="quote-attribution">— the button</div>
+      </div>
+    </div>
+    <div class="share-row">
+      <button class="primary" @click="advanceFromResult()" x-text="holdNumber < 3 ? 'next hold' : 'see your three'"></button>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="screen final-screen" x-show="screen==='final'" x-transition.opacity>
+    <h2 class="final-heading" x-text="isReplay ? 'someone&rsquo;s three confessions' : 'your three confessions'"></h2>
+    <p class="final-sub" x-text="isReplay ? 'pinned by their taps · ' + replayDateLabel : 'pinned by your taps · ' + replayDateLabel"></p>
+
+    <div class="final-stack">
+      <template x-for="(r, i) in results" :key="i">
+        <div class="final-card">
+          <div class="final-card-head">
+            <span class="final-duration" x-text="r.durationStr"></span>
+            <span class="final-tier" x-text="r.tier"></span>
+          </div>
+          <div class="final-bin" x-text="r.binRangeStr"></div>
+          <p class="final-confession" x-text="r.confession"></p>
+        </div>
+      </template>
+    </div>
+
+    <div class="share-row">
+      <button class="primary" onclick="share()">share these three</button>
+      <button class="secondary" @click="restart()" x-text="isReplay ? 'try it yourself' : 'three more holds'"></button>
+    </div>
+
+    <p class="final-footer">the button knows.</p>
+  </section>
+
+</div>
+</body>
+</html>

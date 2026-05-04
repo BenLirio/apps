@@ -1,0 +1,390 @@
+/* Aesthetic: arcade fortune-machine — black void, blood-red oracle button, ivory typewriter confessions, monospace digit readout. mock-instrument register. */
+
+:root {
+  --bg: #0a0a0a;
+  --ink: #f1ead8;
+  --ink-dim: #b6b1a3;
+  --ink-faint: #6a675e;
+  --red: #c9302a;
+  --red-bright: #f04438;
+  --button-face: #ead8b8;
+  --button-face-pressed: #f04438;
+  --rule: #2a2a2a;
+}
+
+[x-cloak] { display: none !important; }
+
+html { background: var(--bg); }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.app {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ----- masthead ----- */
+
+.masthead {
+  text-align: center;
+  padding-top: 8px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.title {
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: 30px;
+  letter-spacing: 0.04em;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.05;
+}
+.title-emph {
+  color: var(--red-bright);
+}
+
+.tagline {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  margin: 6px 0 0;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ----- screens ----- */
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 28px;
+}
+
+.brief {
+  max-width: 28em;
+  margin: 0 auto 28px;
+  padding: 0 8px;
+  font-size: 18px;
+  text-align: left;
+}
+.brief p { margin: 0 0 14px; }
+.brief strong { color: var(--red-bright); font-weight: 700; }
+.brief-sub {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: var(--ink-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 18px !important;
+}
+
+.footnote {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: var(--ink-faint);
+  margin-top: 28px;
+  max-width: 26em;
+  text-align: center;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+/* ----- buttons ----- */
+
+.primary {
+  background: var(--red);
+  color: var(--ink);
+  border: 2px solid var(--red-bright);
+  border-radius: 999px;
+  padding: 14px 28px;
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  min-width: 220px;
+  transition: transform 80ms ease, background 80ms ease;
+}
+.primary:hover { background: var(--red-bright); }
+.primary:active { transform: translateY(1px); }
+
+.secondary {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.secondary:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+/* ----- HOLD screen — the oracle button ----- */
+
+.hold-screen {
+  justify-content: center;
+}
+
+.hold-counter {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: var(--ink-faint);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.press-instruction {
+  font-family: 'Special Elite', monospace;
+  font-size: 16px;
+  color: var(--ink-dim);
+  margin-bottom: 28px;
+  letter-spacing: 0.05em;
+}
+
+.oracle-button {
+  width: min(72vw, 320px);
+  height: min(72vw, 320px);
+  border-radius: 50%;
+  background: var(--button-face);
+  border: 6px solid #1a1a1a;
+  box-shadow:
+    0 0 0 4px var(--button-face),
+    0 0 0 10px #1a1a1a,
+    inset 0 -10px 18px rgba(0,0,0,0.18),
+    inset 0 6px 14px rgba(255,255,255,0.35),
+    0 18px 0 -2px #1a1a1a,
+    0 22px 30px rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: transform 60ms ease, background 60ms ease, box-shadow 60ms ease;
+  padding: 0;
+  margin: 0;
+}
+.oracle-button.is-armed {
+  animation: oracle-breath 2.4s ease-in-out infinite;
+}
+.oracle-button.is-pressed {
+  background: var(--button-face-pressed);
+  transform: translateY(8px);
+  box-shadow:
+    0 0 0 4px var(--button-face-pressed),
+    0 0 0 10px #1a1a1a,
+    inset 0 -4px 8px rgba(0,0,0,0.4),
+    inset 0 4px 8px rgba(255,255,255,0.25),
+    0 8px 0 -2px #1a1a1a,
+    0 6px 12px rgba(0,0,0,0.6);
+  animation: none;
+}
+.oracle-button:focus-visible { outline: none; }
+.oracle-button:focus-visible .oracle-label { text-decoration: underline; }
+
+.oracle-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 38px;
+  color: #1a1a1a;
+  letter-spacing: 0.08em;
+  font-weight: 400;
+}
+.is-pressed .oracle-label {
+  color: var(--ink);
+}
+
+@keyframes oracle-breath {
+  0%, 100% { box-shadow:
+    0 0 0 4px var(--button-face),
+    0 0 0 10px #1a1a1a,
+    inset 0 -10px 18px rgba(0,0,0,0.18),
+    inset 0 6px 14px rgba(255,255,255,0.35),
+    0 18px 0 -2px #1a1a1a,
+    0 22px 30px rgba(0,0,0,0.55); }
+  50%      { box-shadow:
+    0 0 0 4px var(--button-face),
+    0 0 0 10px #1a1a1a,
+    inset 0 -10px 18px rgba(0,0,0,0.18),
+    inset 0 6px 14px rgba(255,255,255,0.45),
+    0 18px 0 -2px #1a1a1a,
+    0 22px 36px rgba(201, 48, 42, 0.35); }
+}
+
+.hold-aside {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: var(--ink-faint);
+  margin-top: 36px;
+  letter-spacing: 0.05em;
+}
+
+/* ----- RESULT screen ----- */
+
+.result-screen { justify-content: flex-start; }
+
+.duration-display {
+  font-family: 'VT323', monospace;
+  font-size: clamp(64px, 18vw, 96px);
+  color: var(--red-bright);
+  letter-spacing: 0.04em;
+  margin: 4px 0 4px;
+  text-shadow: 0 0 14px rgba(240, 68, 56, 0.45);
+  font-feature-settings: "tnum";
+}
+
+.bin-line {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--ink-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 28px;
+}
+.bin-sep { margin: 0 8px; color: var(--ink-faint); }
+.bin-range { color: var(--ink-dim); }
+.bin-tier { color: var(--red-bright); }
+
+.confession-card {
+  background: #141412;
+  border: 1px solid var(--rule);
+  padding: 24px 22px 22px;
+  max-width: 30em;
+  position: relative;
+  margin: 0 auto;
+}
+.confession-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed #2a2a26;
+  pointer-events: none;
+}
+.quote-mark {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 64px;
+  color: var(--red);
+  position: absolute;
+  top: -18px;
+  left: 12px;
+  line-height: 1;
+}
+.confession-text {
+  font-family: 'Special Elite', monospace;
+  font-size: clamp(20px, 5.4vw, 26px);
+  color: var(--ink);
+  line-height: 1.45;
+  margin: 0;
+  text-align: left;
+}
+.quote-attribution {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--ink-faint);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: right;
+  margin-top: 14px;
+}
+
+/* ----- FINAL screen ----- */
+
+.final-screen { padding-top: 24px; }
+
+.final-heading {
+  font-family: 'Special Elite', monospace;
+  font-size: 26px;
+  color: var(--ink);
+  margin: 4px 0 4px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+.final-sub {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--ink-faint);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0 0 22px;
+  text-align: center;
+}
+
+.final-stack {
+  width: 100%;
+  max-width: 32em;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.final-card {
+  background: #141412;
+  border: 1px solid var(--rule);
+  padding: 16px 18px 18px;
+  position: relative;
+}
+.final-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.final-duration {
+  font-family: 'VT323', monospace;
+  font-size: 38px;
+  color: var(--red-bright);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum";
+}
+.final-tier {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: var(--red-bright);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.final-bin {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--ink-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.final-confession {
+  font-family: 'Special Elite', monospace;
+  font-size: 18px;
+  color: var(--ink);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.final-footer {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--ink-faint);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-top: 30px;
+  text-align: center;
+}
+
+/* ----- small viewports ----- */
+@media (max-width: 380px) {
+  .title { font-size: 26px; }
+  .duration-display { font-size: 64px; }
+  .confession-text { font-size: 19px; }
+}
