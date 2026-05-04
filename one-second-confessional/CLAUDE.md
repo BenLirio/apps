@@ -19,6 +19,7 @@ Hold a button for as close to 1.000s as you can. The button reads your duration 
 
 ## Quirks
 
+- **Alpine's `<script>` tag MUST come AFTER `app.js`** in `index.html`. Alpine 3 starts immediately when its script runs (readyState is `'interactive'` during `defer` execution), and `x-data="oneSecondConfessional()"` will throw "is not defined" if our module hasn't run yet. Defer scripts execute in document order, so putting Alpine last guarantees the factory is on `window` before Alpine walks the DOM. Other apps in the portfolio don't hit this because they don't use Alpine.
 - **No timer is rendered during the press.** Showing a live timer mid-hold would let users cheat by watching it tick — the comedy is that you can't. The duration is revealed only on release. Don't add a press-progress bar.
 - **Bins are 5ms wide across 0.500–1.500s** (200 bins, one confession per bin). Outside that range gets a single "you broke the contract" line — don't add per-millisecond out-of-range variants.
 - **Per-day rotation:** the bin → confession map is rotated by a `dayShift` derived from today's UTC date, so the same bin returns a different line on different days. Shared URLs include the original date (`d=YYYYMMDD`) so receivers replay deterministically.
