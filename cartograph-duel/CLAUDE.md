@@ -6,11 +6,11 @@ takes the match.
 
 ## Files
 
-- `index.html` — DOM (5 screens: landing, waiting, round, round-result, match-result), share-preview meta, ES module entry.
+- `index.html` — DOM (6 screens: hero, setup, waiting, round, round-result, match-result), share-preview meta, ES module entry.
 - `base.css` — DO NOT EDIT. Byte-copied from `infrastructure/styles/base.css`.
-- `style.css` — aesthetic: **cartographer's notebook** (cream paper, IM Fell English serif, ink-blue + vermilion, dashed dividers).
-- `app.js` — entry point. Wires landing screen, room create/join, `?room=` deep link, `window.share`. Hands off to `loop.init()` once both peers are paired.
-- `loop.js` — game state machine + drawing canvas. Owns all 5 screens after landing/waiting. Round flow: pick country → draw → submit → score both → reveal → next round / match result. 60s round timer.
+- `style.css` — aesthetic: **cartographer's notebook** (cream paper, IM Fell English serif, ink-blue + vermilion, dashed dividers). Each `.screen` fills the viewport (`min-height: 100svh` via `.app` + `flex: 1`) so phases feel like distinct pages, with a 240ms fade-in transition.
+- `app.js` — entry point. Wires hero ("Begin a duel"), setup screen (name + create/join + back), `?room=` deep link (skips hero), `window.share`. Hands off to `loop.init()` once both peers are paired.
+- `loop.js` — game state machine + drawing canvas. Owns the post-pair screens (waiting, round, round-result, match-result). Round flow: pick country → draw → submit → score both → reveal → next round / match result. 60s round timer. `show()` toggles `[hidden]` on the canonical `SCREEN_IDS` list and scrolls to top.
 - `net.js` — WebSocket protocol. Connects to `wss://l67yfgkb1j.execute-api.us-east-1.amazonaws.com/prod`. Exposes `createRoom / joinRoom / sendUpdate / on`.
 - `countries.js` — 12 hand-simplified country outlines as normalized `[x, y]` polygons + deterministic `pickCountry(roomCode, roundIndex)` so both peers see the same prompt.
 - `scoring.js` — `scoreDrawing(stroke, w, h, refPoly)` rasterizes both shapes to a 240×240 offscreen canvas and computes `IoU^0.65 * 100`. `renderOverlay()` paints the side-by-side reveal cards.
@@ -19,7 +19,7 @@ takes the match.
 
 ## Data flow
 
-- `app.js` collects name + room intent, calls `net.createRoom / joinRoom`. On `room_created` it shows the waiting screen with QR + join link. On `player_joined` (host) or `joined_room` (guest) it calls `loop.init({ role, playerName, opponentName, roomCode })`.
+- `app.js` shows the hero screen on first load (or skips straight to setup if `?room=ABCD` is present). The "Begin a duel" button on the hero reveals the setup screen. Setup collects name + room intent, calls `net.createRoom / joinRoom`. On `room_created` it shows the waiting screen with QR + join link. On `player_joined` (host) or `joined_room` (guest) it calls `loop.init({ role, playerName, opponentName, roomCode })`.
 - `loop.js` runs the round state machine. On each round: `pickCountry(roomCode, round)` → both players see the same name. Each player draws on their own canvas (no real-time stroke sync — drawing is private). On submit, `loop.js` calls `scoring.scoreDrawing(...)` locally AND sends `{ kind: 'round_submit', round, stroke, canvasW, canvasH }` over the relay so the opponent can score the same stroke.
 - Both peers compute scores from identical inputs (deterministic IoU on the same reference polygon), so they agree without server arbitration.
 - Rematch is the symmetric handshake from `multiplayer.md`: peer A sends `{ kind: 'rematch' }`; peer B echoes; host kicks off via `{ kind: 'rematch_start' }`.
@@ -35,6 +35,7 @@ takes the match.
 
 ## Editing rules
 
-- Soft cap 400 lines per JS file. `loop.js` is at ~340 — split off `controls.js` (canvas drawing + pointer events) if it crosses 400.
+- Soft cap 400 lines per JS file. `loop.js` is at ~350 — split off `controls.js` (canvas drawing + pointer events) if it crosses 400.
 - After any structural edit (file added / removed / responsibility moved), regenerate this CLAUDE.md.
 - Do not add real-time stroke broadcasting between peers. The whole design relies on `simultaneous-submit` to dodge the latency problem flagged in `aws-multiplayer.md` and `multiplayer.md`.
+- Treat each `<section class="screen">` as its own page — full viewport, one job. If a screen starts cramming together two distinct concerns (e.g. marketing + form), split it. Add new screens to the `SCREEN_IDS` list in `loop.js`.

@@ -50,9 +50,22 @@ const ROUND_SECONDS = 60;
 // ── DOM helpers ──────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
+const SCREEN_IDS = [
+  'screen-hero',
+  'screen-setup',
+  'screen-waiting',
+  'screen-round',
+  'screen-round-result',
+  'screen-match-result'
+];
+
 function show(screenId) {
-  ['screen-landing','screen-waiting','screen-round','screen-round-result','screen-match-result']
-    .forEach(id => { $(id).hidden = (id !== screenId); });
+  SCREEN_IDS.forEach(id => {
+    const el = $(id);
+    if (el) el.hidden = (id !== screenId);
+  });
+  // Each phase is its own page — start it from the top.
+  window.scrollTo(0, 0);
 }
 
 function setError(msg) {

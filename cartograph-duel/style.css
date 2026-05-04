@@ -25,9 +25,48 @@ body {
   line-height: 1.5;
 }
 
-.app { padding-top: max(20px, env(safe-area-inset-top)); }
+.app {
+  padding-top: max(20px, env(safe-area-inset-top));
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
 
-.screen { display: flex; flex-direction: column; gap: 18px; }
+/* Each screen fills the viewport so phases feel like distinct pages, not one
+   continuous scroll. Only one screen is visible at a time (others get [hidden]). */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.screen:not([hidden]) {
+  animation: page-in 240ms ease both;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Screen-foot pushes a low-priority control (back link, etc.) to the bottom
+   of the viewport so each page has a clear top/middle/bottom rhythm. */
+.screen-foot { margin-top: auto; padding-top: 12px; text-align: center; }
+.screen-cta { margin-top: auto; padding-top: 8px; }
+.screen-cta .btn { width: 100%; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--ink-light);
+  font-family: 'IM Fell English', Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  padding: 10px 12px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.btn-link:hover { color: var(--ink); }
 
 /* ── Masthead ─────────────────────────────────── */
 .masthead { text-align: center; padding: 6px 0 4px; border-bottom: 1.5px solid var(--ink); }

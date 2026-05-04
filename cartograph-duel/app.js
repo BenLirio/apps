@@ -63,10 +63,10 @@ net.on('error', ({ message }) => {
 });
 
 net.on('disconnected', () => {
-  // loop.js handles in-game disconnect; here we only show landing-stage drops
+  // loop.js handles in-game disconnect; here we only show pre-game drops
   if ($('screen-waiting') && !$('screen-waiting').hidden) {
     setError('lost the connection — try once more');
-    show('screen-landing');
+    show('screen-setup');
   }
 });
 
@@ -83,32 +83,48 @@ window.share = function share() {
   }
 };
 
-// ── Landing wire-up ──────────────────────────────────────────────────
-function bindLanding() {
+// ── Hero + Setup wire-up ─────────────────────────────────────────────
+function bindHero() {
+  $('begin-btn').onclick = () => {
+    show('screen-setup');
+    // Auto-focus the name field once the user has chosen to begin.
+    setTimeout(() => $('player-name').focus(), 50);
+  };
+}
+
+function bindSetup() {
   $('create-btn').onclick = createRoom;
   $('join-btn').onclick = joinRoom;
+  $('back-to-hero-btn').onclick = () => {
+    setError('');
+    show('screen-hero');
+  };
   $('join-code').addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   });
 }
 
 // ── ?room= deep-link handler (multiplayer.md "?room= URL handler") ──
+// Returns true if a deep-link was applied (caller skips hero in that case).
 function handleRoomParam() {
   const params = new URLSearchParams(location.search);
   const room = params.get('room');
-  if (!room) return;
+  if (!room) return false;
   const code = room.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-  if (code.length !== 4) return;
+  if (code.length !== 4) return false;
   $('join-code').value = code;
   $('challenge-banner').hidden = false;
   $('challenge-banner-code').textContent = code;
   // De-emphasize Create, promote Join
   $('create-btn').classList.add('demoted');
   $('join-btn').classList.add('promoted');
+  return true;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  bindLanding();
-  handleRoomParam();
-  show('screen-landing');
+  bindHero();
+  bindSetup();
+  const hasDeepLink = handleRoomParam();
+  // A challenge link skips the marketing hero — they came here to join, not learn.
+  show(hasDeepLink ? 'screen-setup' : 'screen-hero');
 });

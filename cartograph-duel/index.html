@@ -29,13 +29,31 @@
 <body>
 <div class="app">
 
-  <!-- Screen 1: Landing -->
-  <section id="screen-landing" class="screen">
+  <!-- Screen 1: Hero (welcome / rules) -->
+  <section id="screen-hero" class="screen">
     <header class="masthead">
       <div class="kicker">EST. MMXXVI · WEST WING, MAP ROOM</div>
       <h1>Cartograph Duel</h1>
       <p class="tagline">Two friends. One country at a time. Whoever draws closest to the real outline wins the round. Best of three takes the match.</p>
     </header>
+
+    <div class="how">
+      <h2>HOW IT GOES</h2>
+      <ol>
+        <li>Both players see a country name. (No reference picture — that's the fun part.)</li>
+        <li>You draw its outline from memory on your own canvas. Sixty seconds.</li>
+        <li>Both submissions reveal at once. Geometric overlap with the real shape decides the round.</li>
+      </ol>
+    </div>
+
+    <div class="screen-cta">
+      <button id="begin-btn" class="btn btn-primary">Begin a duel</button>
+    </div>
+  </section>
+
+  <!-- Screen 2: Setup (create or join a room) -->
+  <section id="screen-setup" class="screen" hidden>
+    <h2 class="screen-title">Set up the duel</h2>
 
     <div id="challenge-banner" class="banner" hidden>
       You have been challenged to room <strong id="challenge-banner-code"></strong>. Enter your name and step into the duel.
@@ -60,13 +78,8 @@
       <p id="error-msg" class="error" hidden></p>
     </div>
 
-    <div class="how">
-      <h2>HOW IT GOES</h2>
-      <ol>
-        <li>Both players see a country name. (No reference picture — that's the fun part.)</li>
-        <li>You draw its outline from memory on your own canvas. Sixty seconds.</li>
-        <li>Both submissions reveal at once. Geometric overlap with the real shape decides the round.</li>
-      </ol>
+    <div class="screen-foot">
+      <button id="back-to-hero-btn" class="btn-link" type="button">← back to the map room</button>
     </div>
   </section>
 
