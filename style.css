@@ -321,10 +321,12 @@ main {
 .card.is-archived:hover { opacity: .85; }
 .card.fading { opacity: .25; transform: none; }
 
-/* Hero image (prototype/published) */
+/* Hero image (prototype/published). Favicons are square — render at native
+   aspect-ratio so they don't get cropped. `contain` is forgiving if a future
+   logo isn't quite square. */
 .card .logo-wrap {
   position: relative;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 1 / 1;
   background: var(--bg-elevated);
   overflow: hidden;
   border-bottom: 1px solid var(--border);
@@ -333,7 +335,7 @@ main {
 .card .logo {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   transition: transform .3s ease;
 }

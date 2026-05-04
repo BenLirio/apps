@@ -100,7 +100,9 @@
     const tsDate = (tsRaw || '').slice(0, 10);
 
     const isLive = !a.archived;
-    const showHero = isLive && (a.stage === 'prototype' || a.stage === 'published') && !!a.logo;
+    // Hero/favicon is the published-stage brand treatment. Prototypes intentionally
+    // don't show one — generated only on publish.
+    const showHero = isLive && a.stage === 'published' && !!a.logo;
 
     // Hero (only for prototype/published with a logo image)
     let hero = '';
