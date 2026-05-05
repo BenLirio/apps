@@ -110,17 +110,30 @@
     <p class="muted small">As soon as they join, the first country drops on both screens.</p>
   </section>
 
-  <!-- Screen 5: Round (drawing) -->
-  <section id="screen-round" class="screen" hidden>
+  <!-- Screen 5: Prompt — show the country to draw, prepare your mental image -->
+  <section id="screen-prompt" class="screen" hidden>
     <div class="round-header">
-      <div id="round-label" class="round-label">round 1 of 3</div>
-      <div id="match-score" class="match-score">you 0 · 0 rival</div>
+      <div id="prompt-round-label" class="round-label">round 1 of 3</div>
     </div>
 
-    <div class="prompt-block">
-      <div class="prompt-prelabel">DRAW FROM MEMORY</div>
-      <div id="country-name" class="prompt-name">—</div>
-      <div id="country-hint" class="prompt-hint"></div>
+    <div class="prompt-block prompt-block-large">
+      <div class="prompt-prelabel">YOUR ASSIGNMENT</div>
+      <div id="prompt-country-name" class="prompt-name">—</div>
+      <div id="prompt-country-hint" class="prompt-hint"></div>
+    </div>
+
+    <p class="muted small prompt-instructions">Picture the outline in your head. The 60-second clock starts when you tap below.</p>
+
+    <div class="screen-cta">
+      <button id="begin-drawing-btn" class="btn btn-primary">begin drawing</button>
+    </div>
+  </section>
+
+  <!-- Screen 6: Round (drawing only) -->
+  <section id="screen-round" class="screen" hidden>
+    <div class="round-header">
+      <div id="round-country-label" class="round-label">drawing —</div>
+      <div id="timer" class="timer">60s</div>
     </div>
 
     <div class="canvas-wrap">
@@ -130,13 +143,18 @@
     <div class="round-controls">
       <button id="clear-btn" class="btn btn-secondary">clear</button>
       <button id="submit-btn" class="btn btn-primary" disabled>draw the outline first</button>
-      <div id="timer" class="timer">60s</div>
     </div>
-
-    <p id="waiting-note" class="muted small" hidden>Locked in. The rival is still drawing…</p>
   </section>
 
-  <!-- Screen 6: Round result -->
+  <!-- Screen 7: Submitted — waiting for rival -->
+  <section id="screen-submitted" class="screen" hidden>
+    <h2 class="screen-title">Locked in.</h2>
+    <p class="muted submitted-detail">Your stroke has been sealed. The rival is still tracing the coastline…</p>
+    <div class="seal pulse">⏳</div>
+    <p class="muted small">Both reveals will appear the moment they finish or the timer runs out.</p>
+  </section>
+
+  <!-- Screen 8: Round result — reveal the two drawings (one job: the comparison) -->
   <section id="screen-round-result" class="screen" hidden>
     <h2 class="screen-title">Reveal: <span id="rr-country">—</span></h2>
     <div id="rr-verdict" class="verdict">—</div>
@@ -154,12 +172,39 @@
       </div>
     </div>
 
-    <div id="rr-match-score" class="match-score-large">match: you 0 · 0 rival</div>
-
-    <button id="rr-next-btn" class="btn btn-primary">next country</button>
+    <div class="screen-cta">
+      <button id="rr-next-btn" class="btn btn-primary">see the standings</button>
+    </div>
   </section>
 
-  <!-- Screen 7: Match result -->
+  <!-- Screen 9: Standings — match score running tally + advance -->
+  <section id="screen-standings" class="screen" hidden>
+    <div class="round-header">
+      <div id="standings-round-label" class="round-label">after round 1 of 3</div>
+    </div>
+
+    <h2 class="screen-title">The standings.</h2>
+
+    <div class="standings-block">
+      <div class="standings-row">
+        <span class="standings-name" id="st-my-name">you</span>
+        <span class="standings-score" id="st-my-wins">0</span>
+      </div>
+      <div class="standings-divider">·</div>
+      <div class="standings-row">
+        <span class="standings-score" id="st-opp-wins">0</span>
+        <span class="standings-name" id="st-opp-name">rival</span>
+      </div>
+    </div>
+
+    <p id="standings-flavor" class="muted small standings-flavor">—</p>
+
+    <div class="screen-cta">
+      <button id="standings-next-btn" class="btn btn-primary">next country</button>
+    </div>
+  </section>
+
+  <!-- Screen 10: Match result -->
   <section id="screen-match-result" class="screen" hidden>
     <div class="seal">★</div>
     <h2 id="mr-headline" class="result-headline">CARTOGRAPHER LAUREATE</h2>

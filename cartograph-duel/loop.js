@@ -1,8 +1,8 @@
 // loop.js — game state machine + drawing canvas + render.
 // Net protocol lives in net.js. Country data + scoring in their own files.
 //
-// Game flow:
-//   landing -> waiting (host) | game (after match) -> round (draw, submit, reveal) x3 -> match-result
+// Game flow (one job per screen):
+//   waiting -> [ prompt -> round (draw) -> submitted -> reveal -> standings ] x3 -> match-result
 // Each round both players draw on their OWN canvas, then submit their stroke
 // path to the opponent. When both have submitted (or the 60s timer expires),
 // scores resolve identically on both sides.
@@ -55,8 +55,11 @@ const SCREEN_IDS = [
   'screen-create',
   'screen-join',
   'screen-waiting',
+  'screen-prompt',
   'screen-round',
+  'screen-submitted',
   'screen-round-result',
+  'screen-standings',
   'screen-match-result'
 ];
 
@@ -209,13 +212,23 @@ function startRound() {
   state.myCanvasDims = null;
   state.oppCanvasDims = null;
 
-  show('screen-round');
-  $('round-label').textContent = `round ${state.round + 1} of ${state.totalRounds}`;
-  $('country-name').textContent = state.currentCountry.name;
-  $('country-hint').textContent = state.currentCountry.hint;
-  $('match-score').textContent = `you ${state.myWins} · ${state.oppWins} ${state.opponentName || 'rival'}`;
+  showPrompt();
+}
 
-  // Re-fit canvas in case the viewport changed
+// 60s clock does NOT start here — only after the player taps "begin drawing".
+function showPrompt() {
+  show('screen-prompt');
+  $('prompt-round-label').textContent = `round ${state.round + 1} of ${state.totalRounds}`;
+  $('prompt-country-name').textContent = state.currentCountry.name;
+  $('prompt-country-hint').textContent = state.currentCountry.hint;
+}
+
+// Round timer starts here — exiting the prompt page is what kicks the clock.
+function enterDrawingPhase() {
+  show('screen-round');
+  $('round-country-label').textContent = `drawing ${state.currentCountry.name.toLowerCase()}`;
+
+  // Re-fit canvas in case the viewport changed (or this is the first time it's visible)
   requestAnimationFrame(() => {
     fitCanvasToParent(drawCanvas);
     redrawMyCanvas();
@@ -249,7 +262,6 @@ function submitDrawing() {
     state.myStroke, state.myCanvasDims.w, state.myCanvasDims.h, state.currentCountry.poly
   );
   updateSubmitState();
-  $('waiting-note').hidden = false;
 
   net.sendUpdate({
     kind: 'round_submit',
@@ -259,6 +271,8 @@ function submitDrawing() {
     canvasW: state.myCanvasDims.w,
     canvasH: state.myCanvasDims.h
   });
+
+  show('screen-submitted');
 
   tryResolveRound();
 }
@@ -285,6 +299,7 @@ function tryResolveRound() {
   showRoundResult();
 }
 
+// Reveal-only — running match score and "next" CTA live on the standings page.
 function showRoundResult() {
   show('screen-round-result');
   $('rr-country').textContent = state.currentCountry.name;
@@ -292,7 +307,6 @@ function showRoundResult() {
   $('rr-opp-name').textContent = state.opponentName || 'rival';
   $('rr-my-score').textContent = state.myScore + '%';
   $('rr-opp-score').textContent = state.oppScore + '%';
-  $('rr-match-score').textContent = `match: you ${state.myWins} · ${state.oppWins} ${state.opponentName || 'rival'}`;
 
   let verdict;
   if (state.myScore > state.oppScore) verdict = 'YOU WIN THE ROUND';
@@ -310,9 +324,32 @@ function showRoundResult() {
     renderOverlay(oppOverlay, state.oppStroke, state.oppCanvasDims.w, state.oppCanvasDims.h, state.currentCountry.poly, PALETTE);
   }
 
-  // Next-round / match-result button
+  $('rr-next-btn').onclick = showStandings;
+}
+
+function showStandings() {
+  show('screen-standings');
+  $('standings-round-label').textContent = `after round ${state.round + 1} of ${state.totalRounds}`;
+  $('st-my-name').textContent = state.playerName || 'you';
+  $('st-opp-name').textContent = state.opponentName || 'rival';
+  $('st-my-wins').textContent = state.myWins;
+  $('st-opp-wins').textContent = state.oppWins;
+
   const isMatchOver = (state.round + 1) >= state.totalRounds || state.myWins > state.totalRounds/2 || state.oppWins > state.totalRounds/2;
-  const btn = $('rr-next-btn');
+
+  let flavor;
+  if (isMatchOver) {
+    flavor = 'all rounds are in. one final verdict awaits.';
+  } else if (state.myWins > state.oppWins) {
+    flavor = 'you lead. press the advantage on the next country.';
+  } else if (state.oppWins > state.myWins) {
+    flavor = `${state.opponentName || 'they'} lead. answer back on the next country.`;
+  } else {
+    flavor = 'level pegging. the next country breaks the tie.';
+  }
+  $('standings-flavor').textContent = flavor;
+
+  const btn = $('standings-next-btn');
   btn.textContent = isMatchOver ? 'see the verdict' : 'next country';
   btn.onclick = () => {
     if (isMatchOver) {
@@ -422,6 +459,7 @@ export function init({ role, playerName, opponentName, roomCode }) {
 
   $('clear-btn').onclick = clearDrawing;
   $('submit-btn').onclick = submitDrawing;
+  $('begin-drawing-btn').onclick = enterDrawingPhase;
   $('rematch-btn').onclick = requestRematch;
   $('share-btn').onclick = window.share;
 

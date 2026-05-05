@@ -239,12 +239,10 @@ input[type="text"] {
   letter-spacing: 0.3em;
   color: var(--ink-light);
 }
-.match-score {
-  font-style: italic;
-  color: var(--ink-light);
-}
 
 .prompt-block { text-align: center; padding: 4px 0; }
+.prompt-block-large { padding: 24px 0 8px; }
+.prompt-instructions { text-align: center; margin: 4px 0 0; }
 .prompt-prelabel {
   font-family: 'IM Fell English SC', Georgia, serif;
   font-size: 11px;
@@ -275,7 +273,7 @@ input[type="text"] {
 
 .round-controls {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   gap: 10px;
   align-items: center;
 }
@@ -287,6 +285,52 @@ input[type="text"] {
   text-align: right;
   min-width: 56px;
 }
+
+/* ── Submitted (waiting for rival) ─────────────── */
+.submitted-detail { text-align: center; font-style: italic; margin: 4px 0 8px; }
+.pulse {
+  animation: pulse-fade 1.6s ease-in-out infinite;
+}
+@keyframes pulse-fade {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.06); }
+}
+
+/* ── Standings ─────────────────────────────────── */
+.standings-block {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  padding: 22px 8px;
+  margin: 8px 0 4px;
+}
+.standings-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.standings-name {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  color: var(--ink-light);
+}
+.standings-score {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(48px, 12vw, 72px);
+  color: var(--vermilion);
+  line-height: 1;
+}
+.standings-divider {
+  font-family: 'IM Fell English SC', Georgia, serif;
+  font-size: clamp(28px, 7vw, 40px);
+  color: var(--ink-faint);
+}
+.standings-flavor { text-align: center; font-style: italic; margin: 0; }
 
 /* ── Round result ────────────────────────────── */
 .verdict {
