@@ -3,18 +3,18 @@
 // Alpine factory exported on `window`.
 //
 // Reveal model: each of the three holds gets a private result screen
-// (duration + delta + tier only). The live curve is unlocked on the final
-// screen, where the player's session-average is pinned against the
-// distribution of every previous player's average. One session = one POST.
+// (duration + delta + tier only). The live scoreboard is unlocked on the
+// final screen, where the player's session-average is pinned on a horizontal
+// 0.5–1.5s track and a tier-comparison table shows how everyone clusters.
+// One session = one POST.
 
 import {
   computeResult,
   encodeShare,
   decodeShare,
   averageMsOf,
-  curvePathFromBins,
-  CURVE_VIEWBOX,
-  TARGET_X,
+  tierDistributionFromBins,
+  TARGET_PCT,
 } from './mechanic.js';
 
 // shared service: see infrastructure/distribution/ in the entertainment-factory.
@@ -62,19 +62,18 @@ export function closerToOne() {
     bins: [],
     total: 0,
     statsLoaded: false,
+    tierDistribution: tierDistributionFromBins([]),
 
     // session-average pin computed once on transition to final.
     averageMs: null,
     averageResult: null,
 
-    // expose curve constants to the template
-    curvePath: curvePathFromBins([]),
-    curveViewBox: CURVE_VIEWBOX,
-    targetX: TARGET_X,
+    // bullseye marker position on the score track (constant, exposed for the template)
+    targetPct: TARGET_PCT,
 
     async init() {
       // replay path: shared-link viewers jump straight to the final screen.
-      // We re-fetch the live curve so the average pin is rendered against
+      // We re-fetch the live scoreboard so the average pin is rendered against
       // *today's* distribution, not whatever was true when the link was made.
       const decoded = decodeShare(window.location.hash);
       if (!decoded) return;
@@ -92,7 +91,7 @@ export function closerToOne() {
       if (stats) {
         this.bins = stats.bins;
         this.total = stats.total;
-        this.curvePath = curvePathFromBins(stats.bins);
+        this.tierDistribution = tierDistributionFromBins(stats.bins);
         this.statsLoaded = true;
       }
     },
@@ -143,8 +142,8 @@ export function closerToOne() {
 
     recordHold(elapsedMs) {
       const ms = Math.round(elapsedMs);
-      // No network on per-hold reveal — the curve stays hidden until hold 3.
-      // duration / delta / tier are everything the player sees here.
+      // No network on per-hold reveal — the scoreboard stays hidden until
+      // hold 3. duration / delta / tier are everything the player sees here.
       const result = computeResult(ms, [], 0);
       this.holds.push(ms);
       this.results.push(result);
@@ -191,7 +190,7 @@ export function closerToOne() {
           this.statsLoaded = true;
         }
       }
-      this.curvePath = curvePathFromBins(this.bins);
+      this.tierDistribution = tierDistributionFromBins(this.bins);
       this.refreshAverageResult();
     },
 
@@ -203,12 +202,21 @@ export function closerToOne() {
       this.startSession();
     },
 
-    // formatted "1,234 sessions recorded" for the small histogram tally line.
-    // sessions, not holds — the curve is one-pin-per-player.
+    // formatted "1,234 sessions recorded" for the small tally line.
+    // sessions, not holds — the scoreboard is one-pin-per-player.
     get totalLabel() {
-      if (!this.statsLoaded) return '… loading the curve';
+      if (!this.statsLoaded) return '… loading the scoreboard';
       const n = this.total;
       return n.toLocaleString() + (n === 1 ? ' session recorded' : ' sessions recorded');
+    },
+
+    // peak count across all tiers, used to scale tier-table bars. clamped to 1
+    // so an empty scoreboard still gives the bars a denominator and they
+    // render as flat zero-width fills (no NaN, no division-by-zero).
+    get tierMaxCount() {
+      let m = 0;
+      for (const t of this.tierDistribution) if (t.count > m) m = t.count;
+      return Math.max(1, m);
     },
   };
 }

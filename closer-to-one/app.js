@@ -4,7 +4,7 @@ import './journey.js';
 
 window.share = async function share() {
   const url = window.location.href;
-  const text = "I beat the curve. how close can you get to 1.000s? " + url;
+  const text = "I made the scoreboard. how close can you get to 1.000s? " + url;
   try {
     if (navigator.share) {
       await navigator.share({ title: 'Closer to 1.000', text, url });

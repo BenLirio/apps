@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Closer to 1.000</title>
 
-<meta name="description" content="Hold a button for as close to 1.000 seconds as you can. Three holds. Your average lands on the live curve of every player&rsquo;s average.">
+<meta name="description" content="Hold a button for as close to 1.000 seconds as you can. Three holds. Your average lands on the live scoreboard of every player&rsquo;s average.">
 
 <meta property="og:title" content="Closer to 1.000">
-<meta property="og:description" content="Three holds. Your average lands on the live curve. Closer is better.">
+<meta property="og:description" content="Three holds. Your average lands on the live scoreboard. Closer is better.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://benlirio.com/apps/closer-to-one/">
 <meta property="og:image" content="https://benlirio.com/apps/closer-to-one/og.jpg">
@@ -17,7 +17,7 @@
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Closer to 1.000">
-<meta name="twitter:description" content="Three holds. Your average lands on the live curve. Closer is better.">
+<meta name="twitter:description" content="Three holds. Your average lands on the live scoreboard. Closer is better.">
 <meta name="twitter:image" content="https://benlirio.com/apps/closer-to-one/og.jpg">
 
 <!-- Google tag (gtag.js) -->
@@ -45,18 +45,18 @@
 
   <header class="masthead">
     <h1 class="title">Closer to<br><span class="title-emph">1.000</span></h1>
-    <p class="tagline">vs. the live curve.</p>
+    <p class="tagline">vs. the live scoreboard.</p>
   </header>
 
   <!-- INTRO -->
   <section class="screen" x-show="screen==='intro'" x-transition.opacity>
     <div class="brief">
       <p>Hold the button for as close to <strong>1.000 seconds</strong> as you can.</p>
-      <p>You get <strong>three holds</strong>. After the third, your average lands as a pin on the live curve of every player&rsquo;s average. The closer you land to <strong>1.000</strong>, the more people you beat.</p>
+      <p>You get <strong>three holds</strong>. After the third, your average lands on the live scoreboard of every player&rsquo;s average. The closer you land to <strong>1.000</strong>, the more people you beat.</p>
       <p class="brief-sub">Three holds. One average. One pin.</p>
     </div>
     <button class="primary" @click="startSession()">step up</button>
-    <p class="footnote">no timer is shown. no peeking. the curve unlocks after hold 3.</p>
+    <p class="footnote">no timer is shown. no peeking. the scoreboard unlocks after hold 3.</p>
   </section>
 
   <!-- HOLD -->
@@ -94,45 +94,49 @@
         <span class="delta-value" x-text="current && current.deltaStr"></span>
       </div>
       <div class="tier-badge" x-text="current && current.tierLabel"></div>
-      <p class="result-aside" x-text="holdNumber < 3 ? 'curve unlocks after hold 3.' : 'curve unlocks next.'"></p>
+      <p class="result-aside" x-text="holdNumber < 3 ? 'scoreboard unlocks after hold 3.' : 'scoreboard unlocks next.'"></p>
     </div>
     <div class="share-row">
-      <button class="primary" @click="advanceFromResult()" x-text="holdNumber < 3 ? 'next hold' : 'reveal the curve'"></button>
+      <button class="primary" @click="advanceFromResult()" x-text="holdNumber < 3 ? 'next hold' : 'reveal the scoreboard'"></button>
     </div>
   </section>
 
   <!-- FINAL -->
   <section class="screen final-screen" x-show="screen==='final'" x-transition.opacity>
     <h2 class="final-heading" x-text="isReplay ? 'someone&rsquo;s average' : 'your average'"></h2>
-    <p class="final-sub">vs. the live curve</p>
 
     <div class="final-best" x-show="averageResult">
-      <div class="final-best-label">average of three</div>
       <div class="final-best-duration" x-text="averageResult && averageResult.durationStr"></div>
-      <div class="final-best-meta">
-        <span class="final-best-pct" x-text="averageResult && (averageResult.beatPct == null ? 'beat —%' : 'beat ' + averageResult.beatPct + '%')"></span>
-        <span class="final-best-sep">·</span>
-        <span class="final-best-tier" x-text="averageResult && averageResult.tierLabel"></span>
-      </div>
+      <div class="final-best-tier" x-text="averageResult && averageResult.tierLabel"></div>
+      <div class="final-best-pct" x-text="averageResult && (averageResult.beatPct == null ? 'beat —%' : ('beat ' + averageResult.beatPct + '%'))"></div>
     </div>
 
-    <div class="curve-wrap final-curve-wrap">
-      <div class="curve-board">
-        <svg class="curve-svg" :viewBox="curveViewBox" preserveAspectRatio="none" aria-hidden="true">
-          <path class="curve-fill" :d="curvePath"></path>
-          <line class="curve-target" :x1="targetX" :x2="targetX" y1="6" y2="94"></line>
-        </svg>
-        <div class="curve-pin" x-show="averageResult" :style="`left: ${(averageResult && averageResult.pinX || 0) / 10}%`">
-          <div class="curve-pin-line"></div>
-          <div class="curve-pin-dot"></div>
+    <div class="score-track-wrap">
+      <div class="score-track">
+        <div class="score-track-target" :style="`left: ${targetPct}%`" aria-hidden="true"></div>
+        <div class="score-track-pin" x-show="averageResult" :style="`left: ${(averageResult && averageResult.pinPct) || 0}%`">
+          <div class="score-track-pin-dot"></div>
         </div>
       </div>
-      <div class="curve-axis">
+      <div class="score-track-axis">
         <span>0.500s</span>
         <span class="axis-target">1.000s</span>
         <span>1.500s</span>
       </div>
-      <div class="curve-tally" x-text="totalLabel"></div>
+    </div>
+
+    <div class="tier-table">
+      <div class="tier-table-head">how everyone compares</div>
+      <template x-for="t in tierDistribution" :key="t.key">
+        <div class="tier-row" :class="{ 'is-mine': averageResult && averageResult.tierKey === t.key }">
+          <span class="tier-row-label" x-text="t.label"></span>
+          <span class="tier-row-bar">
+            <span class="tier-row-bar-fill" :style="`width: ${(t.count / tierMaxCount) * 100}%`"></span>
+          </span>
+          <span class="tier-row-count" x-text="t.count"></span>
+        </div>
+      </template>
+      <div class="tier-table-tally" x-text="totalLabel"></div>
     </div>
 
     <div class="final-stack">

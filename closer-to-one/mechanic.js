@@ -1,12 +1,12 @@
-// pure logic. no DOM, no fetch. owns the percentile math, the SVG-density
-// helper, and the share-fragment encode/decode. the percentile and curve are
-// computed from a histogram of session-averages submitted by previous players
-// — see distribution proxy at infrastructure/distribution/. tiers stay
-// deterministic on |delta|.
+// pure logic. no DOM, no fetch. owns the percentile math, the tier-distribution
+// helper, and the share-fragment encode/decode. percentile and the
+// tier-comparison readout are computed from a histogram of session-averages
+// submitted by previous players — see distribution proxy at
+// infrastructure/distribution/. tiers stay deterministic on |delta|.
 
 const TARGET_MS = 1000;          // bullseye
-const RANGE_LO = 500;            // ms — visible curve floor (off-curve clamps below)
-const RANGE_HI = 1500;           // ms — visible curve ceiling
+const RANGE_LO = 500;            // ms — visible track floor (off-track clamps below)
+const RANGE_HI = 1500;           // ms — visible track ceiling
 
 // scoreboard tiers, keyed on absolute |delta| in ms. labels are designed to
 // read like a competitive scoreboard, not a fortune-teller's verdict. tiers
@@ -54,51 +54,36 @@ export function beatPctFromBins(durationMs, bins, total) {
   return Math.max(0, Math.min(99, Math.round(100 * larger / total)));
 }
 
-// build a closed SVG fill path from histogram bins, restricted to the visible
-// 500..1500ms range. heights are normalized so the tallest visible bin equals
-// PEAK_H; this keeps the curve visually meaningful across totals (10 averages
-// or 10,000). bins is [[ms, count], ...] sorted by ms ascending.
-//
-// Rendered as a stepped/columnar histogram (each bin is a flat top spanning
-// exactly its STEP-wide range, with vertical risers/fallers at the bin edges).
-// A line-interpolation approach would render each lone bin as a triangle
-// 2*STEP wide — visually double the bin width — which reads as a bug when
-// the histogram is sparse.
-export function curvePathFromBins(bins) {
-  const W = 1000, H = 100, BASE_PAD = 6, PEAK_H = 80;
-  const baseY = H - BASE_PAD;
-  if (!bins || bins.length === 0) {
-    return `M 0,${baseY} L ${W},${baseY} Z`;
+// Bucket every recorded session-average into one of the seven tiers and
+// return [{key, label, count}, ...] in tier order. This is what the final
+// screen renders instead of an SVG histogram — sparse data looks like
+// "BULLSEYE: 0, DEAD-ON: 1, SHARP: 0, ..." (honest), not a near-flat
+// near-empty curve (looks broken). Always returns all seven tiers, even at
+// total=0, so the table layout never jumps when the fetch resolves.
+export function tierDistributionFromBins(bins) {
+  const out = TIERS.map(t => ({ key: t.key, label: t.label, count: 0 }));
+  if (!bins) return out;
+  for (const [ms, count] of bins) {
+    const absDelta = Math.abs(ms - TARGET_MS);
+    for (let i = 0; i < TIERS.length; i++) {
+      if (absDelta <= TIERS[i].maxDelta) {
+        out[i].count += count;
+        break;
+      }
+    }
   }
-  const STEP = 5;
-  const stepCount = Math.floor((RANGE_HI - RANGE_LO) / STEP);
-  const heights = new Array(stepCount).fill(0);
-  for (const [ms, c] of bins) {
-    if (ms < RANGE_LO || ms >= RANGE_HI) continue;
-    const idx = Math.floor((ms - RANGE_LO) / STEP);
-    if (idx >= 0 && idx < stepCount) heights[idx] += c;
-  }
-  const peak = Math.max(1, ...heights);
-  let d = `M 0,${baseY}`;
-  for (let i = 0; i < stepCount; i++) {
-    const x0 = i * STEP;
-    const x1 = (i + 1) * STEP;
-    const y = (baseY - (heights[i] / peak) * PEAK_H).toFixed(1);
-    d += ` L ${x0},${y} L ${x1},${y}`;
-  }
-  d += ` L ${W},${baseY} Z`;
-  return d;
+  return out;
 }
 
-// map a duration to an x in the curve's viewBox; clamp so off-curve pins
-// still render at the edge instead of vanishing.
-export function pinXFor(durationMs) {
-  const x = durationMs - RANGE_LO;
-  return Math.max(0, Math.min(1000, x));
+// 0..100% across the visible 0.5..1.5s range. used to position the pin (and
+// the bullseye marker) on the horizontal score track via `left: X%`.
+// out-of-range averages clamp to 0 / 100 so the pin still renders at the edge.
+export function pinPctFor(durationMs) {
+  const pct = ((durationMs - RANGE_LO) / (RANGE_HI - RANGE_LO)) * 100;
+  return Math.max(0, Math.min(100, pct));
 }
 
-export const TARGET_X = TARGET_MS - RANGE_LO; // 500
-export const CURVE_VIEWBOX = '0 0 1000 100';
+export const TARGET_PCT = pinPctFor(TARGET_MS); // 50 — bullseye marker
 
 // the central function. give it a duration in ms plus the live histogram, get
 // back everything the result + final screens need to render. beatPct is null
@@ -118,13 +103,13 @@ export function computeResult(durationMs, bins, total) {
     beatPct: beatPctFromBins(durationMs, bins, total),
     tierKey: tier.key,
     tierLabel: tier.label,
-    pinX: pinXFor(durationMs),
+    pinPct: pinPctFor(durationMs),
     isOutOfRange,
   };
 }
 
 // session score = arithmetic mean of the three holds, rounded to ms. one
-// session contributes one data point to the live curve.
+// session contributes one data point to the live scoreboard.
 export function averageMsOf(durationsMs) {
   if (!durationsMs || durationsMs.length === 0) return null;
   const sum = durationsMs.reduce((s, d) => s + d, 0);

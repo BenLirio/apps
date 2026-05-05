@@ -1,6 +1,7 @@
 /* Aesthetic: arcade scoreboard — black void, blood-red bullseye, ivory
    typewriter accents, monospace digit readout. competitive register: the
-   curve is the field, the pin is your score, the target line is the bullseye. */
+   horizontal track is the field, the pin is your score, the dashed marker
+   at 1.000s is the bullseye. the tier table is "how everyone clusters". */
 
 :root {
   --bg: #0a0a0a;
@@ -12,9 +13,7 @@
   --button-face: #ead8b8;
   --button-face-pressed: #f04438;
   --rule: #2a2a2a;
-  --curve-fill: rgba(241, 234, 216, 0.08);
-  --curve-edge: rgba(241, 234, 216, 0.32);
-  --target-line: rgba(240, 68, 56, 0.55);
+  --target-line: rgba(240, 68, 56, 0.7);
 }
 
 [x-cloak] { display: none !important; }
@@ -26,12 +25,19 @@ body {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-weight: 500;
   line-height: 1.5;
+  /* defensive: keep wide content inside the viewport. The grid below also
+     sets minmax(0, 1fr) so columns can shrink below content width, but this
+     is the hard backstop. */
+  overflow-x: hidden;
 }
 
 .app {
   min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr;
+  /* min-content default of grid items is auto, which can blow out the
+     column on narrow viewports — explicitly let the column shrink. */
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* ----- masthead ----- */
@@ -78,13 +84,16 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 28px;
+  padding: 28px 14px 0;
+  /* let inner full-width children shrink to viewport */
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .brief {
   max-width: 28em;
   margin: 0 auto 28px;
-  padding: 0 8px;
   font-size: 18px;
   text-align: left;
 }
@@ -248,7 +257,6 @@ body {
 .result-card {
   width: 100%;
   max-width: 32em;
-  padding: 0 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -303,114 +311,6 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* ----- the curve viz ----- */
-
-.curve-wrap {
-  width: 100%;
-  max-width: 32em;
-  margin: 0 auto 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.curve-board {
-  position: relative;
-  width: 100%;
-  height: 110px;
-  background: #141412;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-}
-
-.curve-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-}
-
-.curve-fill {
-  fill: var(--curve-fill);
-  stroke: var(--curve-edge);
-  stroke-width: 1.2;
-  vector-effect: non-scaling-stroke;
-}
-
-.curve-target {
-  stroke: var(--target-line);
-  stroke-width: 1.4;
-  stroke-dasharray: 3 3;
-  vector-effect: non-scaling-stroke;
-}
-
-/* HTML-overlay pins. positioned by `left: X%` (computed from pinX/10).
-   the line + dot live in a column anchored at the bottom of the board so
-   the dot sits at the top regardless of board height. */
-.curve-pin {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-.curve-pin-line {
-  flex: 1;
-  width: 2px;
-  background: var(--red-bright);
-  box-shadow: 0 0 8px rgba(240, 68, 56, 0.55);
-  margin-top: 14px;
-}
-.curve-pin-dot {
-  position: absolute;
-  top: 0;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--red-bright);
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 10px rgba(240, 68, 56, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'VT323', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--bg);
-  line-height: 1;
-}
-.curve-axis {
-  display: flex;
-  justify-content: space-between;
-  font-family: 'VT323', monospace;
-  font-size: 14px;
-  color: var(--ink-faint);
-  letter-spacing: 0.12em;
-}
-.axis-target {
-  color: var(--red-bright);
-}
-
-/* tiny tally line under the histogram axis. shows the live total — the curve
-   is computed from this exact number of submitted holds. starts as a loading
-   placeholder so the layout doesn't jump when the fetch resolves. */
-.curve-tally {
-  font-family: 'VT323', monospace;
-  font-size: 13px;
-  color: var(--ink-faint);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  margin-top: 2px;
-  text-align: center;
-  min-height: 1.2em;
-}
-
 .tier-badge {
   font-family: 'VT323', monospace;
   font-size: 22px;
@@ -440,64 +340,214 @@ body {
 
 .final-heading {
   font-family: 'Special Elite', monospace;
-  font-size: 26px;
-  color: var(--ink);
-  margin: 4px 0 4px;
+  font-size: 22px;
+  color: var(--ink-dim);
+  margin: 0 0 14px;
   font-weight: 400;
-  letter-spacing: 0.03em;
-  text-align: center;
-}
-.final-sub {
-  font-family: 'VT323', monospace;
-  font-size: 16px;
-  color: var(--ink-faint);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin: 0 0 18px;
   text-align: center;
 }
 
+/* hero block — the average is the score, the tier is the rank, the percentile
+   is the contextual brag. Stacked vertically so the visual hierarchy is
+   unambiguous on every viewport width. */
 .final-best {
-  text-align: center;
-  margin: 0 auto 18px;
-  padding: 14px 22px;
+  width: 100%;
+  max-width: 26em;
+  margin: 0 auto 22px;
+  padding: 18px 14px;
   border: 1px solid var(--rule);
   border-radius: 4px;
   background: #141412;
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
 }
-.final-best-label {
+.final-best-duration {
+  font-family: 'VT323', monospace;
+  font-size: clamp(64px, 18vw, 88px);
+  color: var(--red-bright);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum";
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(240, 68, 56, 0.45);
+}
+.final-best-tier {
+  font-family: 'VT323', monospace;
+  font-size: 26px;
+  color: var(--red-bright);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.final-best-pct {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--ink);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ----- score track (replaces the SVG histogram curve) ----- */
+
+.score-track-wrap {
+  width: 100%;
+  max-width: 32em;
+  margin: 0 auto 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-track {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  background: #141412;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* dashed bullseye marker at 1.000s */
+.score-track-target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px dashed var(--target-line);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* the player's pin — vertical column with a glowing dot at the top */
+.score-track-pin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--red-bright);
+  box-shadow: 0 0 10px rgba(240, 68, 56, 0.7);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.score-track-pin-dot {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--red-bright);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 12px rgba(240, 68, 56, 0.75);
+}
+
+.score-track-axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--ink-faint);
+  letter-spacing: 0.12em;
+}
+.axis-target { color: var(--red-bright); }
+
+/* ----- tier comparison table ----- */
+
+.tier-table {
+  width: 100%;
+  max-width: 32em;
+  margin: 0 auto 24px;
+  border: 1px solid var(--rule);
+  background: #141412;
+  border-radius: 4px;
+  padding: 14px 14px 10px;
+  box-sizing: border-box;
+}
+.tier-table-head {
   font-family: 'VT323', monospace;
   font-size: 14px;
   color: var(--ink-faint);
   letter-spacing: 0.22em;
   text-transform: uppercase;
+  margin-bottom: 10px;
+  text-align: center;
 }
-.final-best-duration {
+.tier-row {
+  display: grid;
+  grid-template-columns: 7em 1fr 2.4em;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px;
   font-family: 'VT323', monospace;
-  font-size: 56px;
-  color: var(--red-bright);
-  letter-spacing: 0.04em;
-  font-feature-settings: "tnum";
-  line-height: 1.05;
-  text-shadow: 0 0 12px rgba(240, 68, 56, 0.4);
-}
-.final-best-meta {
-  font-family: 'VT323', monospace;
-  font-size: 17px;
+  font-size: 16px;
   color: var(--ink-dim);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  border-bottom: 1px dashed transparent;
 }
-.final-best-pct { color: var(--ink); }
-.final-best-tier { color: var(--red-bright); }
-.final-best-sep { margin: 0 6px; color: var(--ink-faint); }
+.tier-row + .tier-row { border-top: 1px dashed var(--rule); }
+.tier-row.is-mine {
+  color: var(--ink);
+  background: rgba(240, 68, 56, 0.08);
+}
+.tier-row.is-mine .tier-row-label { color: var(--red-bright); }
+.tier-row.is-mine .tier-row-count { color: var(--ink); }
 
-.final-curve-wrap {
-  margin-bottom: 24px;
+.tier-row-label {
+  /* tier names are short ("BULLSEYE", "OFF THE CURVE"); a fixed column keeps
+     bars left-aligned even when label widths vary across rows. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  letter-spacing: 0.14em;
 }
+.tier-row-bar {
+  position: relative;
+  height: 8px;
+  background: rgba(241, 234, 216, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  /* bars must shrink to fit narrow viewports */
+  min-width: 0;
+}
+.tier-row-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-faint);
+  border-radius: 999px;
+  transition: width 220ms ease-out;
+}
+.tier-row.is-mine .tier-row-bar-fill {
+  background: var(--red-bright);
+  box-shadow: 0 0 8px rgba(240, 68, 56, 0.5);
+}
+.tier-row-count {
+  text-align: right;
+  font-feature-settings: "tnum";
+  color: var(--ink);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+.tier-table-tally {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* ----- per-hold breakdown stack ----- */
 
 .final-stack {
   width: 100%;
@@ -505,13 +555,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 14px;
+  margin: 0 auto;
 }
 .final-card {
   background: #141412;
   border: 1px solid var(--rule);
   padding: 14px 18px;
   position: relative;
+  box-sizing: border-box;
 }
 .final-card-head {
   display: flex;
@@ -551,8 +602,6 @@ body {
   padding-left: 24px;
 }
 .final-delta { color: var(--ink); }
-.final-beat { color: var(--ink); }
-.final-meta-sep { color: var(--ink-faint); margin: 0 6px; }
 
 .final-footer {
   font-family: 'VT323', monospace;
@@ -569,6 +618,9 @@ body {
   .title { font-size: 26px; }
   .title-emph { font-size: 32px; }
   .duration-display { font-size: 64px; }
-  .final-best-duration { font-size: 44px; }
-  .curve-svg { height: 96px; }
+  .final-best-duration { font-size: 60px; }
+  .final-best-tier { font-size: 22px; }
+  .tier-row { grid-template-columns: 6em 1fr 2.2em; font-size: 14px; }
+  .tier-row-label { font-size: 12px; }
+  .tier-row-count { font-size: 14px; }
 }
