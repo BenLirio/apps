@@ -328,11 +328,20 @@ button.danger-btn {
   color: var(--ink);
 }
 
+.palette-theme-label {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  margin: 4px 0 6px;
+  font-family: "Special Elite", "Courier New", monospace;
+}
 .palette-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
-  margin: 12px 0 14px;
+  margin: 4px 0 14px;
 }
 .palette-key {
   min-height: 48px;

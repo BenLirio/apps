@@ -13,7 +13,7 @@
 // "authoritative" coordinator. Same pattern as the old game's deterministic
 // truth derivation.
 
-import { FEELINGS, PALETTE, pickPrompt, overlapScore } from "./content.js";
+import { FEELINGS, pickPrompt, overlapScore, getPaletteForPrompt } from "./content.js";
 
 export const TOTAL_ROUNDS = 5;
 export const PALETTE_SLOTS = 4;
@@ -53,10 +53,15 @@ export class SyncGame {
     return FEELINGS[this.promptIndex(round)];
   }
 
-  appendEmoji(idx) {
+  // Palette for the round's prompt — both clients derive it identically.
+  palette(round = this.round) {
+    return getPaletteForPrompt(this.promptIndex(round));
+  }
+
+  appendEmoji(emoji) {
     if (this.locked) return;
     if (this.composition.length >= PALETTE_SLOTS) return;
-    this.composition.push(PALETTE[idx]);
+    this.composition.push(emoji);
     this.onChange();
   }
 
@@ -96,7 +101,7 @@ export class SyncGame {
 
   _maybeResolveRound() {
     if (!(this.locked && this.peerLocked)) return;
-    const overlap = overlapScore(this.composition, this.peerComposition);
+    const overlap = overlapScore(this.composition, this.peerComposition, this.palette());
     this.score += overlap;
     this.lastRoundOverlap = overlap;
     this.history.push({

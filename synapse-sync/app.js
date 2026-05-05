@@ -6,7 +6,7 @@
 
 import { SyncNet, generateRoomCode, isValidRoomCode } from "./net.js";
 import { SyncGame, TOTAL_ROUNDS, MAX_SCORE, PALETTE_SLOTS } from "./loop.js";
-import { PALETTE, compositionToSet, verdictForPercentile } from "./content.js";
+import { compositionToSet, verdictForPercentile, getPaletteForPrompt, getThemeName } from "./content.js";
 import { fetchDistribution, recordScore, percentileOf } from "./histogram.js";
 
 // ── Screens ───────────────────────────────────────────────────────────────
@@ -152,28 +152,40 @@ function startGame() {
   game.onGameComplete = onGameComplete;
   document.getElementById("opponent-banner-name").textContent =
     net.opponentName || (net.role === "host" ? "your partner" : "the host");
-  buildPalette();
+  rebuildPaletteForRound();
   renderPlay();
   show("play");
 }
 
 // ── Play screen rendering ─────────────────────────────────────────────────
-function buildPalette() {
+// Palette varies per prompt — the symbol kit changes with the question, so
+// we tear down and re-render the grid each time the round advances.
+let lastPalettePromptIdx = -1;
+function rebuildPaletteForRound() {
+  if (!game) return;
+  const promptIdx = game.promptIndex();
+  if (promptIdx === lastPalettePromptIdx) return;
+  lastPalettePromptIdx = promptIdx;
+  const palette = game.palette();
   const grid = document.getElementById("my-palette");
-  if (grid.dataset.built) return;
-  grid.dataset.built = "1";
-  PALETTE.forEach((emoji, i) => {
+  grid.innerHTML = "";
+  palette.forEach((emoji, i) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "palette-key";
     b.textContent = emoji;
     b.setAttribute("aria-label", `encode symbol ${i + 1}`);
-    b.addEventListener("click", () => game && game.appendEmoji(i));
+    b.addEventListener("click", () => game && game.appendEmoji(emoji));
     grid.appendChild(b);
   });
 }
 
 function renderPlay() {
+  // Round may have advanced via nextRound() — re-render the palette before
+  // we render the grid state below so click handlers point at this round's
+  // symbols, not last round's.
+  rebuildPaletteForRound();
+
   // Top bar.
   document.getElementById("round-label").textContent =
     `TRIAL ${game.round} / ${TOTAL_ROUNDS}`;
@@ -182,6 +194,11 @@ function renderPlay() {
 
   // Prompt.
   document.getElementById("prompt-feeling").textContent = game.promptText();
+  const themeEl = document.getElementById("prompt-theme");
+  if (themeEl) {
+    themeEl.textContent =
+      "SYMBOL KIT · " + getThemeName(game.promptIndex()).replace(/_/g, " ").toUpperCase();
+  }
 
   // Composition slots.
   const comp = document.getElementById("my-composition");
@@ -227,10 +244,12 @@ function renderReveal() {
   document.getElementById("reveal-prompt").textContent = last.prompt;
 
   document.getElementById("reveal-mine").textContent = last.mine.join(" ");
-  // Peer composition is a flat string from the wire — render with spaces between graphemes.
-  const peerSet = compositionToSet(last.peer);
+  // Peer composition is a flat string from the wire — tokenise with the
+  // round's palette since palettes vary per prompt.
+  const roundPalette = getPaletteForPrompt(game.promptIndex(last.round));
+  const peerSet = compositionToSet(last.peer, roundPalette);
   // Keep peer's original order if we can — fall back to set order.
-  document.getElementById("reveal-peer").textContent = renderEmojiString(last.peer);
+  document.getElementById("reveal-peer").textContent = renderEmojiString(last.peer, roundPalette);
 
   const overlap = last.overlap;
   document.getElementById("reveal-overlap").textContent = `${overlap} / ${PALETTE_SLOTS}`;
@@ -269,8 +288,9 @@ function renderReveal() {
 
 // Render a peer emoji string with single spaces between recognised palette
 // graphemes so multi-codepoint glyphs (😵‍💫 etc.) display individually.
-function renderEmojiString(s) {
-  const sorted = [...PALETTE].sort((a, b) => b.length - a.length);
+function renderEmojiString(s, palette) {
+  const symbols = palette || [];
+  const sorted = [...symbols].sort((a, b) => b.length - a.length);
   const out = [];
   let i = 0;
   while (i < (s || "").length) {
