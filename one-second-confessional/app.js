@@ -4,10 +4,10 @@ import './journey.js';
 
 window.share = async function share() {
   const url = window.location.href;
-  const text = "the button has spoken. " + url;
+  const text = "I beat the curve. how close can you get to 1.000s? " + url;
   try {
     if (navigator.share) {
-      await navigator.share({ title: '1-Second Confessional', text, url });
+      await navigator.share({ title: 'Closer to 1.000', text, url });
       return;
     }
   } catch (_) { /* user cancelled or unsupported — fall through to clipboard */ }

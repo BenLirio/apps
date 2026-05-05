@@ -1,4 +1,6 @@
-/* Aesthetic: arcade fortune-machine — black void, blood-red oracle button, ivory typewriter confessions, monospace digit readout. mock-instrument register. */
+/* Aesthetic: arcade scoreboard — black void, blood-red bullseye, ivory
+   typewriter accents, monospace digit readout. competitive register: the
+   curve is the field, the pin is your score, the target line is the bullseye. */
 
 :root {
   --bg: #0a0a0a;
@@ -10,6 +12,9 @@
   --button-face: #ead8b8;
   --button-face-pressed: #f04438;
   --rule: #2a2a2a;
+  --curve-fill: rgba(241, 234, 216, 0.08);
+  --curve-edge: rgba(241, 234, 216, 0.32);
+  --target-line: rgba(240, 68, 56, 0.55);
 }
 
 [x-cloak] { display: none !important; }
@@ -48,6 +53,9 @@ body {
 }
 .title-emph {
   color: var(--red-bright);
+  font-family: 'VT323', monospace;
+  font-size: 38px;
+  letter-spacing: 0.06em;
 }
 
 .tagline {
@@ -63,8 +71,7 @@ body {
 
 .screen {
   /* All screens share the same grid cell so x-transition crossfades
-     overlap on the z-axis instead of stacking vertically (which caused
-     a visible layout-shift flicker during intro→hold). */
+     overlap on the z-axis instead of stacking vertically. */
   grid-column: 1;
   grid-row: 2;
   display: flex;
@@ -134,7 +141,7 @@ body {
 }
 .secondary:hover { color: var(--ink); border-color: var(--ink-faint); }
 
-/* ----- HOLD screen — the oracle button ----- */
+/* ----- HOLD screen ----- */
 
 .hold-screen {
   justify-content: center;
@@ -238,6 +245,15 @@ body {
 
 .result-screen { justify-content: flex-start; }
 
+.result-card {
+  width: 100%;
+  max-width: 32em;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .duration-display {
   font-family: 'VT323', monospace;
   font-size: clamp(64px, 18vw, 96px);
@@ -246,61 +262,177 @@ body {
   margin: 4px 0 4px;
   text-shadow: 0 0 14px rgba(240, 68, 56, 0.45);
   font-feature-settings: "tnum";
-}
-
-.bin-line {
-  font-family: 'VT323', monospace;
-  font-size: 17px;
-  color: var(--ink-dim);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-align: center;
-  margin-bottom: 28px;
-}
-.bin-sep { margin: 0 8px; color: var(--ink-faint); }
-.bin-range { color: var(--ink-dim); }
-.bin-tier { color: var(--red-bright); }
-
-.confession-card {
-  background: #141412;
-  border: 1px solid var(--rule);
-  padding: 24px 22px 22px;
-  max-width: 30em;
-  position: relative;
-  margin: 0 auto;
-}
-.confession-card::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border: 1px dashed #2a2a26;
-  pointer-events: none;
-}
-.quote-mark {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 64px;
-  color: var(--red);
-  position: absolute;
-  top: -18px;
-  left: 12px;
   line-height: 1;
 }
-.confession-text {
-  font-family: 'Special Elite', monospace;
-  font-size: clamp(20px, 5.4vw, 26px);
-  color: var(--ink);
-  line-height: 1.45;
-  margin: 0;
-  text-align: left;
-}
-.quote-attribution {
+
+.delta-line {
   font-family: 'VT323', monospace;
-  font-size: 16px;
-  color: var(--ink-faint);
-  letter-spacing: 0.18em;
+  font-size: 18px;
+  color: var(--ink-dim);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  text-align: right;
+  margin-bottom: 22px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.delta-label { color: var(--ink-faint); }
+.delta-value {
+  color: var(--ink);
+  font-feature-settings: "tnum";
+  font-size: 22px;
+  letter-spacing: 0.05em;
+}
+
+/* ----- the curve viz ----- */
+
+.curve-wrap {
+  width: 100%;
+  max-width: 32em;
+  margin: 0 auto 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.curve-board {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  background: #141412;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+
+.curve-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.curve-fill {
+  fill: var(--curve-fill);
+  stroke: var(--curve-edge);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.curve-target {
+  stroke: var(--target-line);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+/* HTML-overlay pins. positioned by `left: X%` (computed from pinX/10).
+   the line + dot live in a column anchored at the bottom of the board so
+   the dot sits at the top regardless of board height. */
+.curve-pin {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+.curve-pin-line {
+  flex: 1;
+  width: 2px;
+  background: var(--red-bright);
+  box-shadow: 0 0 8px rgba(240, 68, 56, 0.55);
   margin-top: 14px;
+}
+.curve-pin-dot {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--red-bright);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 10px rgba(240, 68, 56, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bg);
+  line-height: 1;
+}
+.curve-pin--numbered .curve-pin-dot {
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+}
+.curve-pin--numbered .curve-pin-line {
+  margin-top: 20px;
+}
+
+.curve-axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--ink-faint);
+  letter-spacing: 0.12em;
+}
+.axis-target {
+  color: var(--red-bright);
+}
+
+/* ----- the score line ----- */
+
+.beat-line {
+  text-align: center;
+  margin: 4px 0 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.beat-pct {
+  font-family: 'VT323', monospace;
+  font-size: clamp(48px, 14vw, 72px);
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum";
+  line-height: 1;
+}
+.beat-words {
+  font-family: 'Special Elite', monospace;
+  font-size: 14px;
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+
+.tier-badge {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--red-bright);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  border: 1px solid var(--red-bright);
+  padding: 6px 18px;
+  border-radius: 4px;
+  margin-top: 8px;
+  margin-bottom: 18px;
+  background: rgba(240, 68, 56, 0.08);
+}
+
+.share-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding-bottom: 28px;
 }
 
 /* ----- FINAL screen ----- */
@@ -322,8 +454,50 @@ body {
   color: var(--ink-faint);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin: 0 0 22px;
+  margin: 0 0 18px;
   text-align: center;
+}
+
+.final-best {
+  text-align: center;
+  margin: 0 auto 18px;
+  padding: 14px 22px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: #141412;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.final-best-label {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--ink-faint);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.final-best-duration {
+  font-family: 'VT323', monospace;
+  font-size: 56px;
+  color: var(--red-bright);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum";
+  line-height: 1.05;
+  text-shadow: 0 0 12px rgba(240, 68, 56, 0.4);
+}
+.final-best-meta {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--ink-dim);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.final-best-pct { color: var(--ink); }
+.final-best-tier { color: var(--red-bright); }
+.final-best-sep { margin: 0 6px; color: var(--ink-faint); }
+
+.final-curve-wrap {
+  margin-bottom: 24px;
 }
 
 .final-stack {
@@ -331,12 +505,13 @@ body {
   max-width: 32em;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  padding: 0 14px;
 }
 .final-card {
   background: #141412;
   border: 1px solid var(--rule);
-  padding: 16px 18px 18px;
+  padding: 14px 18px;
   position: relative;
 }
 .final-card-head {
@@ -346,35 +521,39 @@ body {
   gap: 12px;
   margin-bottom: 4px;
 }
-.final-duration {
+.final-card-num {
   font-family: 'VT323', monospace;
-  font-size: 38px;
-  color: var(--red-bright);
+  font-size: 18px;
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+  min-width: 24px;
+}
+.final-duration {
+  flex: 1;
+  font-family: 'VT323', monospace;
+  font-size: 30px;
+  color: var(--ink);
   letter-spacing: 0.04em;
   font-feature-settings: "tnum";
 }
 .final-tier {
   font-family: 'VT323', monospace;
-  font-size: 15px;
-  color: var(--red-bright);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-.final-bin {
-  font-family: 'VT323', monospace;
   font-size: 14px;
-  color: var(--ink-faint);
-  letter-spacing: 0.14em;
+  color: var(--red-bright);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  margin-bottom: 10px;
 }
-.final-confession {
-  font-family: 'Special Elite', monospace;
-  font-size: 18px;
-  color: var(--ink);
-  line-height: 1.45;
-  margin: 0;
+.final-meta {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: var(--ink-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-left: 24px;
 }
+.final-delta { color: var(--ink); }
+.final-beat { color: var(--ink); }
+.final-meta-sep { color: var(--ink-faint); margin: 0 6px; }
 
 .final-footer {
   font-family: 'VT323', monospace;
@@ -382,13 +561,16 @@ body {
   color: var(--ink-faint);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  margin-top: 30px;
+  margin-top: 24px;
   text-align: center;
 }
 
 /* ----- small viewports ----- */
 @media (max-width: 380px) {
   .title { font-size: 26px; }
+  .title-emph { font-size: 32px; }
   .duration-display { font-size: 64px; }
-  .confession-text { font-size: 19px; }
+  .beat-pct { font-size: 48px; }
+  .final-best-duration { font-size: 44px; }
+  .curve-svg { height: 96px; }
 }

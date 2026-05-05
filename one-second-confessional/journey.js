@@ -1,15 +1,17 @@
-// copy strings + screen state machine + pointer-event handlers for the oracle
+// copy strings + screen state machine + pointer-event handlers for the hold
 // button. Alpine factory exported on `window`.
 
 import {
   computeResult,
   encodeShare,
   decodeShare,
-  todayDateInt,
-  dateLabelFromDateInt,
+  bestOf,
+  CURVE_PATH,
+  CURVE_VIEWBOX,
+  TARGET_X,
 } from './mechanic.js';
 
-export function oneSecondConfessional() {
+export function closerToOne() {
   return {
     // screen: 'intro' | 'hold' | 'result' | 'final'
     screen: 'intro',
@@ -21,23 +23,21 @@ export function oneSecondConfessional() {
     results: [],        // array of result objects from computeResult
     current: null,      // result for the just-revealed hold
     isReplay: false,
-    replayDateInt: 0,
-    replayDateLabel: '',
+
+    // expose curve constants to the template (Alpine reads these via x-bind)
+    curvePath: CURVE_PATH,
+    curveViewBox: CURVE_VIEWBOX,
+    targetX: TARGET_X,
 
     init() {
       // if a share fragment is present, jump straight to final replay.
       const decoded = decodeShare(window.location.hash);
       if (decoded) {
         this.isReplay = true;
-        this.replayDateInt = decoded.dateInt;
-        this.replayDateLabel = dateLabelFromDateInt(decoded.dateInt);
-        this.results = decoded.durationsMs.map(d => computeResult(d, decoded.dateInt));
+        this.results = decoded.durationsMs.map(d => computeResult(d));
         this.holds = decoded.durationsMs.slice();
         this.screen = 'final';
-        return;
       }
-      this.replayDateInt = todayDateInt();
-      this.replayDateLabel = dateLabelFromDateInt(this.replayDateInt);
     },
 
     startSession() {
@@ -46,8 +46,6 @@ export function oneSecondConfessional() {
       this.results = [];
       this.current = null;
       this.isReplay = false;
-      this.replayDateInt = todayDateInt();
-      this.replayDateLabel = dateLabelFromDateInt(this.replayDateInt);
       this.screen = 'hold';
     },
 
@@ -71,10 +69,9 @@ export function oneSecondConfessional() {
 
     onCancel(ev) {
       if (!this.pressing) return;
-      // a pointercancel mid-press is treated as a release at "now" — the user
-      // committed to a press and the system interrupted; we still owe them a
-      // confession. (the alternative — silently dropping the hold — feels
-      // broken, and re-tapping doesn't recover the timing.)
+      // a pointercancel mid-press is treated as a release at "now" — the
+      // user committed to a press and the system interrupted; we still owe
+      // them a score. silently dropping the hold feels broken.
       const elapsedMs = performance.now() - this.pressStart;
       this.pressing = false;
       this.pressPointerId = null;
@@ -82,8 +79,7 @@ export function oneSecondConfessional() {
     },
 
     recordHold(elapsedMs) {
-      const dateInt = this.replayDateInt || todayDateInt();
-      const result = computeResult(elapsedMs, dateInt);
+      const result = computeResult(elapsedMs);
       this.holds.push(Math.round(elapsedMs));
       this.results.push(result);
       this.current = result;
@@ -98,21 +94,25 @@ export function oneSecondConfessional() {
         return;
       }
       // third hold done — write the share fragment and move to final.
-      const fragment = encodeShare(this.holds, this.replayDateInt);
-      try {
-        history.replaceState(null, '', '#' + fragment);
-      } catch (_) { /* noop */ }
+      const fragment = encodeShare(this.holds);
+      try { history.replaceState(null, '', '#' + fragment); } catch (_) { /* noop */ }
       this.screen = 'final';
     },
 
     restart() {
-      // clear the fragment so next session starts fresh on today's seed.
+      // clear the fragment so next session starts fresh.
       try {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       } catch (_) { /* noop */ }
       this.startSession();
     },
+
+    // best-of-three — the one that beat the most of the field. used as the
+    // headline on the final screen.
+    get bestResult() {
+      return bestOf(this.results);
+    },
   };
 }
 
-window.oneSecondConfessional = oneSecondConfessional;
+window.closerToOne = closerToOne;
