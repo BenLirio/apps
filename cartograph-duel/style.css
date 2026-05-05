@@ -52,7 +52,13 @@ body {
 /* Screen-foot pushes a low-priority control (back link, etc.) to the bottom
    of the viewport so each page has a clear top/middle/bottom rhythm. */
 .screen-foot { margin-top: auto; padding-top: 12px; text-align: center; }
-.screen-cta { margin-top: auto; padding-top: 8px; }
+.screen-cta {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .screen-cta .btn { width: 100%; }
 
 .btn-link {
@@ -161,40 +167,11 @@ input[type="text"] {
 .btn.demoted { opacity: 0.5; }
 .btn.promoted { box-shadow: 0 0 0 3px rgba(180, 60, 40, 0.18); }
 
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--ink-light);
-  font-style: italic;
-  font-size: 14px;
-}
-.divider::before, .divider::after {
-  content: '';
-  flex: 1;
-  border-top: 1px dashed var(--ink-faint);
-}
-
 .error {
   color: var(--vermilion);
   font-style: italic;
   margin: 4px 0 0;
 }
-
-/* ── How it goes ──────────────────────────────── */
-.how {
-  border-top: 1px dashed var(--ink-faint);
-  padding-top: 16px;
-}
-.how h2 {
-  font-family: 'IM Fell English SC', Georgia, serif;
-  font-size: 12px;
-  letter-spacing: 0.3em;
-  color: var(--ink-light);
-  margin: 0 0 10px;
-}
-.how ol { padding-left: 22px; margin: 0; }
-.how li { margin: 6px 0; }
 
 /* ── Waiting screen ───────────────────────────── */
 .screen-title {

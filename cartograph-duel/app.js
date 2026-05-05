@@ -1,13 +1,25 @@
-// app.js — entry point. Wires landing screen, room creation/join, and share.
+// app.js — entry point. Wires hero (mode chooser), create + join screens, share.
 // Game logic lives in loop.js, network in net.js.
 
 import * as net from './net.js';
-import { init as initGame, show, setError } from './loop.js';
+import { init as initGame, show } from './loop.js';
 
 let role = null;
 let playerName = '';
 
 const $ = (id) => document.getElementById(id);
+
+function setCreateError(msg) {
+  const el = $('create-error');
+  if (msg) { el.textContent = msg; el.hidden = false; }
+  else { el.hidden = true; }
+}
+
+function setJoinError(msg) {
+  const el = $('join-error');
+  if (msg) { el.textContent = msg; el.hidden = false; }
+  else { el.hidden = true; }
+}
 
 function showWaiting(roomCode) {
   show('screen-waiting');
@@ -24,19 +36,19 @@ function showWaiting(roomCode) {
 }
 
 function createRoom() {
-  setError('');
+  setCreateError('');
   playerName = ($('player-name').value || '').trim();
-  if (!playerName) { setError('what should we call you on the leaderboard?'); return; }
+  if (!playerName) { setCreateError('what should we call you on the leaderboard?'); return; }
   role = 'host';
   net.createRoom(playerName);
 }
 
 function joinRoom() {
-  setError('');
-  playerName = ($('player-name').value || '').trim();
+  setJoinError('');
+  playerName = ($('player-name-join').value || '').trim();
   const code = ($('join-code').value || '').trim().toUpperCase();
-  if (!playerName) { setError('what should we call you on the leaderboard?'); return; }
-  if (code.length !== 4) { setError('room codes are 4 letters — check it again'); return; }
+  if (!playerName) { setJoinError('what should we call you on the leaderboard?'); return; }
+  if (code.length !== 4) { setJoinError('room codes are 4 letters — check it again'); return; }
   role = 'guest';
   net.joinRoom(code, playerName);
 }
@@ -59,14 +71,22 @@ net.on('error', ({ message }) => {
     room_full:      'two cartographers already in there — start a fresh room',
     connection_error: "the courier dropped the message — try again"
   };
-  setError(errorCopy[message] || 'something jammed in the press');
+  const text = errorCopy[message] || 'something jammed in the press';
+  // Route to whichever form the user just submitted from.
+  if (role === 'guest') setJoinError(text);
+  else setCreateError(text);
 });
 
 net.on('disconnected', () => {
   // loop.js handles in-game disconnect; here we only show pre-game drops
   if ($('screen-waiting') && !$('screen-waiting').hidden) {
-    setError('lost the connection — try once more');
-    show('screen-setup');
+    if (role === 'guest') {
+      setJoinError('lost the connection — try once more');
+      show('screen-join');
+    } else {
+      setCreateError('lost the connection — try once more');
+      show('screen-create');
+    }
   }
 });
 
@@ -83,22 +103,23 @@ window.share = function share() {
   }
 };
 
-// ── Hero + Setup wire-up ─────────────────────────────────────────────
+// ── Wire-up ──────────────────────────────────────────────────────────
 function bindHero() {
-  $('begin-btn').onclick = () => {
-    show('screen-setup');
-    // Auto-focus the name field once the user has chosen to begin.
+  $('open-new-btn').onclick = () => {
+    show('screen-create');
     setTimeout(() => $('player-name').focus(), 50);
+  };
+  $('join-existing-btn').onclick = () => {
+    show('screen-join');
+    setTimeout(() => $('player-name-join').focus(), 50);
   };
 }
 
-function bindSetup() {
+function bindForms() {
   $('create-btn').onclick = createRoom;
   $('join-btn').onclick = joinRoom;
-  $('back-to-hero-btn').onclick = () => {
-    setError('');
-    show('screen-hero');
-  };
+  $('create-back-btn').onclick = () => { setCreateError(''); show('screen-hero'); };
+  $('join-back-btn').onclick = () => { setJoinError(''); show('screen-hero'); };
   $('join-code').addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   });
@@ -115,16 +136,13 @@ function handleRoomParam() {
   $('join-code').value = code;
   $('challenge-banner').hidden = false;
   $('challenge-banner-code').textContent = code;
-  // De-emphasize Create, promote Join
-  $('create-btn').classList.add('demoted');
-  $('join-btn').classList.add('promoted');
   return true;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   bindHero();
-  bindSetup();
+  bindForms();
   const hasDeepLink = handleRoomParam();
-  // A challenge link skips the marketing hero — they came here to join, not learn.
-  show(hasDeepLink ? 'screen-setup' : 'screen-hero');
+  // A challenge link skips the hero — they came here to join, not to choose.
+  show(hasDeepLink ? 'screen-join' : 'screen-hero');
 });

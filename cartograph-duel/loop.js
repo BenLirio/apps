@@ -52,7 +52,8 @@ const $ = (id) => document.getElementById(id);
 
 const SCREEN_IDS = [
   'screen-hero',
-  'screen-setup',
+  'screen-create',
+  'screen-join',
   'screen-waiting',
   'screen-round',
   'screen-round-result',
@@ -66,12 +67,6 @@ function show(screenId) {
   });
   // Each phase is its own page — start it from the top.
   window.scrollTo(0, 0);
-}
-
-function setError(msg) {
-  const el = $('error-msg');
-  if (msg) { el.textContent = msg; el.hidden = false; }
-  else { el.hidden = true; }
 }
 
 // ── Drawing canvas ───────────────────────────────────────────────────
@@ -434,4 +429,4 @@ export function init({ role, playerName, opponentName, roomCode }) {
   startGame(opponentName);
 }
 
-export { show, setError };
+export { show };

@@ -29,7 +29,7 @@
 <body>
 <div class="app">
 
-  <!-- Screen 1: Hero (welcome / rules) -->
+  <!-- Screen 1: Hero — masthead + the one decision (create or join) -->
   <section id="screen-hero" class="screen">
     <header class="masthead">
       <div class="kicker">EST. MMXXVI · WEST WING, MAP ROOM</div>
@@ -37,23 +37,35 @@
       <p class="tagline">Two friends. One country at a time. Whoever draws closest to the real outline wins the round. Best of three takes the match.</p>
     </header>
 
-    <div class="how">
-      <h2>HOW IT GOES</h2>
-      <ol>
-        <li>Both players see a country name. (No reference picture — that's the fun part.)</li>
-        <li>You draw its outline from memory on your own canvas. Sixty seconds.</li>
-        <li>Both submissions reveal at once. Geometric overlap with the real shape decides the round.</li>
-      </ol>
-    </div>
-
     <div class="screen-cta">
-      <button id="begin-btn" class="btn btn-primary">Begin a duel</button>
+      <button id="open-new-btn" class="btn btn-primary">Open a new room</button>
+      <button id="join-existing-btn" class="btn btn-secondary">Answer a summons</button>
     </div>
   </section>
 
-  <!-- Screen 2: Setup (create or join a room) -->
-  <section id="screen-setup" class="screen" hidden>
-    <h2 class="screen-title">Set up the duel</h2>
+  <!-- Screen 2: Create — name + open room -->
+  <section id="screen-create" class="screen" hidden>
+    <h2 class="screen-title">Open a new room</h2>
+
+    <div class="card">
+      <label class="field">
+        <span class="field-label">CARTOGRAPHER'S NAME</span>
+        <input id="player-name" type="text" maxlength="20" placeholder="e.g. Ada" autocomplete="off">
+      </label>
+
+      <button id="create-btn" class="btn btn-primary">Open the room</button>
+
+      <p id="create-error" class="error" hidden></p>
+    </div>
+
+    <div class="screen-foot">
+      <button id="create-back-btn" class="btn-link" type="button">← change your mind</button>
+    </div>
+  </section>
+
+  <!-- Screen 3: Join — name + room code -->
+  <section id="screen-join" class="screen" hidden>
+    <h2 class="screen-title">Answer a summons</h2>
 
     <div id="challenge-banner" class="banner" hidden>
       You have been challenged to room <strong id="challenge-banner-code"></strong>. Enter your name and step into the duel.
@@ -62,28 +74,25 @@
     <div class="card">
       <label class="field">
         <span class="field-label">CARTOGRAPHER'S NAME</span>
-        <input id="player-name" type="text" maxlength="20" placeholder="e.g. Ada" autocomplete="off">
+        <input id="player-name-join" type="text" maxlength="20" placeholder="e.g. Ada" autocomplete="off">
       </label>
-
-      <button id="create-btn" class="btn btn-primary">Open a new room</button>
-
-      <div class="divider"><span>or</span></div>
 
       <label class="field">
         <span class="field-label">ROOM CODE</span>
         <input id="join-code" type="text" maxlength="4" placeholder="ABCD" autocomplete="off" inputmode="text" autocapitalize="characters">
       </label>
-      <button id="join-btn" class="btn btn-secondary">Answer the summons</button>
 
-      <p id="error-msg" class="error" hidden></p>
+      <button id="join-btn" class="btn btn-primary">Answer the summons</button>
+
+      <p id="join-error" class="error" hidden></p>
     </div>
 
     <div class="screen-foot">
-      <button id="back-to-hero-btn" class="btn-link" type="button">← back to the map room</button>
+      <button id="join-back-btn" class="btn-link" type="button">← change your mind</button>
     </div>
   </section>
 
-  <!-- Screen 2: Waiting -->
+  <!-- Screen 4: Waiting -->
   <section id="screen-waiting" class="screen" hidden>
     <h2 class="screen-title">Awaiting your second.</h2>
     <p class="muted">Hand them the code below — or scan the QR if they're at the same table.</p>
@@ -101,7 +110,7 @@
     <p class="muted small">As soon as they join, the first country drops on both screens.</p>
   </section>
 
-  <!-- Screen 3: Round (drawing) -->
+  <!-- Screen 5: Round (drawing) -->
   <section id="screen-round" class="screen" hidden>
     <div class="round-header">
       <div id="round-label" class="round-label">round 1 of 3</div>
@@ -127,7 +136,7 @@
     <p id="waiting-note" class="muted small" hidden>Locked in. The rival is still drawing…</p>
   </section>
 
-  <!-- Screen 4: Round result -->
+  <!-- Screen 6: Round result -->
   <section id="screen-round-result" class="screen" hidden>
     <h2 class="screen-title">Reveal: <span id="rr-country">—</span></h2>
     <div id="rr-verdict" class="verdict">—</div>
@@ -150,7 +159,7 @@
     <button id="rr-next-btn" class="btn btn-primary">next country</button>
   </section>
 
-  <!-- Screen 5: Match result -->
+  <!-- Screen 7: Match result -->
   <section id="screen-match-result" class="screen" hidden>
     <div class="seal">★</div>
     <h2 id="mr-headline" class="result-headline">CARTOGRAPHER LAUREATE</h2>
