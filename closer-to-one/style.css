@@ -387,6 +387,20 @@ body {
   color: var(--red-bright);
 }
 
+/* tiny tally line under the histogram axis. shows the live total — the curve
+   is computed from this exact number of submitted holds. starts as a loading
+   placeholder so the layout doesn't jump when the fetch resolves. */
+.curve-tally {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: var(--ink-faint);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-top: 2px;
+  text-align: center;
+  min-height: 1.2em;
+}
+
 /* ----- the score line ----- */
 
 .beat-line {
