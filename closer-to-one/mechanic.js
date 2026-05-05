@@ -58,26 +58,36 @@ export function beatPctFromBins(durationMs, bins, total) {
 // 500..1500ms range. heights are normalized so the tallest visible bin equals
 // PEAK_H; this keeps the curve visually meaningful across totals (10 averages
 // or 10,000). bins is [[ms, count], ...] sorted by ms ascending.
+//
+// Rendered as a stepped/columnar histogram (each bin is a flat top spanning
+// exactly its STEP-wide range, with vertical risers/fallers at the bin edges).
+// A line-interpolation approach would render each lone bin as a triangle
+// 2*STEP wide — visually double the bin width — which reads as a bug when
+// the histogram is sparse.
 export function curvePathFromBins(bins) {
   const W = 1000, H = 100, BASE_PAD = 6, PEAK_H = 80;
+  const baseY = H - BASE_PAD;
   if (!bins || bins.length === 0) {
-    return `M 0,${H - BASE_PAD} L ${W},${H - BASE_PAD} Z`;
+    return `M 0,${baseY} L ${W},${baseY} Z`;
   }
   const STEP = 5;
-  const stepCount = Math.floor((RANGE_HI - RANGE_LO) / STEP) + 1;
+  const stepCount = Math.floor((RANGE_HI - RANGE_LO) / STEP);
   const heights = new Array(stepCount).fill(0);
   for (const [ms, c] of bins) {
-    if (ms < RANGE_LO || ms > RANGE_HI) continue;
-    const idx = Math.round((ms - RANGE_LO) / STEP);
+    if (ms < RANGE_LO || ms >= RANGE_HI) continue;
+    const idx = Math.floor((ms - RANGE_LO) / STEP);
     if (idx >= 0 && idx < stepCount) heights[idx] += c;
   }
   const peak = Math.max(1, ...heights);
-  const pts = heights.map((c, i) => {
-    const x = i * STEP;
-    const y = (H - BASE_PAD) - (c / peak) * PEAK_H;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  return `M ${pts[0]} L ${pts.join(' L ')} L ${W},${H - BASE_PAD} L 0,${H - BASE_PAD} Z`;
+  let d = `M 0,${baseY}`;
+  for (let i = 0; i < stepCount; i++) {
+    const x0 = i * STEP;
+    const x1 = (i + 1) * STEP;
+    const y = (baseY - (heights[i] / peak) * PEAK_H).toFixed(1);
+    d += ` L ${x0},${y} L ${x1},${y}`;
+  }
+  d += ` L ${W},${baseY} Z`;
+  return d;
 }
 
 // map a duration to an x in the curve's viewBox; clamp so off-curve pins
