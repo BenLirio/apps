@@ -495,6 +495,37 @@ body {
 }
 .r-line.heavy .val { color: var(--stamp-red); }
 
+.vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  font-family: 'IBM Plex Mono', 'Special Elite', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px dashed var(--ink-soft);
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 80ms, color 80ms, border-color 80ms;
+  min-height: 28px;
+}
+.vote-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.vote-btn:disabled { cursor: default; opacity: 1; }
+.vote-btn.voted {
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-style: solid;
+}
+.vote-btn .vote-count {
+  font-size: 10px;
+  color: inherit;
+  letter-spacing: 0.04em;
+}
+
 .r-total {
   display: grid;
   grid-template-columns: 1fr auto;
