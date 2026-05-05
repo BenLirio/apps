@@ -1,11 +1,12 @@
 // Ministry of Minor Regrets — bureaucratic-audit calculator.
-// One declaration at a time (no scrolling form). 10 questions chosen to feel
-// like things that quietly affect your health/wellbeing but you don't usually
-// audit yourself for — sunlight, hydration timing, the call you didn't make,
-// the laugh you missed, the hug you didn't ask for. Core arithmetic is fully
-// deterministic; an LLM generates only the closing signature line. Inputs +
-// signature are encoded into the URL fragment so shared links re-hydrate the
-// exact receipt without spending an LLM call.
+// One declaration at a time (no scrolling form). A short rotating subset of
+// declarations chosen to feel like things that quietly affect your
+// health/wellbeing but you don't usually audit yourself for — sunlight,
+// hydration timing, the call you didn't make, the laugh you missed, the hug
+// you didn't ask for. Core arithmetic is fully deterministic; an LLM
+// generates only the closing signature line. Inputs + signature are encoded
+// into the URL fragment so shared links re-hydrate the exact receipt without
+// spending an LLM call.
 //
 // Every line item is capped at LINE_CAP regret units so no single declaration
 // can drown out the others; the receipt's formula text says "maximum penalty
@@ -56,7 +57,7 @@ const BENCHMARKS = {
 // asked to make rotate between sessions and gradually drift toward the
 // declarations real users have voted up.
 
-const PER_RUN_STEPS = 10;
+const PER_RUN_STEPS = 5;
 
 const ALL_DECLARATIONS = [
   { key: 'sun',
