@@ -976,17 +976,15 @@ function pickStepsFromVotes() {
   return picked;
 }
 
-function onReceiptClick(ev) {
-  const btn = ev.target.closest && ev.target.closest('.vote-btn');
-  if (!btn) return;
-  const key = btn.dataset.key;
+// Shared cast-vote helper. Called from the in-flow vote button rendered
+// inside `renderStep`. Local optimistic increment + fire-and-forget POST.
+function castVote(key, btn) {
   if (!key || votedThisRun.has(key)) return;
   votedThisRun.add(key);
-  // Optimistic local increment for immediate UI feedback.
   voteCounts[key] = (voteCounts[key] || 0) + 1;
   btn.disabled = true;
   btn.classList.add('voted');
-  btn.innerHTML = `FILED ✓ <span class="vote-count">(${voteCounts[key].toLocaleString('en-US')})</span>`;
+  btn.innerHTML = `COMMENDATION FILED ✓ <span class="vote-count">(${voteCounts[key].toLocaleString('en-US')})</span>`;
   postVote(key);
 }
 
@@ -1008,20 +1006,11 @@ function renderReceipt(inputs, items, archetype, total, signatureText) {
 
   const lines = items.map((it) => {
     const isHeavy = it.key === heaviest.key && heaviest.units > 0;
-    const votes = voteCountFor(it.key);
-    const voted = votedThisRun.has(it.key);
-    const voteLabel = voted ? 'FILED ✓' : '+ FILE COMMENDATION';
     return `
       <div class="r-line${isHeavy ? ' heavy' : ''}">
         <div class="lbl">
           <span>[${it.code}] ${it.name}</span>
           <small>${escapeHTML(it.inputText)} · ${escapeHTML(it.formula)}</small>
-          <button
-            class="vote-btn${voted ? ' voted' : ''}"
-            type="button"
-            data-key="${escapeHTML(it.key)}"
-            ${voted ? 'disabled' : ''}
-          >${voteLabel} <span class="vote-count">(${votes.toLocaleString('en-US')})</span></button>
         </div>
         <div class="val">${fmtUnits(it.units)}</div>
       </div>
@@ -1092,6 +1081,10 @@ function renderStep(idx) {
   const valAttr = (existing !== undefined && existing !== null && Number.isFinite(existing))
     ? `value="${existing}"` : '';
 
+  const votes = voteCountFor(step.key);
+  const voted = votedThisRun.has(step.key);
+  const voteLabel = voted ? 'COMMENDATION FILED ✓' : '+ FILE COMMENDATION';
+
   card.innerHTML = `
     <div class="step-num">DECLARATION ${String(idx + 1).padStart(2, '0')} OF ${String(total).padStart(2, '0')}</div>
     <label class="step-q-label" for="step-input">${escapeHTML(step.label)}</label>
@@ -1109,6 +1102,16 @@ function renderStep(idx) {
       ${valAttr}
     >
     <div class="step-stamp" id="step-stamp" aria-live="polite"></div>
+    <div class="step-vote-row">
+      <button
+        type="button"
+        id="step-vote-btn"
+        class="vote-btn step-vote-btn${voted ? ' voted' : ''}"
+        data-key="${escapeHTML(step.key)}"
+        ${voted ? 'disabled' : ''}
+      >${voteLabel} <span class="vote-count">(${votes.toLocaleString('en-US')})</span></button>
+      <span class="step-vote-hint">Endorse this declaration; popular ones surface more in future audits.</span>
+    </div>
   `;
 
   document.getElementById('step-counter').textContent =
@@ -1140,6 +1143,11 @@ function renderStep(idx) {
       nextStep();
     }
   });
+
+  const voteBtn = document.getElementById('step-vote-btn');
+  if (voteBtn) {
+    voteBtn.addEventListener('click', () => castVote(step.key, voteBtn));
+  }
 
   refreshStepStamp();
   refreshCumulative();
@@ -1323,9 +1331,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     STEPS = pickStepsFromVotes();
     showIntake(true);
   });
-
-  // Delegated click handler so dynamically-rendered vote buttons work.
-  document.getElementById('receipt').addEventListener('click', onReceiptClick);
 
   // Fetch community vote signal before deciding which 10 declarations to
   // ask. Best-effort: if the proxy is empty/unreachable, selection falls

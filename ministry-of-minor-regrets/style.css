@@ -275,6 +275,26 @@ body {
   background: var(--within-soft);
 }
 
+/* In-flow commendation vote row — under the stamp, above the footer. */
+.step-vote-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(20,24,31,0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.step-vote-btn {
+  align-self: flex-start;
+}
+.step-vote-hint {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
 /* ---------- Step footer (cumulative + buttons) ---------- */
 .step-foot {
   flex-shrink: 0;
