@@ -1,7 +1,8 @@
 // pure logic. no DOM, no fetch. owns the percentile math, the SVG-density
 // helper, and the share-fragment encode/decode. the percentile and curve are
-// computed from a histogram of submitted holds (`bins`) — see distribution
-// proxy at infrastructure/distribution/. tiers stay deterministic on |delta|.
+// computed from a histogram of session-averages submitted by previous players
+// — see distribution proxy at infrastructure/distribution/. tiers stay
+// deterministic on |delta|.
 
 const TARGET_MS = 1000;          // bullseye
 const RANGE_LO = 500;            // ms — visible curve floor (off-curve clamps below)
@@ -36,10 +37,11 @@ function fmtSignedDelta(ms) {
   return sign + Math.abs(Math.round(ms)) + 'ms';
 }
 
-// % of recorded holds with strictly larger |delta| than yours — i.e. the
-// fraction of attempts you beat by being closer to 1.000s. cap at 99 so a
-// perfect hold reads "beat 99%" — there's always head-room. returns null if
-// the histogram hasn't loaded yet so the UI can render a placeholder.
+// % of recorded session-averages with strictly larger |delta| than yours —
+// i.e. the fraction of past players whose average was farther from 1.000s.
+// cap at 99 so a perfect average reads "beat 99%" — there's always head-room.
+// returns null if the histogram hasn't loaded yet so the UI can render a
+// placeholder.
 export function beatPctFromBins(durationMs, bins, total) {
   if (!bins || !total) return null;
   const myAbs = Math.abs(durationMs - TARGET_MS);
@@ -54,16 +56,13 @@ export function beatPctFromBins(durationMs, bins, total) {
 
 // build a closed SVG fill path from histogram bins, restricted to the visible
 // 500..1500ms range. heights are normalized so the tallest visible bin equals
-// PEAK_H; this keeps the curve visually meaningful across totals (10 holds
+// PEAK_H; this keeps the curve visually meaningful across totals (10 averages
 // or 10,000). bins is [[ms, count], ...] sorted by ms ascending.
 export function curvePathFromBins(bins) {
   const W = 1000, H = 100, BASE_PAD = 6, PEAK_H = 80;
   if (!bins || bins.length === 0) {
     return `M 0,${H - BASE_PAD} L ${W},${H - BASE_PAD} Z`;
   }
-  // build a per-ms-step lookup of counts inside the visible range. zero where
-  // there's no data so the path still draws an honest baseline gap rather
-  // than splining over missing bins.
   const STEP = 5;
   const stepCount = Math.floor((RANGE_HI - RANGE_LO) / STEP) + 1;
   const heights = new Array(stepCount).fill(0);
@@ -114,16 +113,12 @@ export function computeResult(durationMs, bins, total) {
   };
 }
 
-// the closest of three results — i.e. the one that beat the most of the field.
-// shown as the headline number on the final screen. results with null beatPct
-// (histogram still loading) lose to any populated result.
-export function bestOf(results) {
-  if (!results || results.length === 0) return null;
-  return results.reduce((best, r) => {
-    if (best.beatPct == null) return r;
-    if (r.beatPct == null) return best;
-    return r.beatPct > best.beatPct ? r : best;
-  }, results[0]);
+// session score = arithmetic mean of the three holds, rounded to ms. one
+// session contributes one data point to the live curve.
+export function averageMsOf(durationsMs) {
+  if (!durationsMs || durationsMs.length === 0) return null;
+  const sum = durationsMs.reduce((s, d) => s + d, 0);
+  return Math.round(sum / durationsMs.length);
 }
 
 // share-fragment shape: `h=847,1023,962`. backwards compatible with the old

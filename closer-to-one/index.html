@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Closer to 1.000</title>
 
-<meta name="description" content="Hold a button for as close to 1.000 seconds as you can. See where your hold lands on the live curve of human attempts.">
+<meta name="description" content="Hold a button for as close to 1.000 seconds as you can. Three holds. Your average lands on the live curve of every player&rsquo;s average.">
 
 <meta property="og:title" content="Closer to 1.000">
-<meta property="og:description" content="Hold the button for one second. The closer you get, the more people you beat.">
+<meta property="og:description" content="Three holds. Your average lands on the live curve. Closer is better.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://benlirio.com/apps/closer-to-one/">
 <meta property="og:image" content="https://benlirio.com/apps/closer-to-one/og.jpg">
@@ -17,7 +17,7 @@
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Closer to 1.000">
-<meta name="twitter:description" content="Hold the button for one second. The closer you get, the more people you beat.">
+<meta name="twitter:description" content="Three holds. Your average lands on the live curve. Closer is better.">
 <meta name="twitter:image" content="https://benlirio.com/apps/closer-to-one/og.jpg">
 
 <!-- Google tag (gtag.js) -->
@@ -52,11 +52,11 @@
   <section class="screen" x-show="screen==='intro'" x-transition.opacity>
     <div class="brief">
       <p>Hold the button for as close to <strong>1.000 seconds</strong> as you can.</p>
-      <p>The button reads your hold to the millisecond and pins it on the live curve of every hold ever submitted. The closer you land to <strong>1.000</strong>, the more people you beat.</p>
-      <p class="brief-sub">Three holds. One curve.</p>
+      <p>You get <strong>three holds</strong>. After the third, your average lands as a pin on the live curve of every player&rsquo;s average. The closer you land to <strong>1.000</strong>, the more people you beat.</p>
+      <p class="brief-sub">Three holds. One average. One pin.</p>
     </div>
     <button class="primary" @click="startSession()">step up</button>
-    <p class="footnote">no timer is shown. no peeking. just you and the second.</p>
+    <p class="footnote">no timer is shown. no peeking. the curve unlocks after hold 3.</p>
   </section>
 
   <!-- HOLD -->
@@ -85,54 +85,34 @@
   <!-- RESULT -->
   <section class="screen result-screen" x-show="screen==='result'" x-transition.opacity>
     <div class="result-card">
+      <div class="result-counter">
+        hold <span x-text="holdNumber"></span> of 3
+      </div>
       <div class="duration-display" x-text="current && current.durationStr"></div>
       <div class="delta-line">
         <span class="delta-label">delta</span>
         <span class="delta-value" x-text="current && current.deltaStr"></span>
       </div>
-
-      <div class="curve-wrap">
-        <div class="curve-board">
-          <svg class="curve-svg" :viewBox="curveViewBox" preserveAspectRatio="none" aria-hidden="true">
-            <path class="curve-fill" :d="curvePath"></path>
-            <line class="curve-target" :x1="targetX" :x2="targetX" y1="6" y2="94"></line>
-          </svg>
-          <div class="curve-pin" x-show="current" :style="`left: ${(current && current.pinX || 0) / 10}%`">
-            <div class="curve-pin-line"></div>
-            <div class="curve-pin-dot"></div>
-          </div>
-        </div>
-        <div class="curve-axis">
-          <span>0.500s</span>
-          <span class="axis-target">1.000s</span>
-          <span>1.500s</span>
-        </div>
-        <div class="curve-tally" x-text="totalLabel"></div>
-      </div>
-
-      <div class="beat-line">
-        <span class="beat-pct" x-text="current && (current.beatPct == null ? '—%' : current.beatPct + '%')"></span>
-        <span class="beat-words">of attempts farther from 1.000</span>
-      </div>
       <div class="tier-badge" x-text="current && current.tierLabel"></div>
+      <p class="result-aside" x-text="holdNumber < 3 ? 'curve unlocks after hold 3.' : 'curve unlocks next.'"></p>
     </div>
     <div class="share-row">
-      <button class="primary" @click="advanceFromResult()" x-text="holdNumber < 3 ? 'next hold' : 'see your three'"></button>
+      <button class="primary" @click="advanceFromResult()" x-text="holdNumber < 3 ? 'next hold' : 'reveal the curve'"></button>
     </div>
   </section>
 
   <!-- FINAL -->
   <section class="screen final-screen" x-show="screen==='final'" x-transition.opacity>
-    <h2 class="final-heading" x-text="isReplay ? 'someone&rsquo;s three holds' : 'your three holds'"></h2>
+    <h2 class="final-heading" x-text="isReplay ? 'someone&rsquo;s average' : 'your average'"></h2>
     <p class="final-sub">vs. the live curve</p>
 
-    <div class="final-best" x-show="bestResult">
-      <div class="final-best-label">best of three</div>
-      <div class="final-best-duration" x-text="bestResult && bestResult.durationStr"></div>
+    <div class="final-best" x-show="averageResult">
+      <div class="final-best-label">average of three</div>
+      <div class="final-best-duration" x-text="averageResult && averageResult.durationStr"></div>
       <div class="final-best-meta">
-        <span class="final-best-pct" x-text="bestResult && (bestResult.beatPct == null ? 'beat —%' : 'beat ' + bestResult.beatPct + '%')"></span>
+        <span class="final-best-pct" x-text="averageResult && (averageResult.beatPct == null ? 'beat —%' : 'beat ' + averageResult.beatPct + '%')"></span>
         <span class="final-best-sep">·</span>
-        <span class="final-best-tier" x-text="bestResult && bestResult.tierLabel"></span>
+        <span class="final-best-tier" x-text="averageResult && averageResult.tierLabel"></span>
       </div>
     </div>
 
@@ -142,12 +122,10 @@
           <path class="curve-fill" :d="curvePath"></path>
           <line class="curve-target" :x1="targetX" :x2="targetX" y1="6" y2="94"></line>
         </svg>
-        <template x-for="(r, i) in results" :key="i">
-          <div class="curve-pin curve-pin--numbered" :style="`left: ${r.pinX / 10}%`">
-            <div class="curve-pin-line"></div>
-            <div class="curve-pin-dot" x-text="i + 1"></div>
-          </div>
-        </template>
+        <div class="curve-pin" x-show="averageResult" :style="`left: ${(averageResult && averageResult.pinX || 0) / 10}%`">
+          <div class="curve-pin-line"></div>
+          <div class="curve-pin-dot"></div>
+        </div>
       </div>
       <div class="curve-axis">
         <span>0.500s</span>
@@ -167,15 +145,13 @@
           </div>
           <div class="final-meta">
             <span class="final-delta" x-text="r.deltaStr"></span>
-            <span class="final-meta-sep">·</span>
-            <span class="final-beat" x-text="r.beatPct == null ? 'beat —%' : 'beat ' + r.beatPct + '%'"></span>
           </div>
         </div>
       </template>
     </div>
 
     <div class="share-row">
-      <button class="primary" onclick="share()">share these three</button>
+      <button class="primary" onclick="share()">share your average</button>
       <button class="secondary" @click="restart()" x-text="isReplay ? 'try it yourself' : 'three more holds'"></button>
     </div>
 
