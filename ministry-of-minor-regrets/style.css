@@ -499,31 +499,35 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
-  padding: 4px 8px;
-  font-family: 'IBM Plex Mono', 'Special Elite', monospace;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  margin-top: 6px;
+  padding: 5px 10px;
+  font-family: 'Special Elite', 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: var(--paper);
-  color: var(--ink);
-  border: 1px dashed var(--ink-soft);
+  background: var(--seal-blue);
+  color: var(--paper);
+  border: 1.5px solid var(--seal-blue);
   cursor: pointer;
   border-radius: 0;
   transition: background 80ms, color 80ms, border-color 80ms;
-  min-height: 28px;
+  min-height: 30px;
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.25);
 }
-.vote-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.vote-btn:hover { background: var(--stamp-red); border-color: var(--stamp-red); }
 .vote-btn:disabled { cursor: default; opacity: 1; }
 .vote-btn.voted {
-  background: var(--paper);
+  background: transparent;
   color: var(--ink-soft);
-  border-style: solid;
+  border: 1.5px solid var(--ink-soft);
+  box-shadow: none;
 }
 .vote-btn .vote-count {
-  font-size: 10px;
+  font-size: 10.5px;
   color: inherit;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 .r-total {
