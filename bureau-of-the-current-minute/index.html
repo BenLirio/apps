@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Bureau of the Current Minute</title>
+
+  <meta name="description" content="A federal bureau of the present tense. Each minute of each weekday has its own pinned decree. Wait one minute — the page silently updates.">
+  <meta name="theme-color" content="#c8b88a">
+
+  <meta property="og:title" content="Bureau of the Current Minute">
+  <meta property="og:description" content="A federal bureau of the present tense. Each minute of each weekday has its own pinned decree. Wait one minute and the page silently updates.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/bureau-of-the-current-minute/">
+  <meta property="og:image" content="https://benlirio.com/apps/bureau-of-the-current-minute/og.png">
+  <meta property="og:image:width" content="1600">
+  <meta property="og:image:height" content="900">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Bureau of the Current Minute">
+  <meta name="twitter:description" content="A federal bureau of the present tense. Each minute has its own pinned decree.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/bureau-of-the-current-minute/og.png">
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-DZ37BB6T3L');
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <main class="app">
+
+    <header class="masthead">
+      <div class="masthead-rule"></div>
+      <p class="masthead-eyebrow">UNITED STATES BUREAU OF</p>
+      <h1 class="masthead-title">THE CURRENT MINUTE</h1>
+      <p class="masthead-sub">Office of Pinned Observations &mdash; Section 4</p>
+      <div class="masthead-rule"></div>
+    </header>
+
+    <!-- The anchor — largest visual element on the page. -->
+    <section class="anchor" aria-live="polite">
+      <div class="anchor-weekday" id="anchor-weekday">WEDNESDAY</div>
+      <div class="anchor-time"><span id="anchor-digits">3:47</span><span class="anchor-meridiem" id="anchor-meridiem">PM</span></div>
+      <div class="anchor-rule"></div>
+    </section>
+
+    <!-- The decree — one typewritten line about this exact minute. -->
+    <section class="decree" aria-live="polite">
+      <p class="decree-prefix" id="decree-prefix">FILED THIS MINUTE</p>
+      <p class="decree-line" id="decree-line">consulting the registry&hellip;</p>
+    </section>
+
+    <!-- The postage-stamp card — date + serial. Doubles as share artifact. -->
+    <section class="stamp-row" aria-label="Stamped record of this minute">
+      <article class="stamp" id="stamp">
+        <div class="stamp-perf-top" aria-hidden="true"></div>
+        <div class="stamp-perf-bottom" aria-hidden="true"></div>
+        <div class="stamp-perf-left" aria-hidden="true"></div>
+        <div class="stamp-perf-right" aria-hidden="true"></div>
+
+        <div class="stamp-inner">
+          <div class="stamp-header">
+            <span class="stamp-bureau">BUREAU OF THE CURRENT MINUTE</span>
+            <span class="stamp-postage">$0.41</span>
+          </div>
+
+          <div class="stamp-body">
+            <div class="stamp-time" id="stamp-time">3:47 PM</div>
+            <div class="stamp-date" id="stamp-date">WED &middot; MAY 5, 2026</div>
+          </div>
+
+          <div class="stamp-footer">
+            <span class="stamp-serial" id="stamp-serial">No. 4-WED-1547</span>
+            <span class="stamp-cancel" id="stamp-cancel" aria-hidden="true">FILED</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="share-row">
+      <button onclick="share()" class="share-btn" id="share-btn" type="button">SAVE THIS MINUTE</button>
+    </div>
+    <p class="share-hint" id="share-hint">card downloaded as PNG &mdash; post it before the next minute comes</p>
+
+    <p class="next-tick" id="next-tick">next decree files in <span id="next-tick-secs">&mdash;</span>s</p>
+
+    <footer class="colophon">
+      <p>10,080 decrees on file &middot; one per minute of the working week</p>
+      <p>Not a real bureau. No legal advice. No actual postage.</p>
+    </footer>
+
+  </main>
+</body>
+</html>
