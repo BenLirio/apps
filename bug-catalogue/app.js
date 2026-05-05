@@ -22,113 +22,160 @@ const RARITY_TIERS = {
 };
 
 // ====================== SPECIES CATALOG ======================
-// Each species: { id, name, kind, rarity, baseSpeed }
+// Each species: { id, name, binomial, kind, rarity, baseSpeed, fact }
+// Real insects (and a few near-relatives), real Latin binomials, real
+// one-sentence biological facts shown on the specimen plate at the end.
+//
 // kind = crawler | flyer | drifter | hopper | zigzag — controls trajectory.
 // rarity = common | uncommon | rare | legendary — controls spawn weight + visual treatment.
 // Visuals are committed PNGs at bugs/{id}.png — Victorian natural-history
 // engravings, transparent backgrounds, oriented with the insect facing up.
+// (Image filenames are historical; the engravings read as period-style
+// insect plates and pair with the real species named above them.)
 const SPECIES = [
-  { id: 'clockroach',   name: 'Gold-banded clock-roach',     kind: 'crawler', rarity: 'common',    baseSpeed: 1.0 },
-  { id: 'stainmoth',    name: 'Stained-glass moth',           kind: 'flyer',   rarity: 'legendary', baseSpeed: 1.6 },
-  { id: 'cigwalker',    name: 'Cigarette-bearer',             kind: 'crawler', rarity: 'common',    baseSpeed: 0.7 },
-  { id: 'velvetbumble', name: 'Velvet bumble-pretender',      kind: 'flyer',   rarity: 'common',    baseSpeed: 1.2 },
-  { id: 'paperwasp',    name: 'Hand-folded paper wasp',       kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.8 },
-  { id: 'glassbeetle',  name: 'Translucent glass beetle',     kind: 'crawler', rarity: 'rare',      baseSpeed: 0.9 },
-  { id: 'inkmite',      name: 'Ink-spilling mite',            kind: 'crawler', rarity: 'common',    baseSpeed: 0.6 },
-  { id: 'lampfly',      name: 'Streetlamp lace-fly',          kind: 'flyer',   rarity: 'rare',      baseSpeed: 2.0 },
-  { id: 'minerbug',     name: 'Coal-miner ground beetle',     kind: 'crawler', rarity: 'common',    baseSpeed: 0.85 },
-  { id: 'ribbonworm',   name: 'Ribbon-worm caterpillar',      kind: 'crawler', rarity: 'common',    baseSpeed: 0.5 },
-  { id: 'jewelhopper',  name: 'Velvet-jeweled grasshopper',   kind: 'hopper',  rarity: 'uncommon',  baseSpeed: 1.1 },
-  { id: 'mournfly',     name: 'Mourning bottle-fly',          kind: 'zigzag',  rarity: 'uncommon',  baseSpeed: 2.2 },
-  { id: 'silkdrifter',  name: 'Silk-thread drifter',          kind: 'drifter', rarity: 'common',    baseSpeed: 0.4 },
-  { id: 'amberbee',     name: 'Amber-cased bee-mimic',        kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.5 },
-  { id: 'ironcricket',  name: 'Iron-shell cricket',           kind: 'hopper',  rarity: 'uncommon',  baseSpeed: 0.95 },
-  { id: 'paperghost',   name: 'Paper-ghost moth',             kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.3 },
-  { id: 'rustbeetle',   name: 'Rusted hinge-beetle',          kind: 'crawler', rarity: 'common',    baseSpeed: 0.8 },
-  { id: 'silvermidge',  name: 'Silver tax-collector midge',   kind: 'zigzag',  rarity: 'common',    baseSpeed: 2.4 },
-  { id: 'velvetdarner', name: 'Velvet darner',                kind: 'flyer',   rarity: 'rare',      baseSpeed: 1.9 },
-  { id: 'bookworm',     name: 'Marginalia bookworm',          kind: 'crawler', rarity: 'common',    baseSpeed: 0.55 },
-  { id: 'opalmoth',     name: 'Opal-eyed dusk moth',          kind: 'flyer',   rarity: 'legendary', baseSpeed: 1.4 },
-  { id: 'leafmime',     name: 'Polite leaf-mime',             kind: 'crawler', rarity: 'common',    baseSpeed: 0.7 },
-  { id: 'bronzebug',    name: 'Bronze-collared sundial bug',  kind: 'crawler', rarity: 'common',    baseSpeed: 1.0 },
-  { id: 'foglace',      name: 'Fog-lace darner',              kind: 'zigzag',  rarity: 'rare',      baseSpeed: 1.7 },
-  { id: 'porcelainbee', name: 'Porcelain-cup bee',            kind: 'flyer',   rarity: 'rare',      baseSpeed: 1.3 },
-  { id: 'spectrebug',   name: 'Spectacled assembly-bug',      kind: 'crawler', rarity: 'common',    baseSpeed: 0.75 },
-  { id: 'sootmoth',     name: 'Soot-eating chimney moth',     kind: 'flyer',   rarity: 'common',    baseSpeed: 1.5 },
-  { id: 'spiralweevil', name: 'Spiral-shelled weevil',        kind: 'crawler', rarity: 'common',    baseSpeed: 0.65 },
-  { id: 'fernhopper',   name: 'Fern-frond hopper',            kind: 'hopper',  rarity: 'common',    baseSpeed: 1.05 },
-  { id: 'velvetfly',    name: 'Velvet seamstress fly',        kind: 'flyer',   rarity: 'common',    baseSpeed: 2.1 },
+  { id: 'clockroach',
+    name: 'American Cockroach',           binomial: 'Periplaneta americana',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 1.0,
+    fact: 'Native to Africa despite the name, it can run up to about three miles per hour and survive without its head for roughly a week, breathing through small holes along each body segment.' },
+  { id: 'stainmoth',
+    name: 'Atlas Moth',                   binomial: 'Attacus atlas',
+    kind: 'flyer',   rarity: 'legendary', baseSpeed: 1.6,
+    fact: 'Among the largest moths in the world by wing surface area, it has no functional mouth and lives only one to two weeks as an adult on energy stored entirely from its caterpillar stage.' },
+  { id: 'cigwalker',
+    name: 'Western Harvester Ant',        binomial: 'Pogonomyrmex occidentalis',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.7,
+    fact: 'Workers gather seeds for the colony and clear vegetation in a circular disc around the nest entrance, sometimes a meter or more across.' },
+  { id: 'velvetbumble',
+    name: 'Common Eastern Bumblebee',     binomial: 'Bombus impatiens',
+    kind: 'flyer',   rarity: 'common',    baseSpeed: 1.2,
+    fact: 'Unlike honey bees, bumblebees can warm their flight muscles by shivering, which lets them forage in cooler weather where most other bees cannot fly.' },
+  { id: 'paperwasp',
+    name: 'European Paper Wasp',          binomial: 'Polistes dominula',
+    kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.8,
+    fact: 'It builds open-comb nests from chewed wood pulp; introduced to North America in the 1980s, it now competes with native paper wasps across most of the continent.' },
+  { id: 'glassbeetle',
+    name: 'Six-Spotted Tiger Beetle',     binomial: 'Cicindela sexguttata',
+    kind: 'crawler', rarity: 'rare',      baseSpeed: 0.9,
+    fact: 'One of the fastest insects on Earth relative to its size — it runs so quickly that its eyes briefly lose the ability to gather enough light, so it must stop to relocate prey.' },
+  { id: 'inkmite',
+    name: 'Common Springtail',            binomial: 'Folsomia candida',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.6,
+    fact: 'Not technically an insect, it leaps using a spring-loaded organ called a furcula tucked beneath its abdomen, propelling itself many times its body length to escape predators.' },
+  { id: 'lampfly',
+    name: 'Green Lacewing',               binomial: 'Chrysoperla carnea',
+    kind: 'flyer',   rarity: 'rare',      baseSpeed: 2.0,
+    fact: 'Adults sip pollen and nectar, but the larvae are voracious aphid predators — gardeners call them "aphid lions" and breed them to protect crops.' },
+  { id: 'minerbug',
+    name: 'Violet Ground Beetle',         binomial: 'Carabus violaceus',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.85,
+    fact: 'A nocturnal hunter that preys on slugs, snails, and caterpillars; its iridescent purple sheen comes from microscopic ridges in its shell rather than pigment.' },
+  { id: 'ribbonworm',
+    name: 'Monarch Caterpillar',          binomial: 'Danaus plexippus',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.5,
+    fact: 'It feeds exclusively on milkweed and stores cardenolide toxins from the plant, which makes both the caterpillar and the resulting butterfly unpalatable to most predators.' },
+  { id: 'jewelhopper',
+    name: 'Differential Grasshopper',     binomial: 'Melanoplus differentialis',
+    kind: 'hopper',  rarity: 'uncommon',  baseSpeed: 1.1,
+    fact: 'It can leap roughly twenty times its body length using a catch-and-release mechanism in its hind legs that stores elastic energy and snaps it free, much like a crossbow.' },
+  { id: 'mournfly',
+    name: 'Blue Bottle Fly',              binomial: 'Calliphora vomitoria',
+    kind: 'zigzag',  rarity: 'uncommon',  baseSpeed: 2.2,
+    fact: 'Forensic entomologists rely on the predictable growth rate of its larvae to estimate time of death at crime scenes, sometimes accurate within hours.' },
+  { id: 'silkdrifter',
+    name: 'Common Mayfly',                binomial: 'Ephemera vulgata',
+    kind: 'drifter', rarity: 'common',    baseSpeed: 0.4,
+    fact: 'Adults live only a single day — sometimes only hours — long enough to mate and lay eggs; the order name "Ephemeroptera" literally means "short-lived wings".' },
+  { id: 'amberbee',
+    name: 'Western Honey Bee',            binomial: 'Apis mellifera',
+    kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.5,
+    fact: 'Returning foragers communicate the direction and distance of food sources through a "waggle dance" performed in the dark of the hive, decoded by other workers through touch and vibration.' },
+  { id: 'ironcricket',
+    name: 'Field Cricket',                binomial: 'Gryllus pennsylvanicus',
+    kind: 'hopper',  rarity: 'uncommon',  baseSpeed: 0.95,
+    fact: 'Males chirp by rubbing a scraper on one wing against a file of teeth on the other; chirp rate rises with temperature, accurate enough to estimate it within a few degrees Fahrenheit.' },
+  { id: 'paperghost',
+    name: 'White Plume Moth',             binomial: 'Pterophorus pentadactyla',
+    kind: 'flyer',   rarity: 'uncommon',  baseSpeed: 1.3,
+    fact: 'At rest it folds its feather-like wings into a slim T-shape, mimicking a dried twig or grass blade so closely that it disappears against pale stems in daylight.' },
+  { id: 'rustbeetle',
+    name: 'Eastern Eyed Click Beetle',    binomial: 'Alaus oculatus',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.8,
+    fact: 'The two large false eyespots on its back deter predators; if knocked onto its back, it snaps a hinge between body segments and launches itself into the air with an audible click.' },
+  { id: 'silvermidge',
+    name: 'Common House Mosquito',        binomial: 'Culex pipiens',
+    kind: 'zigzag',  rarity: 'common',    baseSpeed: 2.4,
+    fact: 'Only females bite — they need a blood meal to develop eggs — and they locate hosts by sensing the carbon dioxide in exhaled breath from up to fifty meters away.' },
+  { id: 'velvetdarner',
+    name: 'Common Green Darner',          binomial: 'Anax junius',
+    kind: 'flyer',   rarity: 'rare',      baseSpeed: 1.9,
+    fact: 'One of the few migrating dragonflies in North America, it travels over a thousand miles between Canada and the southern U.S. across multiple generations each year.' },
+  { id: 'bookworm',
+    name: 'Common Silverfish',            binomial: 'Lepisma saccharinum',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.55,
+    fact: 'A near-living-fossil — its body plan has barely changed in roughly 400 million years, predating the dinosaurs by more than 150 million.' },
+  { id: 'opalmoth',
+    name: 'Luna Moth',                    binomial: 'Actias luna',
+    kind: 'flyer',   rarity: 'legendary', baseSpeed: 1.4,
+    fact: 'Adults have no functional mouthparts and live only about a week, devoting their entire short adulthood to mating; their long curved tails confuse the echolocation of hunting bats.' },
+  { id: 'leafmime',
+    name: 'Walking Leaf',                 binomial: 'Phyllium philippinicum',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.7,
+    fact: 'Its body mimics a leaf so precisely — including pretend bite marks and veins — that other walking-leaf insects sometimes attempt to eat it by mistake.' },
+  { id: 'bronzebug',
+    name: 'Rose Chafer',                  binomial: 'Cetonia aurata',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 1.0,
+    fact: 'Iridescent green adults are common pollinators in summer; the metallic sheen comes from microscopic light-interference structures, not pigment, since true green pigments would absorb the light it reflects.' },
+  { id: 'foglace',
+    name: 'Tiger Crane Fly',              binomial: 'Nephrotoma ferruginea',
+    kind: 'zigzag',  rarity: 'rare',      baseSpeed: 1.7,
+    fact: 'Often mistaken for a giant mosquito, it has no functional biting mouthparts and adults live only a few days, frequently dying soon after laying eggs in damp soil.' },
+  { id: 'porcelainbee',
+    name: 'Red Mason Bee',                binomial: 'Osmia bicornis',
+    kind: 'flyer',   rarity: 'rare',      baseSpeed: 1.3,
+    fact: 'A solitary bee that builds individual nest cells from mud or chewed leaves; the female lays each egg with its own pollen ball before sealing the cell, then dies before her offspring emerge.' },
+  { id: 'spectrebug',
+    name: 'Northern Walking Stick',       binomial: 'Diapheromera femorata',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.75,
+    fact: 'One of very few insects in North America capable of parthenogenesis — unmated females routinely lay viable eggs that hatch into more females.' },
+  { id: 'sootmoth',
+    name: 'Eastern Tent Caterpillar',     binomial: 'Malacosoma americanum',
+    kind: 'flyer',   rarity: 'common',    baseSpeed: 1.5,
+    fact: 'Caterpillars build a silken communal tent in the fork of a host tree (often cherry or apple) and emerge in formation along scent trails to feed, returning together at night.' },
+  { id: 'spiralweevil',
+    name: 'Boll Weevil',                  binomial: 'Anthonomus grandis',
+    kind: 'crawler', rarity: 'common',    baseSpeed: 0.65,
+    fact: 'It devastated American cotton crops in the early 1900s; the city of Enterprise, Alabama later erected a public monument to it after the destruction forced farmers to diversify into peanuts and grow rich on them.' },
+  { id: 'fernhopper',
+    name: 'Greater Anglewing Katydid',    binomial: 'Microcentrum rhombifolium',
+    kind: 'hopper',  rarity: 'common',    baseSpeed: 1.05,
+    fact: 'Males "sing" in late summer by rubbing their wing edges together, producing a rhythmic high-frequency call that gives the insect its onomatopoeic common name.' },
+  { id: 'velvetfly',
+    name: 'Tachinid Fly',                 binomial: 'Tachina grossa',
+    kind: 'flyer',   rarity: 'common',    baseSpeed: 2.1,
+    fact: 'A parasitoid: females lay eggs on or inside other insects, often caterpillars, and the larvae develop inside the still-living host before killing it on emergence.' },
 ];
 
-// ====================== LATIN ROOTS for binomials ======================
-const GENUS_ROOTS = [
-  'Coleoptera','Lepidoptera','Hymenoptera','Diptera','Orthoptera','Hemiptera','Phasmida','Mantodea',
-  'Brachycera','Cicindela','Calliphora','Vespoidea','Saturnia','Carabus','Cetonia','Lampyris','Bombus','Stenopogon','Aedes','Lucanus','Cassida','Anomala'
-];
-const GENUS_SUFFIXES = ['us','a','idae','ina','ella','aria','onta','ipes','opsis','ina','arius','ana'];
-const SPECIES_ROOTS = [
-  'misericordia','crepuscul','vesper','lucid','obscur','tranquill','agitat','solitud','melanchol','curios','dilig','pallor','vetust','silentium','fervor','memori','reverie','tarditud','candor','lucid','contempl','elegans','severitat','austerit','clandestin','anxietat','quietud','perplex','torpor','reverentia'
-];
-const SPECIES_SUFFIXES = ['ae','um','i','onis','aris','alis','antis','ensis','ata','osa','icus','ini'];
-
-// ====================== CURATOR FIELD NOTES ======================
-// One-line deadpan field notes — chosen deterministically per pinned bug.
-const FIELD_NOTES = [
-  'known to overshadow conversations about feelings.',
-  'feeds primarily on unpaid invoices.',
-  'observed only in rooms with one functioning bulb.',
-  'mistaken regularly for a spelling error.',
-  'reluctant to share its weekend plans.',
-  'attracted to the word "perhaps".',
-  'mates only after explicit consent and a brief silence.',
-  'mimics the cadence of an unanswered question.',
-  'considered impolite by neighboring orders.',
-  'lives roughly the length of a long apology.',
-  'molts whenever someone says "we should talk".',
-  'navigates by the smell of warm laundry.',
-  'forms small parliaments under porch lights.',
-  'survives without sleep but not without grievance.',
-  'vibrates audibly when complimented.',
-  'unwilling to enter rooms it has not been invited to.',
-  'regarded by the curator as "a quietly excellent insect".',
-  'last seen near a half-finished crossword.',
-  'will not fly through doorways painted blue.',
-  'has been observed pretending to be a leaf with conviction.',
-  'declines to participate in the spring census.',
-  'collects forgotten umbrellas; purpose unknown.',
-  'appears more frequently on Tuesdays.',
-  'thought, by the elderly, to predict mild weather.',
-  'has never been seen in direct sunlight.',
-  'communicates entirely in elaborate sighs.',
-  'said to be the cause of a single missed appointment in 1873.',
-  'avoids any room containing a metronome.',
-  'most active during the second cup of tea.',
-  'capable of remarkable stillness when accused.',
-  'leaves behind a faint odor of damp stationery.',
-  'has not been seen since the publication of the relevant volume.',
-];
-
-// Plate-level curator framing notes
+// Plate-level curator framing notes — kept deadpan and bureau-flavored.
 const CURATOR_HEADERS = [
-  "Curator's note: a moderately satisfying afternoon.",
-  "Curator's note: the case fills more readily than expected.",
-  "Curator's note: the specimens cooperated, on the whole.",
-  "Curator's note: a quiet drift; nothing inflamed.",
-  "Curator's note: noted no missing bell-rings.",
-  "Curator's note: pinned without ceremony.",
-  "Curator's note: an improving morning's haul.",
+  "Curator's note: a serviceable afternoon's identification.",
+  "Curator's note: today's drift logged, named, and described.",
+  "Curator's note: specimens cooperated; the cabinet accepts them.",
+  "Curator's note: the field index advances by a few entries.",
   "Curator's note: collected, labeled, and shelved.",
-  "Curator's note: the board accepts what it accepts.",
+  "Curator's note: a modest but instructive plate.",
+  "Curator's note: an improving morning's catalogue.",
+  "Curator's note: nothing rare today, but everything correctly placed.",
+  "Curator's note: the board accepts what crosses it.",
 ];
 
 const PLATE_TITLES = [
-  'An assembled museum.',
+  'A field plate, properly catalogued.',
   'Today, what crossed the board.',
-  'Plate the curator approved.',
+  "The morning's identifications.",
   'Specimens, in order pinned.',
-  'A small, mostly true catalogue.',
-  'Of the morning bells.',
-  'The pinned and the labeled.',
+  'A small but accurate catalogue.',
+  'Of this morning’s drift.',
+  'The pinned and the named.',
 ];
 
 // ====================== SEEDED RNG (mulberry32) ======================
@@ -202,32 +249,7 @@ function pickSpawnSpecies() {
   return pool[pool.length - 1];
 }
 
-// ====================== BINOMIAL GENERATION ======================
-function genusFor(speciesId, catchTimeStamp) {
-  const h = hashStr(speciesId + ':' + Math.floor(catchTimeStamp / 1000));
-  const rng = mulberry32(h);
-  const root = seededPick(rng, GENUS_ROOTS);
-  // 50% chance to swap suffix to feel less canonical
-  if (rng() < 0.45) {
-    // strip trailing vowel(s) and append a suffix
-    const stripped = root.replace(/(us|a|ae|idae|ina|ella|aria|onta|ipes|opsis|arius|ana|ata|osa)$/i, '');
-    const base = stripped.length >= 4 ? stripped : root;
-    return capitalize(base + seededPick(rng, GENUS_SUFFIXES));
-  }
-  return capitalize(root);
-}
-function epithetFor(speciesId, catchTimeStamp) {
-  const h = hashStr(speciesId + '#' + catchTimeStamp);
-  const rng = mulberry32(h);
-  const root = seededPick(rng, SPECIES_ROOTS);
-  return root.toLowerCase() + seededPick(rng, SPECIES_SUFFIXES);
-}
-function fieldNoteFor(speciesId, catchTimeStamp) {
-  const h = hashStr(speciesId + '!' + catchTimeStamp);
-  const rng = mulberry32(h);
-  return seededPick(rng, FIELD_NOTES);
-}
-function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); }
+// ====================== TIME FORMATTING ======================
 function fmtTime(ts) {
   const d = new Date(ts);
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
@@ -660,18 +682,25 @@ function renderPlate() {
     const tier = c.rarity || species.rarity || 'common';
     const card = document.createElement('div');
     card.className = 'specimen rarity-' + tier;
-    const genus = genusFor(c.speciesId, c.ts);
-    const epi = epithetFor(c.speciesId, c.ts);
-    const note = fieldNoteFor(c.speciesId, c.ts);
     card.innerHTML = `
       <div class="specimen-art"><div class="specimen-pin"></div>${speciesImg(species)}</div>
       <p class="specimen-num">Specimen ${String(i + 1).padStart(2, '0')} &middot; pinned ${fmtTime(c.ts)}</p>
-      <p class="specimen-latin">${genus} ${epi}</p>
+      <p class="specimen-common">${escapeText(species.name)}</p>
+      <p class="specimen-latin">${escapeText(species.binomial)}</p>
       <p class="specimen-rarity">${RARITY_TIERS[tier].label}</p>
-      <p class="specimen-note">— ${note}</p>
+      <p class="specimen-note">${escapeText(species.fact)}</p>
     `;
     grid.appendChild(card);
   });
+}
+
+function escapeText(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function catNo() {
