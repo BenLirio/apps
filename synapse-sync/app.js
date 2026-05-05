@@ -1,14 +1,13 @@
 // app.js — entry point. Wires DOM, screens, share, and net/game integration.
 //
-// Voice: the Bureau of Synapse Telegraphy is the framing for ALL copy on this
-// app, not just the verdict. Every screen reads as if a stamped, mock-bureaucratic
+// Voice: the Bureau of Synaptic Concordance frames ALL copy on this app, not
+// just the verdict. Every screen reads as if a stamped, mock-bureaucratic
 // agency administers the test.
 
-import { TelephoneNet, generateRoomCode, isValidRoomCode } from "./net.js";
-import { TelephoneGame, TOTAL_ROUNDS, PALETTE_SLOTS } from "./loop.js";
-import { FEELINGS, PALETTE } from "./content.js";
+import { SyncNet, generateRoomCode, isValidRoomCode } from "./net.js";
+import { SyncGame, TOTAL_ROUNDS, MAX_SCORE, PALETTE_SLOTS } from "./loop.js";
+import { PALETTE, compositionToSet, verdictForPercentile } from "./content.js";
 import { fetchDistribution, recordScore, percentileOf } from "./histogram.js";
-import { verdictForPercentile } from "./content.js";
 
 // ── Screens ───────────────────────────────────────────────────────────────
 const SCREENS = ["landing","waiting","play","reveal","intermission","final","disconnected"];
@@ -25,49 +24,42 @@ let net = null;
 let game = null;
 
 function startSession(role, code, name) {
-  net = new TelephoneNet({
+  net = new SyncNet({
     onJoined: ({ role: r, roomCode }) => {
       if (r === "host") {
         renderWaiting(roomCode);
         show("waiting");
       } else {
-        // Guest joined; the actual game start is keyed off player_joined on host
-        // and joined_room on guest. The host kicks off when receiving player_joined.
-        // For guest, start the game immediately on joined_room.
         startGame();
       }
     },
-    onPlayerJoined: ({ guestName }) => {
+    onPlayerJoined: () => {
       // Host's signal that guest is in. Start the game.
       startGame();
     },
     onPeerState: (state) => {
       if (!state || !state.kind) return;
-      if (state.kind === "transmission") {
-        game.onTransmission(state.round, state.emojis);
+      if (state.kind === "lock") {
+        game.onPeerLock(state.round, state.emojis);
         renderPlay();
-      } else if (state.kind === "guess") {
-        game.onPeerGuess(state.round, state.choice, state.correct);
-        // sender will land on reveal via onRoundComplete
       } else if (state.kind === "rematch") {
         runItBack();
       }
     },
     onError: (msg) => {
       const err = {
-        room_not_found: "no arena under that code — re-confirm with your partner",
-        room_full:      "that arena is already paired — request a fresh code",
-        opponent_left:  "your partner has left the wire — connection severed",
-      }[msg] || "the wire is unstable — please retry";
+        room_not_found: "no chamber under that code — re-confirm with your partner",
+        room_full:      "that chamber is already paired — request a fresh code",
+        opponent_left:  "your partner has left the chamber — concordance severed",
+      }[msg] || "the chamber is unstable — please retry";
       showLandingError(err);
     },
     onClose: () => {
       // Only escalate to disconnected if a game was in progress.
-      if (game && game.round <= TOTAL_ROUNDS && document.getElementById("screen-play").hidden === false) {
-        show("disconnected");
-      } else if (document.getElementById("screen-waiting").hidden === false) {
-        show("disconnected");
-      } else if (document.getElementById("screen-reveal").hidden === false) {
+      const playOpen = document.getElementById("screen-play").hidden === false;
+      const waitOpen = document.getElementById("screen-waiting").hidden === false;
+      const revealOpen = document.getElementById("screen-reveal").hidden === false;
+      if ((game && game.round <= TOTAL_ROUNDS && playOpen) || waitOpen || revealOpen) {
         show("disconnected");
       }
     }
@@ -109,7 +101,7 @@ function attachLanding() {
   document.getElementById("btn-create").addEventListener("click", () => {
     clearLandingError();
     const name = (nameInput.value || "").trim().slice(0, 20);
-    if (!name) { showLandingError("name your operator before opening a wire"); return; }
+    if (!name) { showLandingError("name your operator before opening a chamber"); return; }
     startSession("host", null, name);
   });
 
@@ -117,8 +109,8 @@ function attachLanding() {
     clearLandingError();
     const name = (nameInput.value || "").trim().slice(0, 20);
     const code = (codeInput.value || "").trim().toUpperCase();
-    if (!name) { showLandingError("name your operator before opening a wire"); return; }
-    if (!isValidRoomCode(code)) { showLandingError("arena code is four letters — please re-key"); return; }
+    if (!name) { showLandingError("name your operator before joining a chamber"); return; }
+    if (!isValidRoomCode(code)) { showLandingError("chamber code is four letters — please re-key"); return; }
     startSession("guest", code, name);
   });
 
@@ -132,14 +124,12 @@ function renderWaiting(code) {
   document.getElementById("waiting-code").textContent = code.split("").join(" ");
   const joinUrl = `${location.origin}${location.pathname}?room=${code}`;
   document.getElementById("waiting-link").value = joinUrl;
-  // QR via stateless free service.
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(joinUrl)}`;
   const img = document.getElementById("waiting-qr");
   img.src = qrSrc;
-  img.alt = `arena code ${code}`;
+  img.alt = `chamber code ${code}`;
 }
 
-// Copy invite link.
 function copyInvite() {
   const input = document.getElementById("waiting-link");
   input.select();
@@ -153,7 +143,7 @@ function copyInvite() {
 
 // ── Game start ────────────────────────────────────────────────────────────
 function startGame() {
-  game = new TelephoneGame(net);
+  game = new SyncGame(net);
   game.onChange = renderPlay;
   game.onRoundComplete = () => {
     renderReveal();
@@ -162,41 +152,39 @@ function startGame() {
   game.onGameComplete = onGameComplete;
   document.getElementById("opponent-banner-name").textContent =
     net.opponentName || (net.role === "host" ? "your partner" : "the host");
+  buildPalette();
   renderPlay();
   show("play");
 }
 
 // ── Play screen rendering ─────────────────────────────────────────────────
-function renderPlay() {
-  // Top-bar status.
-  document.getElementById("round-label").textContent =
-    `TRANSMISSION ${game.round} / ${TOTAL_ROUNDS}`;
-  document.getElementById("score-label").textContent =
-    `MATCHED: ${game.score} / ${TOTAL_ROUNDS}`;
-
-  const role = game.myRoleThisRound();
-  const roleEl = document.getElementById("role-banner");
-  roleEl.classList.toggle("role-sender", role === "sender");
-  roleEl.classList.toggle("role-receiver", role === "receiver");
-  roleEl.textContent = role === "sender"
-    ? "OPERATOR ON DUTY · transmit a 4-symbol cipher"
-    : "OPERATOR ON DUTY · receive and identify";
-
-  // Show the appropriate panel.
-  document.getElementById("panel-sender").hidden = role !== "sender";
-  document.getElementById("panel-receiver").hidden = role !== "receiver";
-
-  if (role === "sender") {
-    renderSenderPanel();
-  } else {
-    renderReceiverPanel();
-  }
+function buildPalette() {
+  const grid = document.getElementById("my-palette");
+  if (grid.dataset.built) return;
+  grid.dataset.built = "1";
+  PALETTE.forEach((emoji, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "palette-key";
+    b.textContent = emoji;
+    b.setAttribute("aria-label", `encode symbol ${i + 1}`);
+    b.addEventListener("click", () => game && game.appendEmoji(i));
+    grid.appendChild(b);
+  });
 }
 
-function renderSenderPanel() {
-  document.getElementById("sender-feeling").textContent = game.truthFeeling();
-  // Composition display.
-  const comp = document.getElementById("sender-composition");
+function renderPlay() {
+  // Top bar.
+  document.getElementById("round-label").textContent =
+    `TRIAL ${game.round} / ${TOTAL_ROUNDS}`;
+  document.getElementById("score-label").textContent =
+    `CONCORDANCE: ${game.score} / ${MAX_SCORE}`;
+
+  // Prompt.
+  document.getElementById("prompt-feeling").textContent = game.promptText();
+
+  // Composition slots.
+  const comp = document.getElementById("my-composition");
   comp.innerHTML = "";
   for (let i = 0; i < PALETTE_SLOTS; i++) {
     const slot = document.createElement("span");
@@ -204,78 +192,96 @@ function renderSenderPanel() {
     slot.textContent = game.composition[i] || "·";
     comp.appendChild(slot);
   }
-  // Palette grid.
-  const grid = document.getElementById("sender-palette");
-  if (!grid.dataset.built) {
-    grid.dataset.built = "1";
-    PALETTE.forEach((emoji, i) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "palette-key";
-      b.textContent = emoji;
-      b.setAttribute("aria-label", `transmit symbol ${i + 1}`);
-      b.addEventListener("click", () => game.appendEmoji(i));
-      grid.appendChild(b);
-    });
-  }
-  // Disable palette / transmit per phase.
-  const composing = game.phase === "compose";
-  grid.classList.toggle("locked", !composing);
-  document.getElementById("btn-back").disabled = !composing || game.composition.length === 0;
-  document.getElementById("btn-clear").disabled = !composing || game.composition.length === 0;
-  const tx = document.getElementById("btn-transmit");
-  tx.disabled = !composing || game.composition.length !== PALETTE_SLOTS;
-  tx.textContent = game.phase === "sent"
-    ? "TRANSMITTED · awaiting partner"
-    : "TRANSMIT CIPHER";
-}
 
-function renderReceiverPanel() {
-  const wait = document.getElementById("receiver-waiting");
-  const choose = document.getElementById("receiver-choose");
-  if (!game.lastEmojis || !game.choiceTiles) {
-    wait.hidden = false;
-    choose.hidden = true;
-    return;
+  // Palette + buttons enable/disable based on lock state.
+  const grid = document.getElementById("my-palette");
+  const phase = game.phase();
+  grid.classList.toggle("locked", phase !== "compose");
+  document.getElementById("btn-back").disabled = phase !== "compose" || game.composition.length === 0;
+  document.getElementById("btn-clear").disabled = phase !== "compose" || game.composition.length === 0;
+  const lock = document.getElementById("btn-lock");
+  lock.disabled = phase !== "compose" || game.composition.length !== PALETTE_SLOTS;
+  if (phase === "compose") {
+    lock.textContent = "LOCK ENCODING";
+  } else {
+    lock.textContent = "ENCODING LOCKED";
   }
-  wait.hidden = true;
-  choose.hidden = false;
 
-  document.getElementById("receiver-cipher").textContent = game.lastEmojis;
-
-  const grid = document.getElementById("receiver-tiles");
-  grid.innerHTML = "";
-  for (const idx of game.choiceTiles) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "tile";
-    b.textContent = FEELINGS[idx];
-    b.addEventListener("click", () => game.guessTile(idx));
-    grid.appendChild(b);
-  }
+  // Lock-status indicators (only shown once at least one side has locked).
+  const status = document.getElementById("lock-status");
+  status.hidden = !(game.locked || game.peerLocked);
+  const mineLine = document.getElementById("lock-status-mine");
+  const peerLine = document.getElementById("lock-status-peer");
+  mineLine.textContent = game.locked ? "YOU · ENCODING LOCKED" : "YOU · still composing";
+  mineLine.classList.toggle("locked", game.locked);
+  peerLine.textContent = game.peerLocked ? "PARTNER · ENCODING LOCKED" : "PARTNER · still composing";
+  peerLine.classList.toggle("locked", game.peerLocked);
 }
 
 // ── Reveal screen ─────────────────────────────────────────────────────────
 function renderReveal() {
   const last = game.history[game.history.length - 1];
   if (!last) return;
-  document.getElementById("reveal-cipher").textContent = last.emojis;
-  document.getElementById("reveal-truth").textContent = FEELINGS[last.truthIndex];
-  document.getElementById("reveal-guess").textContent = FEELINGS[last.guessIndex];
-  const stamp = document.getElementById("reveal-stamp");
-  if (last.correct) {
-    stamp.textContent = "MATCHED";
-    stamp.className = "stamp matched";
+
+  document.getElementById("reveal-round").textContent = String(last.round);
+  document.getElementById("reveal-prompt").textContent = last.prompt;
+
+  document.getElementById("reveal-mine").textContent = last.mine.join(" ");
+  // Peer composition is a flat string from the wire — render with spaces between graphemes.
+  const peerSet = compositionToSet(last.peer);
+  // Keep peer's original order if we can — fall back to set order.
+  document.getElementById("reveal-peer").textContent = renderEmojiString(last.peer);
+
+  const overlap = last.overlap;
+  document.getElementById("reveal-overlap").textContent = `${overlap} / ${PALETTE_SLOTS}`;
+
+  // Show the actually-shared emojis (intersection) for emotional payoff.
+  const mineSet = new Set(last.mine);
+  const shared = [...peerSet].filter(e => mineSet.has(e));
+  const sharedEl = document.getElementById("reveal-shared");
+  if (shared.length === 0) {
+    sharedEl.textContent = "no concordance this trial";
+    sharedEl.classList.add("none");
   } else {
-    stamp.textContent = "MISMATCHED";
+    sharedEl.textContent = shared.join(" ");
+    sharedEl.classList.remove("none");
+  }
+
+  const stamp = document.getElementById("reveal-stamp");
+  if (overlap >= 3) {
+    stamp.textContent = "FULLY CONCORDANT";
+    stamp.className = "stamp matched";
+  } else if (overlap >= 1) {
+    stamp.textContent = "PARTIAL CONCORDANCE";
+    stamp.className = "stamp partial";
+  } else {
+    stamp.textContent = "DIVERGENT";
     stamp.className = "stamp mismatched";
   }
+
   document.getElementById("reveal-progress").textContent =
-    `Transmission ${last.round} of ${TOTAL_ROUNDS} · running tally ${game.score}/${TOTAL_ROUNDS}`;
+    `Trial ${last.round} of ${TOTAL_ROUNDS} · running tally ${game.score}/${MAX_SCORE}`;
   const btn = document.getElementById("btn-next");
   btn.textContent = (last.round < TOTAL_ROUNDS)
-    ? "ADVANCE TO NEXT TRANSMISSION"
+    ? "ADVANCE TO NEXT TRIAL"
     : "FILE FINAL REPORT";
+}
+
+// Render a peer emoji string with single spaces between recognised palette
+// graphemes so multi-codepoint glyphs (😵‍💫 etc.) display individually.
+function renderEmojiString(s) {
+  const sorted = [...PALETTE].sort((a, b) => b.length - a.length);
+  const out = [];
+  let i = 0;
+  while (i < (s || "").length) {
+    let matched = null;
+    for (const sym of sorted) {
+      if (s.startsWith(sym, i)) { matched = sym; break; }
+    }
+    if (matched) { out.push(matched); i += matched.length; }
+    else { i++; }
+  }
+  return out.join(" ");
 }
 
 function nextFromReveal() {
@@ -283,7 +289,6 @@ function nextFromReveal() {
     onGameComplete();
     return;
   }
-  // Brief intermission while the next sender prepares.
   game.nextRound();
   show("play");
   renderPlay();
@@ -293,11 +298,11 @@ function nextFromReveal() {
 async function onGameComplete() {
   show("final");
   const finalScore = game.score;
-  document.getElementById("final-score").textContent = `${finalScore} / ${TOTAL_ROUNDS}`;
+  document.getElementById("final-score").textContent = `${finalScore} / ${MAX_SCORE}`;
   document.getElementById("final-pair").textContent =
     `${truncName(net.playerName)} & ${truncName(net.opponentName || "partner")}`;
 
-  // 800ms minimum for the "filing the report" beat (KB rule on computation).
+  // 800ms minimum for the "filing the report" beat.
   const t0 = Date.now();
   const dist = await fetchDistribution();
   await recordScore(finalScore);
@@ -329,7 +334,7 @@ function drawHistogram(dist, finalScore) {
   const wrap = document.getElementById("histogram");
   wrap.innerHTML = "";
   const max = Math.max(...dist.counts, 1);
-  for (let s = 0; s <= 10; s++) {
+  for (let s = 0; s <= MAX_SCORE; s++) {
     const col = document.createElement("div");
     col.className = "bar-col" + (s === finalScore ? " our-bar" : "");
     const bar = document.createElement("div");
@@ -337,7 +342,8 @@ function drawHistogram(dist, finalScore) {
     bar.style.height = ((dist.counts[s] / max) * 100).toFixed(1) + "%";
     const label = document.createElement("div");
     label.className = "bar-label";
-    label.textContent = String(s);
+    // Show only every other tick so axis stays legible at MAX_SCORE=20.
+    label.textContent = (s % 2 === 0) ? String(s) : "";
     col.appendChild(bar);
     col.appendChild(label);
     wrap.appendChild(col);
@@ -345,9 +351,9 @@ function drawHistogram(dist, finalScore) {
 }
 
 function doShare(score, pct, verdict, partner) {
-  const text = `The Bureau of Synapse Telegraphy classified ${truncName(net.playerName)} & ${truncName(partner)} as ${verdict.name} (${pct}th percentile, ${score}/${TOTAL_ROUNDS}).`;
+  const text = `The Bureau of Synaptic Concordance classified ${truncName(net.playerName)} & ${truncName(partner)} as ${verdict.name} (${pct}th percentile, ${score}/${MAX_SCORE} matched).`;
   const url = location.origin + location.pathname;
-  const payload = { title: "Telephone Brain", text, url };
+  const payload = { title: "Synapse Sync", text, url };
   if (navigator.share) {
     navigator.share(payload).catch(() => fallbackShare(text, url));
   } else {
@@ -375,10 +381,7 @@ function requestRematch() {
   renderPlay();
 }
 function runItBack() {
-  if (rematchPending) {
-    // We already asked; just mirror.
-    return;
-  }
+  if (rematchPending) return; // we already asked; just mirror
   rematchPending = true;
   game.reset();
   net.sendState({ kind: "rematch" }); // echo
@@ -390,7 +393,7 @@ function runItBack() {
 function wireButtons() {
   document.getElementById("btn-back").addEventListener("click", () => game && game.popEmoji());
   document.getElementById("btn-clear").addEventListener("click", () => game && game.clearComposition());
-  document.getElementById("btn-transmit").addEventListener("click", () => game && game.transmit());
+  document.getElementById("btn-lock").addEventListener("click", () => game && game.lockIn());
   document.getElementById("btn-next").addEventListener("click", nextFromReveal);
   document.getElementById("btn-share").addEventListener("click", () => window.share && window.share());
   document.getElementById("btn-rematch").addEventListener("click", requestRematch);
@@ -403,5 +406,4 @@ attachLanding();
 wireButtons();
 show("landing");
 
-// expose for inline onclick fallback if any (none currently)
 window.share = () => {};

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Synapse Sync — Bureau of Synaptic Concordance</title>
+  <meta name="description" content="A two-phone duo test from the Bureau of Synaptic Concordance. Both partners see the same prompt; both pick four emojis; the Bureau scores how synced your minds really are.">
+
+  <!-- Share-preview tags -->
+  <meta property="og:title" content="Synapse Sync">
+  <meta property="og:description" content="The Bureau of Synaptic Concordance administers your two-phone duo test. Are you a FUNCTIONALLY-LINKED LOBE PAIR?">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://benlirio.com/apps/synapse-sync/">
+  <meta property="og:image" content="https://benlirio.com/apps/synapse-sync/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Synapse Sync">
+  <meta name="twitter:description" content="A two-phone duo test from the Bureau of Synaptic Concordance.">
+  <meta name="twitter:image" content="https://benlirio.com/apps/synapse-sync/og.jpg">
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-DZ37BB6T3L');
+  </script>
+
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+  <script src="feedback.js" defer></script>
+</head>
+<body>
+  <div class="app">
+
+    <header class="letterhead">
+      <span class="form-no">FORM 47-C</span>
+      <div class="seal" aria-hidden="true">🧠</div>
+      <h1>Synapse Sync</h1>
+      <div class="subhead">Bureau of Synaptic Concordance · Field Office</div>
+    </header>
+
+    <!-- ─────────── Screen: Landing ─────────── -->
+    <section id="screen-landing">
+      <div id="invite-banner" class="invite-banner" hidden>
+        you have been summoned to chamber <strong id="invite-banner-code">—</strong><br>
+        confirm your operator name and join the concordance trial
+      </div>
+
+      <p style="font-size:13px; color:var(--ink-soft); letter-spacing:0.04em; margin: 8px 0 4px;">
+        Two operators. Two phones. The Bureau will issue a single feeling at a time and observe both lobes independently. Five trials. The match between your independent encodings determines your concordance rating.
+      </p>
+
+      <div class="section-head">// open a chamber</div>
+      <label class="field" for="player-name">operator name</label>
+      <input id="player-name" type="text" placeholder="e.g. Sarah" maxlength="20" autocomplete="off" autocapitalize="words">
+
+      <div id="create-section">
+        <div class="button-row">
+          <button id="btn-create" class="stamp-btn">Open new chamber</button>
+        </div>
+      </div>
+
+      <div class="section-head">// or join an open chamber</div>
+      <label class="field" for="join-code">chamber code (4 letters)</label>
+      <input id="join-code" type="text" placeholder="ABCD" maxlength="4" autocomplete="off" inputmode="text" autocapitalize="characters">
+      <div class="button-row">
+        <button id="btn-join" class="stamp-btn outline-btn">Join chamber</button>
+      </div>
+
+      <p id="landing-error" class="error-line" hidden></p>
+    </section>
+
+    <!-- ─────────── Screen: Waiting (host) ─────────── -->
+    <section id="screen-waiting" hidden>
+      <div class="section-head">// awaiting partner operator</div>
+      <p class="code-caption">your chamber code</p>
+      <div id="waiting-code" class="code-display">— — — —</div>
+      <p class="code-caption">read aloud or scan</p>
+
+      <div class="qr-block">
+        <img id="waiting-qr" alt="" width="240" height="240">
+      </div>
+
+      <div class="link-row">
+        <input id="waiting-link" type="text" readonly>
+        <button id="btn-copy-link" class="stamp-btn outline-btn">Copy</button>
+      </div>
+
+      <p class="waiting-note">the chamber is open. the Bureau is patient.</p>
+    </section>
+
+    <!-- ─────────── Screen: Play ─────────── -->
+    <section id="screen-play" hidden>
+      <div class="top-bar">
+        <span id="round-label">TRIAL 1 / 5</span>
+        <span id="score-label">CONCORDANCE: 0 / 20</span>
+      </div>
+
+      <p style="text-align:center; font-size:11px; letter-spacing:0.18em; color:var(--ink-soft); text-transform:uppercase; margin:0 0 12px;">
+        partner: <span id="opponent-banner-name">—</span>
+      </p>
+
+      <div class="feeling-card">
+        <div class="label">subjective frequency · both lobes</div>
+        <div id="prompt-feeling" class="feeling">—</div>
+      </div>
+
+      <div class="section-head">// encode independently · 4 symbols</div>
+      <div id="my-composition" class="composition-row"></div>
+
+      <div id="my-palette" class="palette-grid" aria-label="emoji palette"></div>
+
+      <div class="button-row">
+        <button id="btn-back" class="stamp-btn outline-btn">Back</button>
+        <button id="btn-clear" class="stamp-btn outline-btn">Clear</button>
+        <button id="btn-lock" class="stamp-btn">Lock encoding</button>
+      </div>
+
+      <div id="lock-status" class="lock-status" hidden>
+        <div id="lock-status-mine" class="lock-line">YOU · awaiting lock</div>
+        <div id="lock-status-peer" class="lock-line">PARTNER · awaiting lock</div>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen: Reveal ─────────── -->
+    <section id="screen-reveal" hidden>
+      <div class="section-head">// concordance record · trial <span id="reveal-round">—</span></div>
+
+      <div class="reveal-card">
+        <div class="field-row">
+          <div class="key">subjective frequency</div>
+          <div id="reveal-prompt" class="val">—</div>
+        </div>
+
+        <div class="reveal-grid">
+          <div class="reveal-side">
+            <div class="reveal-side-label">YOU</div>
+            <div id="reveal-mine" class="reveal-cipher-mini">— — — —</div>
+          </div>
+          <div class="reveal-side">
+            <div class="reveal-side-label">PARTNER</div>
+            <div id="reveal-peer" class="reveal-cipher-mini">— — — —</div>
+          </div>
+        </div>
+
+        <div class="overlap-readout">
+          <div class="overlap-label">shared symbols</div>
+          <div id="reveal-overlap" class="overlap-num">0 / 4</div>
+          <div id="reveal-shared" class="overlap-shared">—</div>
+        </div>
+
+        <div style="text-align:center;">
+          <span id="reveal-stamp" class="stamp matched">CONCORDANT</span>
+        </div>
+      </div>
+
+      <p id="reveal-progress" class="reveal-progress">—</p>
+
+      <div class="button-row">
+        <button id="btn-next" class="stamp-btn">Advance to next trial</button>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen: Final / Verdict ─────────── -->
+    <section id="screen-final" hidden>
+      <div class="section-head">// final report · case closed</div>
+
+      <div class="final-card">
+        <div id="verdict-stamp" class="tier-stamp">TIER —</div>
+        <div class="seal-row">case file</div>
+        <div id="final-pair" class="case-title">— & —</div>
+
+        <div class="score-line">concordance score</div>
+        <div id="final-score" class="score-num">0 / 20</div>
+
+        <div id="final-percentile" class="pct">—TH PERCENTILE</div>
+
+        <div class="seal-row" style="margin-top:14px;">official classification</div>
+        <div id="verdict-name" class="verdict-name">—</div>
+        <div id="verdict-blurb" class="verdict-blurb">—</div>
+
+        <div class="histogram-block">
+          <div class="hist-title">// concordance distribution · all duos on record</div>
+          <div id="histogram" class="histogram"></div>
+          <div id="dist-source" class="dist-source">—</div>
+        </div>
+      </div>
+
+      <div class="share-row">
+        <button id="btn-share" class="stamp-btn">Forward stamped report</button>
+        <button id="btn-rematch" class="stamp-btn outline-btn">Run it back</button>
+        <button id="btn-reload" class="stamp-btn outline-btn">New chamber</button>
+      </div>
+    </section>
+
+    <!-- ─────────── Screen: intermission (reserved, not used live) ─────────── -->
+    <section id="screen-intermission" hidden></section>
+
+    <!-- ─────────── Screen: Disconnected ─────────── -->
+    <section id="screen-disconnected" hidden>
+      <div class="notice">
+        <h2>Concordance lost</h2>
+        <p>The Bureau has logged the interruption. Open a fresh chamber to resume operations.</p>
+        <button id="btn-reload-disconnect" class="stamp-btn">Open a new chamber</button>
+      </div>
+    </section>
+
+    <footer class="footer">
+      No claims of actual telepathy are made. Pair-verdicts are advisory and not legally binding.
+    </footer>
+
+  </div>
+</body>
+</html>

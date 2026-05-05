@@ -1,9 +1,9 @@
 // histogram.js — talks to the shared per-slug histogram store
-// (config.distribution.endpoint). Encodes a duo's final shared-brain score
-// (0..10 correct) into the millisecond bin space the proxy expects:
-// score → score*1000 ms (range 0..10000 — within proxy limits, 5ms bin width).
+// (config.distribution.endpoint). Encodes a duo's final concordance score
+// (0..20 matched emojis) into the millisecond bin space the proxy expects:
+// score → score*500 ms (range 0..10000 — within proxy limits, 5ms bin width).
 //
-// The proxy aggregates ALL pairs that have ever played telephone-brain into a
+// The proxy aggregates ALL pairs that have ever played synapse-sync into a
 // single per-slug distribution. We GET the bins to draw the histogram and
 // compute the percentile of this duo's score, then POST our own score so the
 // next pair's histogram includes us.
@@ -13,11 +13,13 @@
 // the goal is the FEELING of "how do we compare to everyone else."
 
 const HIST_ENDPOINT = "https://7uhtm126ve.execute-api.us-east-1.amazonaws.com";
-const SLUG = "telephone-brain";
+const SLUG = "synapse-sync";
 
-// Score domain: 0..10 correct guesses. We map to ms = score * 1000.
-const MS_PER_SCORE = 1000;
-const MAX_SCORE = 10;
+// Score domain: 0..20 matched emojis (5 rounds * 4 slots). ms = score * 500
+// keeps each integer score in its own 5ms-wide bin while staying within the
+// proxy's [0, 10000] ms range.
+const MS_PER_SCORE = 500;
+const MAX_SCORE = 20;
 
 export async function fetchDistribution() {
   try {
@@ -58,19 +60,18 @@ function normalizeFromProxy(data) {
   return { counts, total, simulated: total === 0 };
 }
 
-// Simulated baseline: roughly normal-ish around 5.5/10 with 240 fake duos.
+// Simulated baseline: roughly bell-shaped around 6/20 with ~250 fake duos.
+// Independent emoji agreement on a 60-symbol palette is harder than the old
+// multiple-choice mechanic — the curve sits lower and is wider.
 // Used when the real distribution is empty or the proxy is unreachable.
 function simulatedDistribution() {
-  // Hand-tuned shape so percentile feels right.
-  // Curve: lots of pairs score 5–7, fewer at extremes.
-  const shape = [3, 6, 14, 28, 38, 48, 42, 32, 18, 8, 3];
+  // Hand-tuned shape across scores 0..20 so percentile feels right.
+  const shape = [4, 8, 14, 22, 30, 36, 38, 34, 28, 22, 16, 12, 8, 6, 4, 3, 2, 2, 1, 1, 1];
   return { counts: shape.slice(), total: shape.reduce((a, b) => a + b, 0), simulated: true };
 }
 
 // Return percentile (0..99) of `score` in the given distribution.
-// Percentile = "what fraction of duos scored strictly less than us, plus half
-// of those tied." This is the standard mid-rank percentile and avoids
-// degenerate 100s.
+// Mid-rank percentile: fraction strictly below + half tied.
 export function percentileOf(score, dist) {
   const total = dist.total || 1;
   let below = 0;

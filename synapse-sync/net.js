@@ -1,15 +1,14 @@
-// net.js — WebSocket protocol for Telephone Brain.
+// net.js — WebSocket protocol for Synapse Sync.
 //
 // Uses the shared aws-multiplayer dumb-relay. The server forwards game_update
 // messages between the two peers; all game logic runs client-side.
 //
 // Message kinds we use inside `state`:
-//   { kind: "transmission", round, sequence }    sender → receiver: emoji code
-//   { kind: "guess", round, choice, correct }    receiver → sender: their pick
-//   { kind: "rematch" }                          either → either: handshake
+//   { kind: "lock", round, emojis }   either → other: my locked-in 4-emoji set
+//   { kind: "rematch" }                either → other: rematch handshake
 
 const WSS_URL = "wss://l67yfgkb1j.execute-api.us-east-1.amazonaws.com/prod";
-const SLUG = "telephone-brain";
+const SLUG = "synapse-sync";
 
 // 4-letter no-confusables alphabet (KB rule: short codes).
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -28,7 +27,7 @@ export function isValidRoomCode(s) {
   return true;
 }
 
-export class TelephoneNet {
+export class SyncNet {
   constructor(handlers) {
     this.ws = null;
     this.role = null;            // 'host' | 'guest'

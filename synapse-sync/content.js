@@ -1,14 +1,16 @@
-// content.js — the deck of 100 feelings and the 60-emoji palette.
+// content.js — the deck of 100 feelings, the 60-emoji palette, and the
+// scoring + verdict tables for Synapse Sync.
 //
-// Design constraints (from the pitch's risk callout):
-//   - Each feeling must have at least 3 plausibly-mappable 4-emoji compositions
-//     on this palette so the encoding has signal. We don't enforce that
-//     mechanically — we curate the deck and palette so it's true in practice.
-//   - The 8-tile multiple-choice for the receiver is sampled from the deck;
-//     the truth is always one of the 8. Shuffled per round.
+// Mechanic: on each round, both players see the SAME feeling at the SAME time
+// and independently compose a 4-emoji response from the 60-emoji palette.
+// Score per round = number of shared emojis between the two compositions
+// (set intersection, 0..4). 5 rounds → total 0..20.
 //
-// FEELINGS — handcurated absurdly-specific feelings. The Bureau of Synapse
-// Telegraphy refers to these as "subjective frequencies".
+// Design constraints:
+//   - Each feeling must have at least 3 plausibly-mappable 4-emoji
+//     compositions on this palette so independent agreement is possible
+//     above chance (curated, not enforced mechanically).
+//   - Order of emojis is irrelevant for scoring — only the set matters.
 
 export const FEELINGS = [
   "the feeling of finding a 20 in last winter's coat",
@@ -115,13 +117,13 @@ export const FEELINGS = [
   "the dread of an ATM noise pause that lasts a beat too long"
 ];
 
-if (FEELINGS.length !== 100) {
-  console.error("FEELINGS deck is not 100 entries:", FEELINGS.length);
+if (FEELINGS.length < 100) {
+  console.error("FEELINGS deck below minimum 100 entries:", FEELINGS.length);
 }
 
 // PALETTE — 60 emojis spanning emotional registers, motion, objects, weather,
 // fauna, household. Curated so each feeling has at least 3 plausible 4-emoji
-// compositions. Indexed 0..59.
+// independent-agreement compositions. Indexed 0..59.
 export const PALETTE = [
   // emotion / face (10)
   "😀","😶","😬","😭","😱","😴","🥹","🤐","😵‍💫","🫠",
@@ -147,41 +149,8 @@ if (PALETTE.length !== 60) {
   console.error("PALETTE is not 60 emojis:", PALETTE.length);
 }
 
-// Deterministic shuffle (same seed → same order). Used to shuffle the
-// 8-tile multiple-choice consistently across both clients in a round.
-export function seededShuffle(arr, seed) {
-  const a = arr.slice();
-  let s = seed >>> 0;
-  for (let i = a.length - 1; i > 0; i--) {
-    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
-    const j = s % (i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// Pick the round's feeling tile and 7 distractors from the deck.
-// `seed` is the room-code+round hash; both clients run identical logic so the
-// 8-tile choice set is identical on both phones (the receiver gets the same
-// shuffle as the sender).
-export function pickRoundTiles(seed, truthIndex) {
-  // Pick 7 distractors that are not the truth.
-  const indices = [];
-  let s = seed >>> 0;
-  while (indices.length < 7) {
-    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
-    const idx = s % FEELINGS.length;
-    if (idx !== truthIndex && !indices.includes(idx)) {
-      indices.push(idx);
-    }
-  }
-  // Insert truth, then deterministic shuffle.
-  const eight = [truthIndex, ...indices];
-  return seededShuffle(eight, seed ^ 0xa5a5a5a5);
-}
-
-// Deterministic per-room round seed: hash of (roomCode, round, role)
-export function roundSeed(roomCode, round, salt = 0) {
+// Deterministic per-room round seed: hash of (roomCode, round).
+function roundSeed(roomCode, round, salt = 0) {
   let h = 2166136261 >>> 0;
   const s = `${roomCode}:${round}:${salt}`;
   for (let i = 0; i < s.length; i++) {
@@ -191,25 +160,61 @@ export function roundSeed(roomCode, round, salt = 0) {
   return h;
 }
 
-// Pick the truth tile for a given round (deterministic per room).
-export function pickTruth(roomCode, round) {
+// Pick the prompt feeling for a given round (deterministic per room).
+// Both clients run identical logic so they see the SAME prompt at the SAME
+// time — the entire mechanic depends on this.
+export function pickPrompt(roomCode, round) {
   const s = roundSeed(roomCode, round, 0xfeedface);
   return s % FEELINGS.length;
 }
 
-// Bureau verdict bands — keyed by percentile. Bureau-style copy.
-// Each band is { name, blurb, stamp }.
+// Score = number of shared emojis between two 4-emoji compositions.
+// Order is irrelevant; only set membership matters. Range 0..4.
+// Accepts Array<string> (local state) or joined string (from network).
+export function overlapScore(aComp, bComp) {
+  const aSet = compositionToSet(aComp);
+  const bSet = compositionToSet(bComp);
+  let matches = 0;
+  for (const e of aSet) if (bSet.has(e)) matches++;
+  return matches;
+}
+
+// Reconstruct an emoji set from either an Array<string> or a flat joined
+// string. We match against PALETTE entries so multi-codepoint graphemes
+// (😵‍💫, 👁️, etc.) are not split on JS string indexing.
+export function compositionToSet(comp) {
+  if (Array.isArray(comp)) return new Set(comp);
+  if (typeof comp !== "string") return new Set();
+  const sorted = [...PALETTE].sort((a, b) => b.length - a.length);
+  const out = new Set();
+  let i = 0;
+  while (i < comp.length) {
+    let matched = null;
+    for (const sym of sorted) {
+      if (comp.startsWith(sym, i)) { matched = sym; break; }
+    }
+    if (matched) {
+      out.add(matched);
+      i += matched.length;
+    } else {
+      i++;
+    }
+  }
+  return out;
+}
+
+// Bureau verdict bands — keyed by percentile. Bureau-of-Synaptic-Concordance copy.
 export const VERDICTS = [
   { min: 95, name: "A FUSED-CORTEX OPERATIONAL UNIT",
-    blurb: "Filed under: Section 14(a). Recommended for classified telegraphic work and ambient lighthouse keeping. Considered a state-level asset.",
+    blurb: "Filed under: Section 14(a). Recommended for classified concordance work and ambient lighthouse keeping. Considered a state-level asset.",
     stamp: "TIER I" },
   { min: 80, name: "A FUNCTIONALLY-LINKED LOBE PAIR",
     blurb: "Filed under: Section 12(b). Recommended for emergency séance work and assembling IKEA furniture without speaking.",
     stamp: "TIER II" },
-  { min: 60, name: "A SATISFACTORY SYNAPTIC CORRESPONDENCE",
+  { min: 60, name: "A SATISFACTORY SYNAPTIC CONCORDANCE",
     blurb: "Filed under: Section 9(c). Cleared for non-classified telepathy and choosing where to eat without an argument.",
     stamp: "TIER III" },
-  { min: 40, name: "A WORKING-CLASS COMMUNICATION UNIT",
+  { min: 40, name: "A WORKING-CLASS CONVERGENCE UNIT",
     blurb: "Filed under: Section 7(d). Approved for joint grocery shopping and the splitting of bills on the second attempt.",
     stamp: "TIER IV" },
   { min: 20, name: "A LOOSELY ENTANGLED PAIR",

@@ -1,6 +1,6 @@
 /* Aesthetic: mock-bureaucratic typewriter — cream onionskin paper, red-ink
- * agency stamps, monospace, dossier rule lines. The Bureau of Synapse
- * Telegraphy administers the test on cream foolscap paper.
+ * agency stamps, monospace, dossier rule lines. The Bureau of Synaptic
+ * Concordance administers the trial on cream foolscap paper.
  *
  * Forbidden defaults check (visible at a glance): no purple/blue gradient,
  * no Inter / Roboto, no glassmorphism, no uniform border-radius, no three-
@@ -260,25 +260,30 @@ button.danger-btn {
   margin-bottom: 14px;
   color: var(--ink-soft);
 }
-.role-banner {
-  text-align: center;
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  border: 2px solid var(--ink);
-  padding: 8px 6px;
-  margin-bottom: 14px;
-  background: var(--paper-edge);
+/* Lock-status indicator (replaces sender/receiver role banner) */
+.lock-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
 }
-.role-banner.role-sender {
+.lock-line {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 6px 4px;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  background: var(--paper);
+}
+.lock-line.locked {
   background: var(--green-soft);
   border-color: var(--green);
   color: var(--green);
-}
-.role-banner.role-receiver {
-  background: var(--stamp-bg);
-  border-color: var(--stamp);
-  color: var(--stamp);
+  font-weight: 700;
 }
 
 /* Sender panel */
@@ -346,63 +351,12 @@ button.danger-btn {
   pointer-events: none;
 }
 
-/* Receiver panel */
-.cipher-display {
-  text-align: center;
-  font-size: 56px;
-  letter-spacing: 0.06em;
-  border: 2px solid var(--ink);
-  background: rgba(255,255,255,0.4);
-  padding: 18px 8px;
-  margin-bottom: 14px;
-}
-.tile-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-.tile {
-  text-align: left;
-  font-family: "Special Elite", monospace;
-  font-size: 15px;
-  line-height: 1.4;
-  padding: 12px 14px;
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  color: var(--ink);
-  cursor: pointer;
-  border-radius: 0;
-  min-height: 60px;
-}
-.tile:active {
-  background: var(--paper-edge);
-  transform: translateY(1px);
-}
-
-.waiting-block {
-  text-align: center;
-  padding: 30px 12px;
-  border: 2px dashed var(--rule);
-  color: var(--ink-soft);
-  font-size: 14px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 /* Reveal screen */
 .reveal-card {
   border: 3px solid var(--ink);
   background: var(--paper);
   padding: 16px 14px;
   position: relative;
-}
-.reveal-card .reveal-cipher {
-  font-size: 44px;
-  text-align: center;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid var(--rule);
-  padding-bottom: 10px;
-  margin-bottom: 12px;
 }
 .reveal-card .field-row {
   margin: 8px 0;
@@ -418,6 +372,64 @@ button.danger-btn {
   font-size: 16px;
   line-height: 1.35;
   margin-top: 2px;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 10px;
+}
+
+.reveal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0 12px;
+}
+.reveal-side {
+  border: 2px solid var(--ink);
+  background: rgba(255,255,255,0.4);
+  padding: 8px 6px;
+  text-align: center;
+}
+.reveal-side-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.reveal-cipher-mini {
+  font-size: 30px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+.overlap-readout {
+  text-align: center;
+  border-top: 1px dashed var(--rule);
+  border-bottom: 1px dashed var(--rule);
+  padding: 10px 0;
+  margin: 6px 0 12px;
+}
+.overlap-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.overlap-num {
+  font-family: "Special Elite", monospace;
+  font-size: 28px;
+  margin: 4px 0;
+}
+.overlap-shared {
+  font-size: 28px;
+  letter-spacing: 0.1em;
+  min-height: 36px;
+}
+.overlap-shared.none {
+  font-family: "Special Elite", monospace;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 .stamp {
@@ -425,13 +437,14 @@ button.danger-btn {
   margin-top: 10px;
   padding: 6px 14px;
   border: 3px double currentColor;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.22em;
   transform: rotate(-3deg);
   text-transform: uppercase;
 }
 .stamp.matched { color: var(--green); }
+.stamp.partial { color: var(--ink); }
 .stamp.mismatched { color: var(--stamp); }
 
 .reveal-progress {
@@ -541,8 +554,8 @@ button.danger-btn {
 }
 .histogram {
   display: grid;
-  grid-template-columns: repeat(11, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(21, 1fr);
+  gap: 2px;
   align-items: end;
   height: 110px;
   border-bottom: 2px solid var(--ink);
@@ -621,7 +634,7 @@ button.danger-btn {
   .palette-grid { grid-template-columns: repeat(5, 1fr); }
   .palette-key { font-size: 22px; min-height: 44px; }
   .slot { width: 48px; height: 48px; font-size: 28px; }
-  .cipher-display { font-size: 42px; padding: 14px 6px; }
+  .reveal-cipher-mini { font-size: 24px; }
   .final-card .verdict-name { font-size: 22px; }
   .code-display { font-size: 44px; letter-spacing: 0.4em; }
 }
