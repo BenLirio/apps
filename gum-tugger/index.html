@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<title>Gum Tugger — pull until it snaps</title>
+<meta name="description" content="A photorealistic strand of pink chewing gum stretches from the top of the screen to your finger. Pull as far as you can. Three pulls. One verdict. Don't let it snap.">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Gum Tugger">
+<meta property="og:description" content="Pull the gum. Don't let it snap. Three pulls. One dental verdict.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/gum-tugger/">
+<meta property="og:image" content="https://benlirio.com/apps/gum-tugger/og.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gum Tugger">
+<meta name="twitter:description" content="Pull the gum. Don't let it snap. Three pulls. One dental verdict.">
+<meta name="twitter:image" content="https://benlirio.com/apps/gum-tugger/og.jpg">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Source+Serif+4:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <header class="hud">
+    <div class="brand">GUM TUGGER</div>
+    <div class="meta">
+      <span class="pulls" id="pullsLabel">PULL 1 / 3</span>
+      <span class="best" id="bestLabel">BEST: 0.0 cm</span>
+    </div>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="Strand of pink gum stretches from above to your finger"></canvas>
+    <div class="hint" id="hint">touch &amp; drag downward — don't snap it</div>
+    <div class="readout" id="readout">0.0 cm</div>
+  </div>
+
+  <section class="result-card" id="resultCard" hidden aria-live="polite">
+    <div class="rc-stamp">CHEWING ARCHETYPE</div>
+    <div class="rc-name" id="rcName">— —</div>
+    <div class="rc-line" id="rcLine">— —</div>
+    <hr class="rc-rule">
+    <div class="rc-row"><span class="rc-key">PULL 1</span><span class="rc-val" id="rc1">—</span></div>
+    <div class="rc-row"><span class="rc-key">PULL 2</span><span class="rc-val" id="rc2">—</span></div>
+    <div class="rc-row"><span class="rc-key">PULL 3</span><span class="rc-val" id="rc3">—</span></div>
+    <hr class="rc-rule">
+    <div class="rc-row total"><span class="rc-key">LONGEST</span><span class="rc-val" id="rcLongest">—</span></div>
+    <div class="rc-foot" id="rcFoot">artificial elongation, certified by no one</div>
+  </section>
+
+  <div class="share-row" id="shareRow" hidden>
+    <button id="btnShare" type="button" onclick="share()">share verdict</button>
+    <button id="btnAgain" type="button" onclick="restart()">three new pulls</button>
+  </div>
+
+  <section class="ghost-note" id="ghostNote" hidden>
+    <span class="g-dot"></span>
+    <span id="ghostText">a friend's stretch is haunting your strand</span>
+  </section>
+
+  <footer class="legal">
+    <small>no dentists were consulted. no gum was harmed (it's photons).</small>
+  </footer>
+</div>
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</body>
+</html>
