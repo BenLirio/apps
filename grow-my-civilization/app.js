@@ -245,29 +245,37 @@ async function fetchCrises(n) {
 
   const eraName = ERAS[stats.era].name;
 
-  const sys = `You are the chronicler of the civilization "${civName}", currently in the ${eraName}. Output ONLY valid JSON.
+  const sys = `You write crisis cards for a silly civilization-building game. The civilization is "${civName}", currently in the ${eraName}. Output ONLY valid JSON.
 
-You will generate ${n} new crisis card(s) the people now face. Each crisis has:
-- title: 3-6 evocative words, Title Case. Use a SPECIFIC proper noun whenever possible (a place, a person, a holy thing) — "The Salt Caravan Of Velm" beats "A Trade Dilemma." Never abstract ("A Reckoning," "Hard Times").
-- description: ONE sentence, max 22 words. Must contain at least ONE concrete sensory or named detail — a person by name, a smell, a sound, a specific object, a building. No abstract dilemmas, no numbers, no stat names.
-- choices: EXACTLY TWO choices presenting opposing approaches
+Generate ${n} crisis card(s). The vibe is STUPID SIMPLE, HILARIOUS, AND FUN. Plainspoken modern English. Absurd situations, dumb-funny choices. Think SpongeBob meets history class — not folk-saga, not literary.
+
+Each crisis has:
+- title: 2-6 words, Title Case. Plain and weirdly specific ("A Cow Won't Stop Staring At The King" / "Everyone's Hat Is Wrong Now"). NO archaic words. NO "Of Velm" or other made-up proper nouns. NO solemn reckonings.
+- description: ONE sentence, max 18 words. PLAIN, ABSURD, FUNNY. No "evocative imagery." No archaic syntax. Examples: "A goat got into the war chest. He won't come out." / "The blacksmith invented a weird whistle and now everyone whistles wrong on purpose."
+- choices: EXACTLY TWO choices presenting opposing approaches.
 
 Each choice has:
-- label: 2-4 word imperative, Title Case. Vivid and specific ("Drown The Heretics" not "Punish Them").
-- stability: integer in [-25, +25] — how the choice affects social cohesion / safety
-- ambition: integer in [-25, +25] — how it affects momentum (NEGATIVE means spending ambition on bold action; POSITIVE means restraint or hope-building)
-- narrative: ONE sentence, max 16 words. MUST contain a vivid image — a sound, a smell, a named person's reaction, a specific object. No numbers, no stat names. Examples: "Smoke rises for nine days; the priest's daughter does not return." / "The granary fills; old men weep at the smell of new grain."
-- legendary: boolean (default false). Set true ONLY when the choice is so dramatic / costly / iconic that the chronicler would mark it down for the saga — roughly 1 in 6 choices. Be choosy.
-- twist: optional string, max 18 words, only on ~1 in 4 choices. A surprise consequence revealed after the choice resolves — an unintended cost or gift, a person's reveal, an omen. Examples: "The seer was the trader's mother all along." / "Among the dead is the king's only son." Leave empty when nothing twists.
+- label: 2-4 word imperative, Title Case. Punchy and dumb-funny ("Crown The Goat" / "Whistle Back, Worse").
+- stability: integer in [-20, +20] — how the choice affects social order
+- ambition: integer in [-20, +20] — how it affects momentum (NEGATIVE means spending ambition on bold action; POSITIVE means coasting / building energy)
+- narrative: ONE sentence, max 14 words. PLAIN COMEDIC consequence — modern voice, not literary. NO smoke-rises-for-nine-days. Examples: "The goat is now treasurer. He is great at his job." / "A bird laughs at you for the rest of the season."
+- legendary: boolean (default false). Set true ONLY for the most cinematic dumb-bold choice — roughly 1 in 6 choices.
+- twist: optional string, max 16 words, only on ~1 in 5 choices. A surprise consequence — short, funny, modern. Examples: "Turns out the goat had a master's degree." / "The bird files a formal complaint somehow." Leave empty otherwise.
 
-CRITICAL: the two choices for the SAME crisis must present a meaningful TRADE-OFF. Common patterns:
-  · Cautious: +stability, -ambition (small spend)  vs  Bold: -stability, -ambition (large spend, transformative)
-  · Cautious: +stability, -ambition  vs  Daring: -stability, +ambition (a gambit that risks order to build momentum)
-The two choices for a crisis MUST have DIFFERENT trade-off profiles — never both +stability or both -ambition with similar magnitudes.
+CRITICAL: the two choices must have DIFFERENT trade-off profiles. Common patterns:
+  · Safe: +stability, -ambition (small spend)  vs  Bold: -stability, -ambition (big spend, transformative)
+  · Safe: +stability, -ambition  vs  Reckless: -stability, +ambition (a gambit that risks order to build momentum)
+Never both +stability or both -ambition with similar magnitudes.
 
-Magnitudes: typically ±5 to ±15. Reserve ±18 to ±25 for grave, dramatic dilemmas.
+Magnitudes: typically ±4 to ±12. Reserve ±15 to ±20 for the most dramatic ridiculous choices.
 
-Voice: era-appropriate, folk-saga, ALWAYS specific. Vary subject matter — people, weather, neighbors, faith, illness, harvest, strangers, technology, omens, art, language, the dead — not just battles. Lean weird and personal: a child's vision, a butcher's confession, a sea-stone that bleeds, a rival's daughter at your gate. Boring is the enemy.`;
+Voice rules — STRICT:
+- Modern English. No "thee", "shall", "hark", "lo", "henceforth".
+- No vague abstractions. ("A Reckoning", "Dark Times", "The Choosing" — BAD.)
+- Lean toward STUPID specifics. ("The Mayor Lost His Pants Again" — GOOD.)
+- One stupid concrete object/animal/person per crisis.
+- Vary subject: animals, food, weather, hats, sports, hobbies, gossip, smells, music, fashion, the moon, a bug, a haircut. NOT just war/famine.
+- It should make the player smile. If it sounds like a Tolkien prologue, you wrote it wrong.`;
 
   const user = `Stability: ${stats.stability}/100. Ambition: ${stats.ambition}/100. Era: ${eraName}. Chapter ${chapter + 1}.
 
@@ -358,69 +366,113 @@ function titleCaseClip(s, maxLen) {
 }
 
 // ── Fallback (used if AI is unreachable) ──────────────────────────────────────
+// Stupid simple, hilarious, fun. Plain modern English, absurd specifics,
+// dumb-funny consequences. Don't reach for folk-saga voice here — the
+// fallback is what the user sees if the network is down, so it has to
+// match the new comedic direction or the app feels schizophrenic.
 const FALLBACK_POOL = [
   {
-    title: 'The Salt Caravan Arrives',
-    description: 'Foreign traders offer salt and iron in exchange for a season of guarded passage.',
+    title: 'A Goat Got Into The War Chest',
+    description: 'A goat got into the war chest. He will not come out.',
     choices: [
-      { label: 'Strike The Bargain', stability: +8,  ambition: -6,  narrative: 'The granary fills; warriors march beside the trader.' },
-      { label: 'Refuse And Tax Them', stability: -10, ambition: +12, narrative: 'They leave swearing oaths; a fortune is held but enemies are made.' }
+      { label: 'Crown The Goat',  stability: +6,  ambition: -4,  narrative: 'The goat is now treasurer. He is annoyingly good at it.' },
+      { label: 'Storm The Chest', stability: -8,  ambition: +10, narrative: 'The goat wins. Several knights are now afraid of goats.' }
     ]
   },
   {
-    title: 'An Early Frost',
-    description: 'Frost arrives a month early and the river skins over.',
+    title: 'Everyone\'s Hat Is Wrong Now',
+    description: 'A trendsetter wore a weird hat. Now everyone\'s hats look stupid.',
     choices: [
-      { label: 'Burn The Reserves',  stability: +10, ambition: -8,  narrative: 'Fires roar through the night. Everyone wakes warm.' },
-      { label: 'March Out Hunting',  stability: -12, ambition: +10, narrative: 'Half return with meat. Half do not return at all.' }
+      { label: 'Outlaw The Hat',     stability: +5,  ambition: -6,  narrative: 'Hats normalize. The trendsetter is now a folk hero anyway.' },
+      { label: 'Mandate The Hat',    stability: -7,  ambition: +8,  narrative: 'Three new hat factories open. Foreign dignitaries laugh openly.' }
     ]
   },
   {
-    title: 'A Child Speaks Strangely',
-    description: 'A child returns from the woods speaking words no one taught her.',
+    title: 'The Mayor Lost His Pants',
+    description: 'The mayor lost his pants in a contest. The contest is a secret.',
     choices: [
-      { label: 'Mark Her A Seer',    stability: +6,  ambition: +6,  narrative: 'The people begin to whisper, then to listen.' },
-      { label: 'Banish The Family',  stability: -8,  ambition: -10, narrative: 'They vanish by morning. The woods grow louder at night.' }
+      { label: 'Pretend Nothing Happened', stability: +7,  ambition: -3,  narrative: 'Everyone agrees the mayor has always been like this.' },
+      { label: 'Investigate Loudly',       stability: -10, ambition: +6,  narrative: 'The contest is found. Several nobles are now in the contest.' }
     ]
   },
   {
-    title: 'The Ambition Of A General',
-    description: 'A celebrated general begins to keep his own court in the south.',
+    title: 'A Bear At The Market',
+    description: 'A bear walked into the market. He keeps trying to buy bread.',
     choices: [
-      { label: 'Recall Him Home',    stability: +12, ambition: -14, narrative: 'He returns sullen but bowed. The southern roads grow quiet.' },
-      { label: 'Crown Him Vassal',   stability: -8,  ambition: +14, narrative: 'A second banner rises. Two banners flutter, sometimes together.' }
+      { label: 'Sell Him Bread',  stability: +6,  ambition: +4,  narrative: 'The bear pays in fish. The economy is briefly weird.' },
+      { label: 'Chase The Bear',  stability: -8,  ambition: -6,  narrative: 'The bear knocks over three stalls and writes a strongly-worded letter.' }
     ]
   },
   {
-    title: 'An Eclipse At Noon',
-    description: 'The sun goes black at noon and the priests demand answers.',
+    title: 'Music Got Too Fast',
+    description: 'The town band started playing at triple speed. Nobody can dance.',
     choices: [
-      { label: 'Sacrifice In Silence', stability: +9,  ambition: -7,  narrative: 'The sun returns. Whether it heard, no one says.' },
-      { label: 'Forbid The Old Rites', stability: -14, ambition: +16, narrative: 'A schism is born. Some priests sharpen knives.' }
+      { label: 'Ban Fast Music',     stability: +8,  ambition: -7,  narrative: 'The band starts a quiet rebellion. They are humming aggressively.' },
+      { label: 'Build A Fast Dance', stability: -6,  ambition: +9,  narrative: 'Five people pull a hamstring on the first night. They love it.' }
     ]
   },
   {
-    title: 'A Forge Burns Hotter',
-    description: 'A smith claims to have melted a stone the gods placed in the river.',
+    title: 'Frogs',
+    description: 'A LOT of frogs showed up. Like a lot a lot.',
     choices: [
-      { label: 'Lock Up The Method',   stability: +8,  ambition: -10, narrative: 'The smith dies quietly. The secret stays in the temple.' },
-      { label: 'Build Many More',      stability: -10, ambition: -16, narrative: 'A hundred forges roar. Whole villages choke on the smoke.' }
+      { label: 'Eat The Frogs',   stability: +4,  ambition: -4,  narrative: 'Frog cuisine becomes a thing. Soup is now mostly frog.' },
+      { label: 'Worship The Frogs', stability: -9, ambition: +10, narrative: 'A frog cult forms. They mean well. They are damp.' }
     ]
   },
   {
-    title: 'Pestilence In The Quarter',
-    description: 'A wasting sickness empties three neighborhoods near the docks.',
+    title: 'The Smith Invented A Whistle',
+    description: 'The smith invented a whistle that nobody can tune. Everyone whistles wrong now.',
     choices: [
-      { label: 'Quarantine The Quarter', stability: +10, ambition: -12, narrative: 'The sickness fades. So does trust between districts.' },
-      { label: 'Open The Granaries',     stability: -6,  ambition: +8,  narrative: 'The poor are fed; the rich grow restless. Hope flickers.' }
+      { label: 'Confiscate Whistles', stability: +7,  ambition: -5,  narrative: 'The smith makes a louder whistle out of spite.' },
+      { label: 'Standardize The Pitch', stability: -4, ambition: +7,  narrative: 'A whistle academy opens. Tuition is a whistle.' }
     ]
   },
   {
-    title: 'The Old Tongue Is Forgotten',
-    description: 'A scholar reports that no one under thirty speaks the old tongue cleanly.',
+    title: 'The Moon Looked Weird',
+    description: 'The moon looked weird last night. The astronomers are panicking on principle.',
     choices: [
-      { label: 'Compel The Schools',   stability: +6,  ambition: -8,  narrative: 'Children chant verbs by rote. Their teachers age.' },
-      { label: 'Let The Tongue Pass',  stability: -8,  ambition: +12, narrative: 'A new dialect blooms in the markets. The elders mourn.' }
+      { label: 'Pay The Astronomers', stability: +7,  ambition: -7,  narrative: 'They calm down. The moon stays up there, smug.' },
+      { label: 'Replace The Astronomers', stability: -10, ambition: +12, narrative: 'New astronomers panic harder. The moon remains uninvolved.' }
+    ]
+  },
+  {
+    title: 'A Dog Wrote A Speech',
+    description: 'Witnesses claim a dog wrote a speech. The dog is now in town hall.',
+    choices: [
+      { label: 'Hear The Dog Out', stability: +5,  ambition: +5,  narrative: 'The speech is mostly about treats. It is electrifying.' },
+      { label: 'Demand A Re-Vote', stability: -8,  ambition: -4,  narrative: 'The dog wins again with a bigger margin. Treats win.' }
+    ]
+  },
+  {
+    title: 'Bread Got Square',
+    description: 'A baker started making bread in cubes. People are upset for unclear reasons.',
+    choices: [
+      { label: 'Round Bread Only', stability: +6,  ambition: -5,  narrative: 'Cube bakers go underground. There is now contraband bread.' },
+      { label: 'Embrace The Cube', stability: -5,  ambition: +7,  narrative: 'Toaster makers panic. Several quit and become poets.' }
+    ]
+  },
+  {
+    title: 'The General Is Bored',
+    description: 'The general is bored. He started a new sport with rules nobody understands.',
+    choices: [
+      { label: 'Outlaw The Sport',  stability: +9,  ambition: -8,  narrative: 'He invents a worse one. It involves more onions.' },
+      { label: 'Hold A Tournament', stability: -6,  ambition: +10, narrative: 'Three knights retire. One marries a referee.' }
+    ]
+  },
+  {
+    title: 'A Cat Inherited A Lot',
+    description: 'A merchant left everything to his cat. The cat is now extremely rich.',
+    choices: [
+      { label: 'Honor The Will',  stability: +5,  ambition: +4,  narrative: 'The cat invests well. Kind of. Mostly in fish.' },
+      { label: 'Tax The Cat Hard', stability: -8, ambition: +7,  narrative: 'The cat lawyers up. Several lawyers are now very allergic.' }
+    ]
+  },
+  {
+    title: 'Everyone Got The Same Haircut',
+    description: 'A barber had a slow week. Now everyone in town has the exact same haircut.',
+    choices: [
+      { label: 'Promote The Look',  stability: +6,  ambition: -4,  narrative: 'Foreign visitors are unsettled. Tourism doubles for a season.' },
+      { label: 'Mandate Variety',   stability: -5,  ambition: +6,  narrative: 'The barbers form a guild. The guild has surprisingly strong opinions.' }
     ]
   }
 ];
