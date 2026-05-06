@@ -28,13 +28,15 @@ let sessionStartMs = Date.now();
 let stewardFiredAt = 0;          // timestamp (0 if not fired)
 
 const SESSION_LENGTH_MS = 5 * 60 * 1000;
-const COOLDOWN_MS = 60 * 1000;
+// Server is authoritative — see infrastructure/aws-multiplayer/message.js.
+// Keep this constant equal to the server's COOLDOWN_MS.
+const COOLDOWN_MS = 2 * 1000;
 const N = 64;
 
 // ── Voice copy banks ───────────────────────────────────────────
 const COOLDOWN_PHRASES = [
-  'arming the brush', 'the saffrons are watching', 'restraint is policy', 'one tap a minute, friend',
-  'the wall is calibrating', 'thinking it over', 'pacing yourself', 'paint is drying',
+  'arming the brush', 'the saffrons are watching', 'restraint is policy',
+  'pacing yourself', 'paint is drying', 'the wall is calibrating', 'thinking it over',
 ];
 const VERDICT_TEMPLATES = [
   ({ nemesis, surviving }) => `your shade was eaten by ${nemesis} more than any other — the ${nemesis.split('-')[0]}s have it in for you. ${surviving} of yours still cling to the wall.`,
@@ -174,7 +176,7 @@ function reflectPalette() {
   $('palette-name').textContent = PALETTE[myColorIdx].name;
 }
 
-// ── Commit row ────────────────────────────────────────────────
+// ── Controlpad: dpad + paint button at center ──────────────────
 function bindUI() {
   $('commit-btn').addEventListener('click', commitTarget);
   $('cancel-btn').addEventListener('click', () => {
@@ -184,9 +186,7 @@ function bindUI() {
   $('steward-close').addEventListener('click', () => {
     $('steward-modal').hidden = true;
   });
-  // Nudge dpad — lets the user fine-tune the target pixel by ±1 cell after a
-  // rough tap. At scale=1 each cell is only a few pixels wide so a fingertip
-  // can't always land on the exact one.
+  // Nudge dpad — fine-tune the target pixel by ±1 cell after a rough tap.
   const nudgeMap = {
     'nudge-up':    [0, -1],
     'nudge-down':  [0,  1],
@@ -197,7 +197,10 @@ function bindUI() {
     $(id).addEventListener('click', () => {
       const t = getTarget(); if (!t) return;
       const [dx, dy] = nudgeMap[id];
-      setTarget(t.x + dx, t.y + dy);
+      setTarget(
+        Math.max(0, Math.min(N - 1, t.x + dx)),
+        Math.max(0, Math.min(N - 1, t.y + dy))
+      );
       refreshCommitRow();
     });
   }
@@ -211,26 +214,23 @@ function refreshCommitRow() {
   const t = getTarget();
   const btn = $('commit-btn');
   const cancel = $('cancel-btn');
-  const nudgeRow = $('nudge-row');
-  const nudgeCoord = $('nudge-coord');
   const cooling = Date.now() < cooldownEndsAt;
+  btn.classList.remove('armed');
   if (!t) {
     btn.disabled = true;
-    btn.textContent = 'tap a pixel to pick a target';
+    btn.textContent = 'tap a cell';
     cancel.hidden = true;
-    nudgeRow.hidden = true;
     return;
   }
   cancel.hidden = false;
-  nudgeRow.hidden = false;
-  nudgeCoord.textContent = `${t.x},${t.y}`;
   if (cooling) {
     btn.disabled = true;
     const s = Math.ceil((cooldownEndsAt - Date.now()) / 1000);
-    btn.textContent = `paint in ${s}s · ${t.x},${t.y}`;
+    btn.textContent = `${s}s · ${t.x},${t.y}`;
   } else {
     btn.disabled = false;
-    btn.textContent = `paint ${PALETTE[myColorIdx].name} at ${t.x},${t.y}`;
+    btn.textContent = `paint ${t.x},${t.y}`;
+    btn.classList.add('armed');
   }
 }
 
@@ -272,12 +272,14 @@ function updateCooldownChip() {
   const chip = $('cooldown-chip');
   const remain = cooldownEndsAt - Date.now();
   if (remain <= 0) {
-    chip.textContent = 'brush armed · one tap';
+    chip.textContent = 'brush armed';
     chip.classList.add('armed');
     chip.classList.remove('cooling');
   } else {
-    const s = Math.ceil(remain / 1000);
-    const phrase = COOLDOWN_PHRASES[Math.floor(s / 8) % COOLDOWN_PHRASES.length];
+    const s = Math.max(1, Math.ceil(remain / 1000));
+    // The cooldown is now seconds-short, so just rotate the phrase per-tap
+    // instead of per-8-seconds — keeps the voice without being noisy.
+    const phrase = COOLDOWN_PHRASES[(cooldownEndsAt >> 11) % COOLDOWN_PHRASES.length];
     chip.textContent = `${phrase} · ${s}s`;
     chip.classList.add('cooling');
     chip.classList.remove('armed');
@@ -357,7 +359,7 @@ function share() {
   } else if (myPixels.size > 0 && longestHoldCoord) {
     text = `${myPixels.size} pixels still answer to me on the same-pixel wall (longest hold ${myPixels.get(longestHoldCoord) ? 'still going' : formatHeld(longestHoldMs)}). ${location.href}`;
   } else {
-    text = `the same-pixel wall: 64×64 cells, one tap a minute, board never resets. ${location.href}`;
+    text = `the same-pixel wall: 64×64 cells, shared with strangers, board never resets. ${location.href}`;
   }
   if (navigator.share) {
     navigator.share({ title: 'Same Pixel', text, url: location.href }).catch(() => {});

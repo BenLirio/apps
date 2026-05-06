@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Same Pixel — strangers fight over one wall</title>
-<meta name="description" content="A 64×64 grid. Tap one pixel a minute. Watch other people paint over you, live.">
+<meta name="description" content="A 64×64 grid. Tap. Then someone paints over you. The board never resets.">
 
 <!-- Share preview -->
 <meta property="og:title" content="Same Pixel">
-<meta property="og:description" content="A 64×64 grid. Tap one pixel a minute. Watch other people paint over you, live. The board never resets.">
+<meta property="og:description" content="A 64×64 grid. Tap. Then someone paints over you. The board never resets.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://benlirio.com/apps/same-pixel/">
 <meta property="og:image" content="https://benlirio.com/apps/same-pixel/og.jpg">
@@ -16,7 +16,7 @@
 <meta property="og:image:height" content="720">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Same Pixel">
-<meta name="twitter:description" content="A 64×64 grid. Tap one pixel a minute. Watch other people paint over you, live.">
+<meta name="twitter:description" content="A 64×64 grid. Tap. Then someone paints over you. The board never resets.">
 <meta name="twitter:image" content="https://benlirio.com/apps/same-pixel/og.jpg">
 
 <!-- Google tag (gtag.js) -->
@@ -41,7 +41,7 @@
 
   <header class="masthead">
     <h1>same pixel</h1>
-    <p class="tagline">four thousand cells. one tap a minute. nobody wins.</p>
+    <p class="tagline">four thousand cells. one shared wall. paint, get painted over.</p>
   </header>
 
   <section class="palette" aria-label="your color for this session">
@@ -50,14 +50,10 @@
   </section>
 
   <section class="status">
-    <div class="status-row">
-      <span class="chip" id="member-chip">— here right now</span>
-      <span class="chip" id="cooldown-chip">arming the brush…</span>
-    </div>
-    <div class="status-row">
-      <span class="chip mine" id="mine-chip">0 pixels still yours</span>
-      <span class="chip" id="streak-chip">longest streak —</span>
-    </div>
+    <span class="chip" id="member-chip">— here right now</span>
+    <span class="chip" id="cooldown-chip">arming the brush…</span>
+    <span class="chip mine" id="mine-chip">0 pixels still yours</span>
+    <span class="chip" id="streak-chip">longest streak —</span>
   </section>
 
   <section class="board-wrap" aria-label="the wall">
@@ -68,29 +64,25 @@
       </div>
     </div>
     <div class="board-help" id="board-help">
-      tap a pixel · nudge with arrows to fine-tune · pinch or double-tap to zoom
+      tap a pixel · nudge with arrows · pinch / double-tap to zoom
     </div>
   </section>
 
-  <section class="nudge" id="nudge-row" hidden aria-label="fine-tune target">
-    <button class="nudge-btn nudge-up" id="nudge-up" aria-label="nudge target up">↑</button>
-    <button class="nudge-btn nudge-left" id="nudge-left" aria-label="nudge target left">←</button>
-    <span class="nudge-coord" id="nudge-coord">—</span>
-    <button class="nudge-btn nudge-right" id="nudge-right" aria-label="nudge target right">→</button>
-    <button class="nudge-btn nudge-down" id="nudge-down" aria-label="nudge target down">↓</button>
+  <section class="controlpad" id="controlpad" aria-label="aim and paint">
+    <button class="ctrl ctrl-up"    id="nudge-up"    aria-label="nudge up">↑</button>
+    <button class="ctrl ctrl-left"  id="nudge-left"  aria-label="nudge left">←</button>
+    <button class="ctrl ctrl-paint" id="commit-btn"  disabled aria-label="paint">tap a cell</button>
+    <button class="ctrl ctrl-right" id="nudge-right" aria-label="nudge right">→</button>
+    <button class="ctrl ctrl-down"  id="nudge-down"  aria-label="nudge down">↓</button>
+    <button class="ctrl-cancel"     id="cancel-btn"  hidden aria-label="cancel target">×</button>
   </section>
 
-  <section class="commit" id="commit-row">
-    <button id="commit-btn" disabled>place pixel — pick one first</button>
-    <button class="ghost" id="cancel-btn" hidden>nevermind</button>
-  </section>
-
-  <section class="overwrite-feed" id="overwrite-feed" aria-live="polite">
-    <h2>recent overwrites</h2>
-    <ul id="overwrite-list">
+  <details class="overwrite-feed" id="overwrite-feed">
+    <summary>recent overwrites</summary>
+    <ul id="overwrite-list" aria-live="polite">
       <li class="empty">a quiet wall. for now.</li>
     </ul>
-  </section>
+  </details>
 
   <!-- Steward notice modal -->
   <div class="modal" id="steward-modal" hidden>

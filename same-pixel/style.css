@@ -102,20 +102,20 @@ body {
 
 /* —— status chips ——————————————————————————————————— */
 
-.status { margin-bottom: 14px; }
-.status-row {
+.status {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 .chip {
   display: inline-block;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border: 1.5px dashed var(--ink);
   background: var(--paper-2);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink);
+  line-height: 1.2;
 }
 .chip.mine { border-style: solid; border-color: var(--stamp-red); color: var(--stamp-red); }
 .chip.armed { background: var(--c5); border-style: solid; }
@@ -184,106 +184,105 @@ body {
   font-style: italic;
 }
 
-/* —— nudge dpad ——————————————————————————————————— */
+/* —— controlpad: dpad + paint button at center ————————————————— */
 
-.nudge {
+.controlpad {
   display: grid;
-  grid-template-columns: 48px 48px 48px;
-  grid-template-rows: 48px 48px 48px;
-  gap: 4px;
+  grid-template-columns: 56px 1fr 56px;
+  grid-template-rows: 56px 56px 56px;
+  gap: 6px;
   justify-content: center;
+  align-items: stretch;
   margin: 0 auto 14px;
-  width: max-content;
+  max-width: 360px;
+  position: relative;
 }
-.nudge[hidden] { display: none; }
-.nudge-btn {
+.ctrl {
   border: 2px solid var(--ink);
   background: var(--paper-2);
   font-family: 'VT323', 'Courier New', monospace;
-  font-size: 24px;
+  font-size: 26px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
   padding: 0;
   color: var(--ink);
-}
-.nudge-btn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 var(--ink);
-}
-.nudge-up    { grid-column: 2; grid-row: 1; }
-.nudge-left  { grid-column: 1; grid-row: 2; }
-.nudge-coord {
-  grid-column: 2;
-  grid-row: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'VT323', monospace;
-  font-size: 14px;
-  background: var(--ink);
-  color: var(--paper);
-  letter-spacing: 0.05em;
-}
-.nudge-right { grid-column: 3; grid-row: 2; }
-.nudge-down  { grid-column: 2; grid-row: 3; }
-
-/* —— commit row ——————————————————————————————————— */
-
-.commit {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  justify-content: center;
-}
-.commit button {
-  flex: 1;
-  max-width: 360px;
-  border: 2px solid var(--ink);
-  background: var(--c0);
-  font-family: inherit;
-  font-size: 16px;
-  padding: 12px 16px;
-  box-shadow: 4px 4px 0 var(--ink);
   text-transform: lowercase;
-  letter-spacing: 0.02em;
 }
-.commit button:active:not(:disabled) {
-  transform: translate(2px, 2px);
+.ctrl:active:not(:disabled) {
+  transform: translate(1px, 1px);
   box-shadow: 2px 2px 0 var(--ink);
 }
-.commit button:disabled {
+.ctrl-up    { grid-column: 2; grid-row: 1; }
+.ctrl-left  { grid-column: 1; grid-row: 2; }
+.ctrl-right { grid-column: 3; grid-row: 2; }
+.ctrl-down  { grid-column: 2; grid-row: 3; }
+.ctrl-paint {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--c0);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.ctrl-paint:disabled {
   background: var(--paper-2);
   color: var(--ink-soft);
   cursor: not-allowed;
-  box-shadow: 4px 4px 0 var(--rule);
+  box-shadow: 3px 3px 0 var(--rule);
+  font-size: 11px;
 }
-.commit button.ghost {
+.ctrl-paint.armed {
+  background: var(--c5);
+  border-color: var(--stamp-red);
+  box-shadow: 4px 4px 0 var(--stamp-red);
+}
+.ctrl-cancel {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--ink);
   background: var(--paper);
-  flex: 0;
-  min-width: 110px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--ink);
+  border-radius: 50%;
 }
+.ctrl-cancel:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
 
-/* —— overwrite feed ——————————————————————————————————— */
+/* —— overwrite feed (collapsed by default) —————————————————————— */
 
 .overwrite-feed {
   border-top: 2px dashed var(--ink);
-  padding-top: 12px;
-  margin-bottom: 24px;
-}
-.overwrite-feed h2 {
+  padding-top: 10px;
+  margin-bottom: 20px;
   font-size: 13px;
+}
+.overwrite-feed > summary {
+  cursor: pointer;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  margin: 0 0 8px;
   color: var(--ink-soft);
+  margin-bottom: 8px;
+  list-style: none;
 }
+.overwrite-feed > summary::before { content: "▸ "; }
+.overwrite-feed[open] > summary::before { content: "▾ "; }
 #overwrite-list {
   list-style: none;
   padding: 0;
   margin: 0;
   font-size: 13px;
-  max-height: 180px;
+  max-height: 160px;
   overflow-y: auto;
 }
 #overwrite-list li {
