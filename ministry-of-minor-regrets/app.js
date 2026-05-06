@@ -3,17 +3,13 @@
 // declarations chosen to feel like things that quietly affect your
 // health/wellbeing but you don't usually audit yourself for — sunlight,
 // hydration timing, the call you didn't make, the laugh you missed, the hug
-// you didn't ask for. Core arithmetic is fully deterministic; an LLM
-// generates only the closing signature line. Inputs + signature are encoded
-// into the URL fragment so shared links re-hydrate the exact receipt without
-// spending an LLM call.
+// you didn't ask for. Fully deterministic — no LLM. Inputs are encoded into
+// the URL fragment so shared links re-hydrate the exact receipt.
 //
 // Every line item is capped at LINE_CAP regret units so no single declaration
 // can drown out the others; the receipt's formula text says "maximum penalty
 // applied" when the cap kicks in.
 
-const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
-const SLUG = 'ministry-of-minor-regrets';
 const LINE_CAP = 250;
 
 function capUnits(raw, formula) {
@@ -737,27 +733,22 @@ function pickArchetype(items) {
 }
 
 // ---------- URL fragment encode/decode ----------
-// v=5 schema: per-run rotation means the 10 declarations differ between
+// v=5 schema: per-run rotation means the declarations differ between
 // sessions, so the fragment encodes both WHICH declarations were asked and
 // the user's values. Format:
 //   v=5
 //   ids=<comma-separated declaration keys, in order asked>
 //   vals=<comma-separated numeric values, parallel to ids>
-//   sig=<base64-encoded signature line>
 // Older fragments (v=4 fixed-keys schema) fall through and the user starts
-// a fresh declaration.
+// a fresh declaration. Older v=5 fragments may include a `sig=` param from
+// the LLM-era; it's silently ignored — the signature is recomputed
+// deterministically from the heaviest line item.
 
-function encodeFragment(declarations, inputs, signature) {
+function encodeFragment(declarations, inputs) {
   const p = new URLSearchParams();
   p.set('v', '5');
   p.set('ids', declarations.map(d => d.key).join(','));
   p.set('vals', declarations.map(d => String(inputs[d.key])).join(','));
-  if (signature) {
-    try {
-      const b64 = btoa(unescape(encodeURIComponent(signature))).replace(/=+$/, '');
-      p.set('sig', b64);
-    } catch (_) {}
-  }
   return p.toString();
 }
 
@@ -779,19 +770,12 @@ function decodeFragment(frag) {
     declarations.push(d);
     inputs[d.key] = n;
   }
-  let signature = null;
-  const sig = p.get('sig');
-  if (sig) {
-    try {
-      signature = decodeURIComponent(escape(atob(sig)));
-    } catch (_) { signature = null; }
-  }
-  return { declarations, inputs, signature };
+  return { declarations, inputs };
 }
 
-// ---------- Deterministic fallback signatures (if LLM fails) ----------
+// ---------- Deterministic signatures (one per heaviest-line key) ----------
 
-const FALLBACK_SIG = {
+const SIGNATURES = {
   sun:        'A small portion of light has been requisitioned in your name today, and the Ministry has filed the deficit on parchment.',
   called:     'Somewhere a phone rings in a kitchen you used to know the smell of, and nobody has logged the silence.',
   water:      'The Ministry observed your throat and finds it dry; a memo to the kitchen has been issued in triplicate.',
@@ -816,55 +800,9 @@ const FALLBACK_SIG = {
   refuse:     'You declined nothing today, and the Ministry observes that the calendar therefore continues to fill.',
 };
 
-function buildFallbackSignature(heaviest) {
-  return FALLBACK_SIG[heaviest.key]
+function buildSignature(heaviest) {
+  return SIGNATURES[heaviest.key]
     || 'Your regrets have been quantified and filed in good standing. Kindly return tomorrow.';
-}
-
-// ---------- LLM call for the signature line ----------
-
-async function generateSignature(archetype, heaviest, total, inputs) {
-  const system =
-    "You write ONE closing line for a fictional bureaucratic audit receipt from the 'Ministry of Minor Regrets'. " +
-    "The tone is dry, slightly theatrical, faintly absurd — bureaucratic prose with a literary edge. " +
-    "Hard rules: ONE sentence, under 30 words, no emojis, no hashtags, no quotation marks, no meta-commentary. " +
-    "You MUST naturally reference the heaviest line item by its NAME (not its code). " +
-    "Do not start with 'The Ministry'. Write as if a weary civil servant sealed the document.";
-
-  const inputDigest = STEPS
-    .map(s => `${s.key}=${inputs[s.key]}`)
-    .join(', ');
-
-  const userMsg =
-    `Archetype verdict: ${archetype.name}\n` +
-    `Heaviest line item name: ${heaviest.name}\n` +
-    `Heaviest input context: ${heaviest.inputText} (${heaviest.units} regret units)\n` +
-    `Total regret units: ${total}\n` +
-    `All inputs: ${inputDigest}\n` +
-    `Write the closing sentence now. Reference "${heaviest.name}" in your sentence.`;
-
-  try {
-    const res = await fetch(AI_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: SLUG,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: userMsg },
-        ],
-        max_tokens: 90,
-      }),
-    });
-    if (!res.ok) throw new Error('http_' + res.status);
-    const data = await res.json();
-    let text = (data && data.content || '').trim();
-    text = text.replace(/^["'\s]+|["'\s]+$/g, '').split('\n')[0];
-    if (!text || text.length < 8) throw new Error('empty');
-    return text;
-  } catch (_) {
-    return buildFallbackSignature(heaviest);
-  }
 }
 
 // ---------- Loading messages ----------
@@ -1289,7 +1227,7 @@ function nextStep() {
   }
   answers[step.key] = v;
   if (stepIdx === STEPS.length - 1) {
-    runAssessment(answers, null);
+    runAssessment(answers);
     return;
   }
   stepIdx++;
@@ -1352,36 +1290,26 @@ function inputsAllValid(declarations, inputs) {
   return true;
 }
 
-async function runAssessment(inputs, providedSignature) {
+function runAssessment(inputs) {
   const items = computeAll(inputs);
   const total = items.reduce((s, x) => s + x.units, 0);
   const archetype = pickArchetype(items);
+  const signature = buildSignature(archetype.heaviest);
 
   showLoading(pickLoadingMsg(JSON.stringify(inputs)));
 
-  const minDelay = new Promise((r) => setTimeout(r, 800));
+  // Brief theatrical pause — the bureaucratic stamping is part of the vibe.
+  setTimeout(() => {
+    renderReceipt(inputs, items, archetype, total, signature);
+    showReceipt();
 
-  let signature;
-  if (providedSignature && providedSignature.length > 4) {
-    signature = providedSignature;
-    await minDelay;
-  } else {
-    const [sig] = await Promise.all([
-      generateSignature(archetype, archetype.heaviest, total, inputs),
-      minDelay,
-    ]);
-    signature = sig;
-  }
-
-  renderReceipt(inputs, items, archetype, total, signature);
-  showReceipt();
-
-  const frag = encodeFragment(STEPS, inputs, signature);
-  try {
-    history.replaceState(null, '', '#' + frag);
-  } catch (_) {
-    location.hash = frag;
-  }
+    const frag = encodeFragment(STEPS, inputs);
+    try {
+      history.replaceState(null, '', '#' + frag);
+    } catch (_) {
+      location.hash = frag;
+    }
+  }, 800);
 }
 
 // ---------- Boot ----------
@@ -1405,17 +1333,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchVotes();
 
   // Re-hydrate from a v=5 fragment if present (skips stepper entirely and
-  // re-uses the EXACT 10 declarations the share-link author was asked).
+  // re-uses the EXACT declarations the share-link author was asked).
   const hydrated = decodeFragment(location.hash);
   if (hydrated && inputsAllValid(hydrated.declarations, hydrated.inputs)) {
     STEPS = hydrated.declarations;
     Object.assign(answers, hydrated.inputs);
-    runAssessment(hydrated.inputs, hydrated.signature);
+    runAssessment(hydrated.inputs);
     return;
   }
 
-  // Fresh visit: pick 10 weighted by community votes (uniform when
-  // voteCounts is empty).
+  // Fresh visit: pick declarations weighted by community votes (uniform
+  // when voteCounts is empty).
   STEPS = pickStepsFromVotes();
   renderStep(0);
 });
