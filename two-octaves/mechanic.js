@@ -62,22 +62,40 @@ export function createEngine() {
     if (ctx.state === "suspended") await ctx.resume();
   }
 
-  // 0.6s calibration tone — 440Hz, fades in/out, low gain.
-  // User confirms "I heard it" by visual change; we don't try to mic-detect.
-  async function testTone() {
+  // Triple-pulse calibration tone — 440Hz, three short bursts.
+  // Pulsed (vs one steady tone) so the user clearly perceives the app as
+  // "actively playing audio right now" instead of mistaking it for ambient
+  // noise; louder than the previous single-tone version (0.32 vs 0.18) for
+  // users on quiet builtin speakers. onPulse(idx, total) is fired in sync
+  // with each pulse so the UI can light up a visible indicator — even if
+  // audio is muted, the user sees the app's audio path *did* fire, which
+  // distinguishes "broken app" from "silent switch / volume / headphones."
+  async function testTone(onPulse) {
     await ensureRunning();
     const t0 = ctx.currentTime;
+    const PULSES = 3;
+    const PULSE_DUR = 0.36;  // audible portion (incl. 40ms attack/release)
+    const GAP = 0.12;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.type = "sine";
     o.frequency.setValueAtTime(440, t0);
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.06);
-    g.gain.setValueAtTime(0.18, t0 + 0.5);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+    for (let i = 0; i < PULSES; i++) {
+      const tStart = t0 + i * (PULSE_DUR + GAP);
+      g.gain.setValueAtTime(0.0001, tStart);
+      g.gain.exponentialRampToValueAtTime(0.32, tStart + 0.04);
+      g.gain.setValueAtTime(0.32, tStart + PULSE_DUR - 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, tStart + PULSE_DUR);
+      if (typeof onPulse === "function") {
+        const delayMs = Math.max(0, (tStart - ctx.currentTime) * 1000);
+        setTimeout(() => onPulse(i + 1, PULSES), delayMs);
+      }
+    }
+    const totalDur = PULSES * PULSE_DUR + (PULSES - 1) * GAP;
     o.connect(g).connect(ctx.destination);
     o.start(t0);
-    o.stop(t0 + 0.62);
+    o.stop(t0 + totalDur + 0.05);
     return new Promise((resolve) => {
       o.onended = () => resolve();
     });

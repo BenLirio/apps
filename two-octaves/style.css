@@ -332,6 +332,49 @@ button.ghost:hover { border-color: var(--ink-dim); color: var(--accent); }
   color: var(--ink-faint);
 }
 
+/* prominent silent-mode warning above the unlock button */
+.silent-warn {
+  background: rgba(241, 196, 106, 0.10);
+  border: 1px solid rgba(241, 196, 106, 0.45);
+  border-left-width: 3px;
+  color: var(--ink);
+  padding: 10px 12px;
+  margin: 4px 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.silent-warn p { margin: 4px 0; }
+.silent-warn p:first-child { margin-top: 0; }
+.silent-warn p:last-child { margin-bottom: 0; }
+.silent-warn strong { color: var(--accent); font-weight: 600; }
+.silent-warn em { color: var(--accent); font-style: normal; font-weight: 700; text-transform: uppercase; }
+
+/* visible audio-path indicator: three dots that light up in sync with the
+   test-tone pulses. Even if the device is muted, the user sees the dots
+   fire and knows the app's audio path is working — narrows the failure
+   to volume / silent switch rather than "the app is broken." */
+.pulse-row {
+  display: flex; align-items: center; gap: 10px;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: rgba(0,0,0,0.25);
+}
+.pulse-dot {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  border: 1px solid var(--rule);
+  flex: 0 0 auto;
+  transition: background 80ms ease, box-shadow 200ms ease, transform 80ms ease;
+}
+.pulse-dot.active {
+  background: var(--accent-2);
+  box-shadow: 0 0 12px rgba(75,227,164,0.75);
+  transform: scale(1.15);
+}
+.pulse-label { color: var(--ink-dim); font-size: 12px; }
+
 /* unlock confirmation gate + help block */
 .confirm-row { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); }
 .confirm-row .check { margin: 0 0 10px; color: var(--ink); }

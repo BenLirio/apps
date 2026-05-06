@@ -58,9 +58,20 @@
         <span class="pill"># AUDIO LOCK</span>
         <span class="pill">PENDING</span>
       </div>
-      <p class="lede">This test is sound-only. Take phone off silent if you can. If not, AirPods and Bluetooth still work — only the speaker is silenced.</p>
-      <p class="check">Tap below to unlock the audio engine and play a 0.6-second calibration tone.</p>
+      <p class="lede">This test is sound-only. Before you tap, do one of these — otherwise you will hear nothing:</p>
+      <div class="silent-warn">
+        <p><strong>iPhone:</strong> flip the silent switch <em>off</em> (small toggle on the left edge — orange = silent = NO sound).</p>
+        <p><strong>Headphones / AirPods / Bluetooth:</strong> these always work — connect a pair if you can't toggle the switch.</p>
+        <p><strong>Volume:</strong> turn media volume up. Ringer volume is separate.</p>
+      </div>
+      <p class="check">Tap below to unlock the audio engine and play three short calibration tones.</p>
       <button id="btn-unlock" class="primary">UNLOCK &amp; PLAY TEST TONE</button>
+      <div id="pulse-row" class="pulse-row" hidden>
+        <div class="pulse-dot" data-idx="1"></div>
+        <div class="pulse-dot" data-idx="2"></div>
+        <div class="pulse-dot" data-idx="3"></div>
+        <span class="pulse-label mono">// 440 Hz · A4 — listen now</span>
+      </div>
       <p class="check small" id="unlock-status">// status: idle</p>
 
       <!-- Confirmation gate — shown only after the test tone finishes playing.

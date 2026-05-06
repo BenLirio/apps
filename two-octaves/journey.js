@@ -21,8 +21,8 @@ import {
 const COPY = Object.freeze({
   unlockIdle:     "// status: idle",
   unlockTrying:   "// status: requesting audio context…",
-  unlockTone:     "// status: playing 0.6s @ 440 Hz · A4",
-  unlockTonePlayed: "// status: tone played · confirm below",
+  unlockTone:     "// status: playing 3 × 360ms @ 440 Hz · A4 — watch dots, listen now",
+  unlockTonePlayed: "// status: tones fired · audio path OK · confirm below",
   unlockOk:       "// status: unlocked. tap below to begin round 1.",
   unlockFail:     "// status: audio engine refused. try a different browser or remove silent-mode.",
   liveListening:  "// status: tone climbing. listen for the doubling.",
@@ -81,6 +81,8 @@ export function startJourney(root) {
   const btnHeardYes   = $("btn-heard-yes");
   const btnHeardNo    = $("btn-heard-no");
   const btnReplayTone = $("btn-replay-tone");
+  const pulseRow      = $("pulse-row");
+  const pulseDots     = pulseRow.querySelectorAll(".pulse-dot");
 
   // Run the unlock + test-tone + reveal the "did you hear it?" gate.
   // Synchronous start: createEngine() is sync, so unlock() creates the
@@ -91,11 +93,19 @@ export function startJourney(root) {
     btnReplayTone.disabled = true;
     unlockHelp.setAttribute("hidden", "");
     unlockConfirm.setAttribute("hidden", "");
+    pulseRow.removeAttribute("hidden");
+    pulseDots.forEach((d) => d.classList.remove("active"));
     unlockStatus.textContent = COPY.unlockTrying;
     try {
       await engine.unlock();
       unlockStatus.textContent = COPY.unlockTone;
-      await engine.testTone();
+      // Light the pulse dots in sync with each audio pulse so the user can
+      // SEE the audio path fire even if the device is muted — that turns a
+      // "the app is broken" report into a "my speaker is muted" diagnosis.
+      await engine.testTone((idx) => {
+        const dot = pulseDots[idx - 1];
+        if (dot) dot.classList.add("active");
+      });
       unlockStatus.textContent = COPY.unlockTonePlayed;
       // Reveal the confirmation gate. We do NOT auto-advance — the user
       // must affirm they heard the tone, otherwise they get help.
