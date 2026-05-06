@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hum The Shape</title>
+
+<!-- Share-preview meta -->
+<meta property="og:title" content="Hum The Shape">
+<meta property="og:description" content="A shape appears. You hum. We trace your pitch in glowing red over the target. Score it. Verdict: Choirmaster, Karaoke Adjacent, Civilian, or The Kazoo Of Theseus.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/hum-the-shape/">
+<meta property="og:image" content="https://benlirio.com/apps/hum-the-shape/og.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hum The Shape">
+<meta name="twitter:description" content="A shape appears. You hum. We trace your pitch in glowing red over the target. Choirmaster or Kazoo Of Theseus?">
+<meta name="twitter:image" content="https://benlirio.com/apps/hum-the-shape/og.jpg">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</head>
+<body>
+<div class="app">
+
+  <header class="hud">
+    <div class="hud-left">
+      <span class="brand">// HUM THE SHAPE</span>
+      <span class="meta" id="round-meta">round 1 of 3</span>
+    </div>
+    <div class="hud-right">
+      <span class="meta">PITCH ANALYZER v0.3</span>
+    </div>
+  </header>
+
+  <!-- INTRO / mic gate -->
+  <section id="screen-intro" class="screen">
+    <h1 class="title">HUM<br>THE SHAPE</h1>
+    <p class="lead">A line appears. You hum.<br>We watch your pitch try to trace it.</p>
+    <ul class="briefing">
+      <li>three shapes, eight seconds each</li>
+      <li>your pitch contour drawn in red over the target in white</li>
+      <li>verdict at the end. share the receipt.</li>
+    </ul>
+    <button id="btn-start" class="primary">// ENGAGE MIC</button>
+    <button id="btn-finger" class="ghost">no mic — finger-trace instead</button>
+    <p class="footnote">no recording. no upload. mic data stays in your browser.</p>
+  </section>
+
+  <!-- CONFIRMATION GATE — did the red line move? -->
+  <section id="screen-confirm" class="screen" hidden>
+    <h2 class="title sm">// MIC CHECK</h2>
+    <p class="lead">hum a note for ~2 seconds.<br>did the red line move?</p>
+    <canvas id="canvas-confirm" width="640" height="200" class="stage stage-sm"></canvas>
+    <div class="confirm-row">
+      <button id="btn-confirm-yes" class="primary">yes — red line moved</button>
+      <button id="btn-confirm-no" class="ghost">no — switch to finger-trace</button>
+    </div>
+    <details class="trouble">
+      <summary>not working?</summary>
+      <ul>
+        <li>iPhone silent switch on the side — flip it off</li>
+        <li>volume up &amp; not muted</li>
+        <li>headphones plugged in correctly</li>
+        <li>browser permission for microphone granted</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- PLAY -->
+  <section id="screen-play" class="screen" hidden>
+    <div class="round-strip">
+      <div class="shape-name" id="shape-name">SHAPE 1 — clean U</div>
+      <div class="timer" id="timer">8.0s</div>
+    </div>
+    <canvas id="canvas-stage" width="800" height="400" class="stage"></canvas>
+    <p class="lead" id="play-prompt">// hum to trace the line. tap START when ready.</p>
+    <button id="btn-play" class="primary">// START ROUND</button>
+    <p class="footnote" id="finger-hint" hidden>finger-trace mode: drag across the canvas, top = high pitch.</p>
+  </section>
+
+  <!-- RESULT -->
+  <section id="screen-result" class="screen" hidden>
+    <div class="result-card">
+      <div class="verdict-band">
+        <div class="verdict-label">// VERDICT</div>
+        <h2 class="verdict-name" id="verdict-name">CHOIRMASTER</h2>
+        <div class="verdict-stat" id="verdict-stat">overlap: 87%</div>
+      </div>
+      <div class="receipt">
+        <div class="receipt-row" id="receipt-row-1"></div>
+        <div class="receipt-row" id="receipt-row-2"></div>
+        <div class="receipt-row" id="receipt-row-3"></div>
+      </div>
+      <p class="microcopy" id="microcopy"></p>
+    </div>
+    <div class="share-row">
+      <button id="btn-share" class="primary" onclick="share()">// SHARE</button>
+      <button id="btn-replay" class="ghost">again</button>
+    </div>
+    <p class="footnote" id="share-state"></p>
+  </section>
+
+</div>
+</body>
+</html>

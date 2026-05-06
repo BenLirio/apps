@@ -1,0 +1,263 @@
+/* Aesthetic: terminal/CRT — black bg, amber-on-green monospace HUD,
+   subtle scanlines, white target line, glowing red user pitch trace.
+   Inspired by an oscilloscope crossed with a 1970s mainframe terminal. */
+
+:root {
+  --bg: #050708;
+  --ink: #e8d39a;          /* amber phosphor */
+  --ink-dim: #8a7a4a;
+  --green: #6cff8a;        /* deep CRT green for HUD accents */
+  --green-dim: #2a8035;
+  --target: #f4f5f0;       /* the white shape line */
+  --user: #ff2d36;         /* the glowing red pitch trace */
+  --user-glow: rgba(255, 60, 70, 0.55);
+  --panel: #0a0d0e;
+  --rule: #1c2326;
+}
+
+html { background: var(--bg); }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Share Tech Mono", "VT323", ui-monospace, monospace;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  /* faint scanlines */
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.018) 0px,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+.app { color: var(--ink); }
+
+/* ── HUD ──────────────────────────────────────────────────────── */
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+  margin-bottom: 22px;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+.hud-left { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
+.brand { color: var(--green); font-weight: bold; }
+.meta { color: var(--ink-dim); font-size: 12px; }
+
+/* ── Screens ─────────────────────────────────────────────────── */
+.screen { display: block; }
+.screen[hidden] { display: none !important; }
+
+.title {
+  font-family: "VT323", "Share Tech Mono", ui-monospace, monospace;
+  font-size: clamp(56px, 16vw, 110px);
+  line-height: 0.92;
+  margin: 14px 0 18px;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 0 6px rgba(232, 211, 154, 0.35),
+    0 0 18px rgba(232, 211, 154, 0.12);
+}
+.title.sm { font-size: clamp(32px, 8vw, 52px); margin: 8px 0 14px; }
+
+.lead {
+  font-size: clamp(16px, 4.4vw, 19px);
+  margin: 0 0 18px;
+  color: var(--ink);
+  max-width: 30ch;
+}
+
+.briefing {
+  list-style: none;
+  padding: 14px 16px;
+  margin: 0 0 22px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+.briefing li { padding: 4px 0; }
+.briefing li::before {
+  content: "› ";
+  color: var(--green);
+  margin-right: 4px;
+}
+
+.footnote {
+  color: var(--ink-dim);
+  font-size: 12px;
+  margin-top: 14px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+button.primary, button.ghost {
+  font-family: inherit;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  padding: 14px 22px;
+  border-radius: 0;
+  display: inline-block;
+  margin: 6px 8px 6px 0;
+  text-transform: uppercase;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.05s ease;
+}
+
+button.primary {
+  background: var(--green);
+  color: #061008;
+  border: 1px solid var(--green);
+  font-weight: bold;
+  text-shadow: none;
+  box-shadow: 0 0 12px rgba(108, 255, 138, 0.4);
+}
+button.primary:hover { background: #9bffb0; }
+button.primary:active { transform: translate(1px, 1px); }
+
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink-dim);
+}
+button.ghost:hover { border-color: var(--ink); color: var(--green); }
+
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Stage canvas ────────────────────────────────────────────── */
+.stage {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #000;
+  border: 1px solid var(--rule);
+  margin: 8px 0 16px;
+  /* subtle inner scan glow */
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.85),
+    inset 0 0 120px rgba(108, 255, 138, 0.04);
+  touch-action: none;
+}
+.stage-sm { aspect-ratio: 16 / 5; }
+
+/* ── Round / play strip ──────────────────────────────────────── */
+.round-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+.shape-name { color: var(--green); }
+.timer {
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  color: var(--user);
+  text-shadow: 0 0 8px var(--user-glow);
+}
+
+#play-prompt {
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
+/* ── Confirm screen ──────────────────────────────────────────── */
+.confirm-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 16px;
+}
+.trouble {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+.trouble summary { cursor: pointer; color: var(--ink); }
+.trouble ul { margin: 8px 0 0; padding-left: 20px; }
+.trouble li { padding: 2px 0; }
+
+/* ── Result screen ───────────────────────────────────────────── */
+.verdict-band {
+  border: 1px solid var(--green);
+  background: var(--panel);
+  padding: 18px 18px 22px;
+  margin-bottom: 12px;
+  position: relative;
+}
+.verdict-band::before {
+  content: "";
+  position: absolute;
+  top: 4px; left: 4px; right: 4px; bottom: 4px;
+  border: 1px dashed rgba(108, 255, 138, 0.18);
+  pointer-events: none;
+}
+.verdict-label {
+  font-size: 12px;
+  color: var(--green);
+  letter-spacing: 0.18em;
+}
+.verdict-name {
+  font-family: "VT323", monospace;
+  font-size: clamp(48px, 12vw, 78px);
+  line-height: 1;
+  margin: 4px 0 8px;
+  color: var(--ink);
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgba(232, 211, 154, 0.55),
+    0 0 22px rgba(232, 211, 154, 0.18);
+}
+.verdict-stat {
+  font-size: 14px;
+  color: var(--user);
+  text-shadow: 0 0 6px var(--user-glow);
+}
+.receipt {
+  border: 1px solid var(--rule);
+  background: #000;
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}
+.receipt-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 70px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink-dim);
+}
+.receipt-row canvas {
+  width: 100%;
+  height: 60px;
+  background: #000;
+  border: 1px solid var(--rule);
+  display: block;
+}
+.receipt-row .pct {
+  text-align: right;
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  color: var(--user);
+}
+.receipt-row .lbl { font-size: 12px; }
+
+.microcopy {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+
+#share-state { min-height: 18px; color: var(--green); }
