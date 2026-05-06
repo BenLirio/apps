@@ -1084,7 +1084,7 @@ function renderStep(idx) {
 
   const votes = voteCountFor(step.key);
   const voted = votedThisRun.has(step.key);
-  const voteLabel = voted ? 'COMMENDATION FILED ✓' : '+ FILE COMMENDATION';
+  const voteLabel = voted ? 'COMMENDATION FILED ✓' : 'FILE COMMENDATION';
 
   card.innerHTML = `
     <div class="step-num">DECLARATION ${String(idx + 1).padStart(2, '0')} OF ${String(total).padStart(2, '0')}</div>
