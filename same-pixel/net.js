@@ -55,16 +55,15 @@ function send(obj) {
   }
 }
 
-// Decode a base64 board string into a Uint8Array of length 40000 (one byte per
+// Decode a base64 board string into a Uint8Array of length 4096 (one byte per
 // pixel: 0..7 = colorIdx, 0xFF = unowned).
+const TOTAL = 64 * 64;
 export function decodeBoard(b64) {
   const bin = atob(b64 || '');
   const arr = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  // If the server returned anything other than 40000 bytes (unlikely),
-  // pad/truncate to be safe.
-  if (arr.length === 40000) return arr;
-  const out = new Uint8Array(40000); out.fill(0xFF);
-  out.set(arr.subarray(0, Math.min(40000, arr.length)));
+  if (arr.length === TOTAL) return arr;
+  const out = new Uint8Array(TOTAL); out.fill(0xFF);
+  out.set(arr.subarray(0, Math.min(TOTAL, arr.length)));
   return out;
 }

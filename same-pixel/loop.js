@@ -1,7 +1,7 @@
 // loop.js — board state + canvas render + pan / zoom / target-pick input.
 //
 // Owns:
-//   - The 200x200 Uint8Array board mirror (mutated by net.js callbacks).
+//   - The 64x64 Uint8Array board mirror (mutated by net.js callbacks).
 //   - The off-screen draw of board → canvas via ImageData.
 //   - Pan / pinch / double-tap zoom on the canvas.
 //   - Tracking the user's "target" pixel (set by tap; cleared by commit).
@@ -11,8 +11,8 @@
 //   - Network calls (net.js).
 //   - Steward-notice math (app.js).
 
-const N = 200;          // grid side
-const TOTAL = N * N;    // 40000
+const N = 64;           // grid side
+const TOTAL = N * N;    // 4096
 
 // 8 cursed-pastel hues, in colorIdx order. Must match style.css :root --c0..7.
 export const PALETTE = [
@@ -109,7 +109,7 @@ export function getTarget() {
 
 // Set the target programmatically (used by the nudge dpad in app.js so users
 // can fine-tune the exact pixel after a rough tap — at scale=1 each cell is
-// only ~2.8px wide, smaller than a fingertip).
+// only a few px wide, smaller than a fingertip).
 export function setTarget(x, y) {
   const cx = Math.max(0, Math.min(N - 1, x));
   const cy = Math.max(0, Math.min(N - 1, y));

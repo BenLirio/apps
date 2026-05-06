@@ -29,7 +29,7 @@ let stewardFiredAt = 0;          // timestamp (0 if not fired)
 
 const SESSION_LENGTH_MS = 5 * 60 * 1000;
 const COOLDOWN_MS = 60 * 1000;
-const N = 200;
+const N = 64;
 
 // ── Voice copy banks ───────────────────────────────────────────
 const COOLDOWN_PHRASES = [
@@ -357,7 +357,7 @@ function share() {
   } else if (myPixels.size > 0 && longestHoldCoord) {
     text = `${myPixels.size} pixels still answer to me on the same-pixel wall (longest hold ${myPixels.get(longestHoldCoord) ? 'still going' : formatHeld(longestHoldMs)}). ${location.href}`;
   } else {
-    text = `the same-pixel wall: 200×200 cells, one tap a minute, board never resets. ${location.href}`;
+    text = `the same-pixel wall: 64×64 cells, one tap a minute, board never resets. ${location.href}`;
   }
   if (navigator.share) {
     navigator.share({ title: 'Same Pixel', text, url: location.href }).catch(() => {});
