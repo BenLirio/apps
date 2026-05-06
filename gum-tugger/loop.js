@@ -123,19 +123,22 @@ function startPull(x, y) {
   // Tiny rest-segment so the user has a long way to *stretch* before snap.
   const restSegLen = Math.max(2.5, Math.min(8, cssH * 0.012));
 
+  // Lay nodes linearly between anchor and finger so initial strain is uniform.
+  // If we instead laid them at rest-spacing and teleported only the tip, the
+  // last segment would start at strain >>> the snap threshold and the strand
+  // would break within ~90ms of the very first touch.
+  const dx = x - anchorX;
+  const dy = y - anchorY;
   const nodes = [];
   for (let i = 0; i < N_NODES; i++) {
     const t = i / (N_NODES - 1);
     nodes.push({
-      x: anchorX,
-      y: anchorY + t * (restSegLen * (N_NODES - 1)),
+      x: anchorX + t * dx,
+      y: anchorY + t * dy,
       vx: 0, vy: 0,
       pinned: i === 0,
     });
   }
-  // Tip starts at the finger.
-  nodes[N_NODES - 1].x = x;
-  nodes[N_NODES - 1].y = y;
   nodes[N_NODES - 1].pinned = false;
 
   strand = {
