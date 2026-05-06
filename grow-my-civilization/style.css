@@ -498,12 +498,46 @@ body {
   text-align: right;
 }
 
+.resource {
+  position: relative;
+}
+
 .resource-track {
   position: relative;
   height: 10px;
   background: var(--parchment-3);
   border: 1px solid var(--ink-faded);
   overflow: hidden;
+}
+
+/* Floating stat-delta callouts — anchored to .resource, drift up + fade.
+   Spawned on every choice resolution so the change is felt as drama, not
+   as silent number-bar nudge. */
+.stat-delta-pill {
+  position: absolute;
+  right: 0;
+  bottom: 6px;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  padding: 1px 8px 1px;
+  border: 1px solid currentColor;
+  background: var(--parchment-1);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 4;
+  animation: stat-delta-float 1.5s cubic-bezier(.4,0,.4,1) forwards;
+}
+.stat-delta-pill.pos { color: #2c6a3e; }
+.stat-delta-pill.neg { color: var(--illum-red); }
+.stat-delta-pill.ambition { right: auto; left: 0; }
+
+@keyframes stat-delta-float {
+  0%   { transform: translateY(0)    scale(0.92); opacity: 0; }
+  18%  { transform: translateY(-4px) scale(1.05); opacity: 1; }
+  72%  { transform: translateY(-22px) scale(1);    opacity: 1; }
+  100% { transform: translateY(-36px) scale(0.95); opacity: 0; }
 }
 
 .resource-fill {
@@ -786,6 +820,50 @@ body {
   margin-top: 4px;
 }
 
+.resolution-main { line-height: 1.6; }
+
+.resolution-legend-tag {
+  margin-top: 10px;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(180,140,40,0.35);
+  animation: legend-stamp-in 600ms ease-out both;
+}
+@keyframes legend-stamp-in {
+  0%   { transform: scale(1.6); opacity: 0; letter-spacing: 0.6em; }
+  60%  { transform: scale(0.96); opacity: 1; letter-spacing: 0.16em; }
+  100% { transform: scale(1);    opacity: 1; letter-spacing: 0.18em; }
+}
+
+.resolution-twist {
+  margin-top: 10px;
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--illum-red);
+  text-align: center;
+  line-height: 1.45;
+  animation: twist-in 700ms ease-out 350ms both;
+}
+.resolution-twist .twist-prefix {
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 2px;
+}
+@keyframes twist-in {
+  0%   { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0);   opacity: 1; }
+}
+
 /* ── DECISION BODY (thinking ↔ ready) ───────────────────────────────── */
 /* Reserve enough height so the panel doesn't visibly shrink when the body
    swaps from a full chapter to the loading state and back. Chosen to fit
@@ -930,6 +1008,43 @@ body {
   font-size: 13px;
   padding: 8px 0;
 }
+
+/* Legends Remembered — bragging-rights highlight reel surfaced only
+   when the chronicler flagged at least one choice as legendary. */
+.legends-block {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--ink-faded);
+}
+.legends-heading {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.legends-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 15px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.legends-list li {
+  padding: 6px 4px;
+  border-bottom: 1px dotted var(--ink-faded);
+}
+.legends-list li:last-child { border-bottom: none; }
+.legend-mark { color: var(--gold); margin-right: 6px; }
+.legend-title { font-weight: 600; }
+.legend-sep { color: var(--ink-soft); }
+.legend-label { font-style: italic; color: var(--ink); }
+.legend-narr { color: var(--ink-soft); font-size: 14px; }
 
 #verdict-stats {
   font-family: 'EB Garamond', Georgia, serif;

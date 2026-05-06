@@ -248,15 +248,17 @@ async function fetchCrises(n) {
   const sys = `You are the chronicler of the civilization "${civName}", currently in the ${eraName}. Output ONLY valid JSON.
 
 You will generate ${n} new crisis card(s) the people now face. Each crisis has:
-- title: 3-6 evocative words, Title Case (no all-caps)
-- description: ONE sentence, max 22 words, a concrete event (no abstract dilemmas, no numbers, no stat names)
+- title: 3-6 evocative words, Title Case. Use a SPECIFIC proper noun whenever possible (a place, a person, a holy thing) — "The Salt Caravan Of Velm" beats "A Trade Dilemma." Never abstract ("A Reckoning," "Hard Times").
+- description: ONE sentence, max 22 words. Must contain at least ONE concrete sensory or named detail — a person by name, a smell, a sound, a specific object, a building. No abstract dilemmas, no numbers, no stat names.
 - choices: EXACTLY TWO choices presenting opposing approaches
 
 Each choice has:
-- label: 2-4 word imperative, Title Case
+- label: 2-4 word imperative, Title Case. Vivid and specific ("Drown The Heretics" not "Punish Them").
 - stability: integer in [-25, +25] — how the choice affects social cohesion / safety
 - ambition: integer in [-25, +25] — how it affects momentum (NEGATIVE means spending ambition on bold action; POSITIVE means restraint or hope-building)
-- narrative: ONE sentence, max 16 words, what unfolds (no numbers, no stat names)
+- narrative: ONE sentence, max 16 words. MUST contain a vivid image — a sound, a smell, a named person's reaction, a specific object. No numbers, no stat names. Examples: "Smoke rises for nine days; the priest's daughter does not return." / "The granary fills; old men weep at the smell of new grain."
+- legendary: boolean (default false). Set true ONLY when the choice is so dramatic / costly / iconic that the chronicler would mark it down for the saga — roughly 1 in 6 choices. Be choosy.
+- twist: optional string, max 18 words, only on ~1 in 4 choices. A surprise consequence revealed after the choice resolves — an unintended cost or gift, a person's reveal, an omen. Examples: "The seer was the trader's mother all along." / "Among the dead is the king's only son." Leave empty when nothing twists.
 
 CRITICAL: the two choices for the SAME crisis must present a meaningful TRADE-OFF. Common patterns:
   · Cautious: +stability, -ambition (small spend)  vs  Bold: -stability, -ambition (large spend, transformative)
@@ -265,7 +267,7 @@ The two choices for a crisis MUST have DIFFERENT trade-off profiles — never bo
 
 Magnitudes: typically ±5 to ±15. Reserve ±18 to ±25 for grave, dramatic dilemmas.
 
-Voice: era-appropriate, grounded, folk-saga. Vary subject matter — people, weather, neighbors, faith, illness, harvest, strangers, technology, omens — not just battles.`;
+Voice: era-appropriate, folk-saga, ALWAYS specific. Vary subject matter — people, weather, neighbors, faith, illness, harvest, strangers, technology, omens, art, language, the dead — not just battles. Lean weird and personal: a child's vision, a butcher's confession, a sea-stone that bleeds, a rival's daughter at your gate. Boring is the enemy.`;
 
   const user = `Stability: ${stats.stability}/100. Ambition: ${stats.ambition}/100. Era: ${eraName}. Chapter ${chapter + 1}.
 
@@ -279,8 +281,8 @@ Generate ${n} new crisis(es). Respond with JSON exactly matching:
       "title": "...",
       "description": "...",
       "choices": [
-        { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "..." },
-        { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "..." }
+        { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "...", "legendary": false, "twist": "" },
+        { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "...", "legendary": false, "twist": "" }
       ]
     }
   ]
@@ -319,11 +321,13 @@ function sanitizeCrisis(raw) {
     label: titleCaseClip(String(c.label || 'Press On'), 26),
     stability: clampInt(c.stability, -25, 25),
     ambition: clampInt(c.ambition, -25, 25),
-    narrative: clipSentence(String(c.narrative || ''), 110)
+    narrative: clipSentence(String(c.narrative || ''), 110),
+    legendary: c.legendary === true,
+    twist: clipSentence(String(c.twist || '').trim(), 130)
   }));
   // Pad if fewer than 2 came back (shouldn't happen if the model obeys).
   while (choices.length < 2) {
-    choices.push({ label: 'Hold The Line', stability: -3, ambition: -3, narrative: 'Nothing changes; the unease deepens.' });
+    choices.push({ label: 'Hold The Line', stability: -3, ambition: -3, narrative: 'Nothing changes; the unease deepens.', legendary: false, twist: '' });
   }
   return {
     id: 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
@@ -604,7 +608,49 @@ function signed(n) { return n > 0 ? `+${n}` : `${n}`; }
 function renderResolutionLine(text) {
   const el = document.getElementById('resolution-line');
   if (!el) return;
-  el.textContent = text || '';
+  // Two render modes: plain text (legacy) or { twist, legendary } extras.
+  const opts = (arguments.length > 1 && typeof arguments[1] === 'object') ? arguments[1] : null;
+  if (!opts) {
+    el.textContent = text || '';
+    return;
+  }
+  el.innerHTML = '';
+  const main = document.createElement('div');
+  main.className = 'resolution-main';
+  main.textContent = text || '';
+  el.appendChild(main);
+  if (opts.legendary) {
+    const tag = document.createElement('div');
+    tag.className = 'resolution-legend-tag';
+    tag.textContent = '✦ A LEGEND IS WRITTEN';
+    el.appendChild(tag);
+  }
+  if (opts.twist) {
+    const tw = document.createElement('div');
+    tw.className = 'resolution-twist';
+    tw.innerHTML = '<span class="twist-prefix">— and yet —</span> ' + opts.twist;
+    el.appendChild(tw);
+  }
+}
+
+// Floating stat-delta callouts. Anchored to the resource bar of the named
+// stat ("stability" | "ambition"), spawn a transient +/- N pill that
+// floats up and fades. Skipped for tiny ±0..1 noise.
+function spawnStatDelta(which, delta) {
+  if (!delta || Math.abs(delta) < 1) return;
+  // Append to the .resource wrapper rather than .resource-track, since the
+  // track has overflow:hidden for the fill animation and would clip the
+  // floating pill. The wrapper is position:relative via CSS.
+  const bar = document.getElementById(which + '-bar');
+  const anchor = bar && bar.parentElement;
+  if (!anchor) return;
+  const pill = document.createElement('div');
+  pill.className = 'stat-delta-pill ' + (delta > 0 ? 'pos' : 'neg') + ' ' + which;
+  const sign = delta > 0 ? '+' : '−';
+  pill.textContent = sign + Math.abs(delta);
+  anchor.appendChild(pill);
+  // Auto-cleanup after the CSS animation completes.
+  setTimeout(() => { try { pill.remove(); } catch (_) {} }, 1600);
 }
 
 function resolveChoice(crisisIdx, choiceIdx) {
@@ -626,8 +672,15 @@ function resolveChoice(crisisIdx, choiceIdx) {
     chapter: chapter + 1,
     era: stats.era,
     engaged: true,
-    statDelta: { stability: choice.stability, ambition: choice.ambition }
+    statDelta: { stability: choice.stability, ambition: choice.ambition },
+    legendary: choice.legendary === true,
+    twist: choice.twist || ''
   });
+
+  // Animate floating stat-delta callouts so the consequences READ as
+  // dramatic instead of as silent number-bar updates.
+  spawnStatDelta('stability', choice.stability);
+  spawnStatDelta('ambition',  choice.ambition);
 
   // Age the unengaged crises; auto-consume any that hit age 2.
   const survivors = [];
@@ -675,13 +728,17 @@ function resolveChoice(crisisIdx, choiceIdx) {
   if (stats.era > beforeEra) {
     resolutionText += `  An age turns: the ${ERAS[stats.era].name} begins.`;
   }
-  renderResolutionLine(resolutionText);
+  renderResolutionLine(resolutionText, {
+    twist: choice.twist || '',
+    legendary: choice.legendary === true
+  });
 
-  // Let the user read the resolution line before next chapter loads.
+  // Twists/legends earn a longer dwell so the user can read them.
+  const dwell = (choice.twist || choice.legendary) ? 3600 : 2200;
   setTimeout(() => {
     if (gameOver) return;
     nextChapter();
-  }, 2200);
+  }, dwell);
 }
 
 function applyChoiceDeltas(choice) {
@@ -1026,13 +1083,29 @@ function showVerdict() {
     const closer = collapseReason
       ? ` And so, ${collapseReason.charAt(0).toLowerCase()}${collapseReason.slice(1)}`
       : '';
-    logEl.innerHTML = `<p class="saga-paragraph">${escapeHtml(sentences.join(' '))}${escapeHtml(closer)}</p>`;
+    let html = `<p class="saga-paragraph">${escapeHtml(sentences.join(' '))}${escapeHtml(closer)}</p>`;
+    // Legends Remembered — only the choices the chronicler flagged
+    // legendary. Surfaced as the bragging-rights highlight reel for the
+    // share card; absent entirely if the run had no legends.
+    const legends = chronicle.filter(d => d.legendary && d.engaged);
+    if (legends.length) {
+      const items = legends.map(d => {
+        const title = String(d.crisisTitle || '').trim().replace(/[.?!]+$/, '');
+        const label = String(d.choiceLabel || '').trim();
+        const flavor = String(d.narrative || '').trim().replace(/[.?!]+$/, '');
+        return `<li><span class="legend-mark">✦</span><span class="legend-title">${escapeHtml(title)}</span><span class="legend-sep"> — </span><span class="legend-label">${escapeHtml(label)}</span><span class="legend-narr">${escapeHtml(' · ' + flavor)}</span></li>`;
+      }).join('');
+      html += `<div class="legends-block"><div class="legends-heading">✦ Legends Remembered ✦</div><ul class="legends-list">${items}</ul></div>`;
+    }
+    logEl.innerHTML = html;
   }
 
   const statsEl = document.getElementById('verdict-stats');
+  const legendCount = chronicle.filter(d => d.legendary && d.engaged).length;
   const rows = [
     ['Chapters told',     chapter],
     ['Reached era',       ERAS[stats.era].name],
+    ['Legends written',   legendCount + (legendCount === 1 ? ' ✦' : (legendCount > 1 ? ' ✦✦' : ''))],
     ['Peak stability',    peakStability],
     ['Peak ambition',     peakAmbition],
     ['Largest spend',     stats.peakAmbitionBurn],
@@ -1055,7 +1128,9 @@ function share() {
   const goalMet = goal.isMet();
   const eraName = ERAS[stats.era].name.toLowerCase();
   const verdict = goalMet ? `achieved the ${goal.short.toLowerCase()}` : `fell short of the ${goal.short.toLowerCase()}`;
-  const txt = `The saga of ${civName}: ${chapter} chapters, the ${eraName}, ${verdict}. — benlirio.com/apps/grow-my-civilization/`;
+  const legendCount = chronicle.filter(d => d.legendary && d.engaged).length;
+  const legendTag = legendCount === 0 ? '' : (legendCount === 1 ? ', one legend written' : `, ${legendCount} legends written`);
+  const txt = `The saga of ${civName}: ${chapter} chapters, the ${eraName}, ${verdict}${legendTag}. — benlirio.com/apps/grow-my-civilization/`;
   if (navigator.share) {
     navigator.share({ title: 'Grow My Civilization', text: txt, url: 'https://benlirio.com/apps/grow-my-civilization/' });
   } else {
