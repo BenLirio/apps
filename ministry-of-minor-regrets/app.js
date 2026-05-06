@@ -6,16 +6,32 @@
 // you didn't ask for. Fully deterministic — no LLM. Inputs are encoded into
 // the URL fragment so shared links re-hydrate the exact receipt.
 //
-// Every line item is capped at LINE_CAP regret units so no single declaration
-// can drown out the others; the receipt's formula text says "maximum penalty
-// applied" when the cap kicks in.
+// Every line item is capped at LINE_CAP regret units (0–20) so the per-run
+// total fits the standard 100-point bureaucratic scale (5 × 20). Each
+// question's compute fn picks a `worstCase` input — the value at which the
+// behavior is genuinely bad — and the line score rises linearly from 0
+// (at the benchmark) to 20 (at the worst case). The receipt's formula text
+// says "maximum penalty applied" when an input exceeds the worst case.
 
-const LINE_CAP = 250;
+const LINE_CAP = 20;
 
 function capUnits(raw, formula) {
   const r = Math.round(raw);
   if (r > LINE_CAP) return { units: LINE_CAP, formula: 'maximum penalty applied' };
-  return { units: r, formula };
+  return { units: Math.max(0, r), formula };
+}
+
+// Linearly score `input` between (benchmark → 0 regret) and (worstCase → 20
+// regret). worstCase < benchmark is a deficit-direction question (e.g.,
+// hugs); worstCase > benchmark is excess-direction (e.g., screens). Inputs
+// past the worst case overflow above 20, then capUnits clamps them.
+function scoreLinear(input, benchmark, worstCase) {
+  if (worstCase < benchmark) {
+    if (input >= benchmark) return 0;
+    return 20 * (benchmark - input) / (benchmark - worstCase);
+  }
+  if (input <= benchmark) return 0;
+  return 20 * (input - benchmark) / (worstCase - benchmark);
 }
 
 // ---------- Ministry benchmarks & per-line metadata ----------
@@ -349,250 +365,144 @@ let STEPS = ALL_DECLARATIONS.slice(0, PER_RUN_STEPS);
 // ---------- Deterministic line-item arithmetic ----------
 
 function computeSun(min) {
-  // Below 25 min = solar deficit. Above 240 min = excess (peeling clerk).
-  const deficit = Math.max(0, 25 - min);
-  const excess = Math.max(0, min - 240);
-  const raw = deficit * 2.0 + excess * 0.4;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 25-min daily allotment × 2.0`
-    : excess > 0
-      ? `${excess} min above 240-min ceiling × 0.4`
-      : 'within solar tolerance';
+  let raw = 0;
+  let baseFormula = 'within solar tolerance';
+  if (min < 25) {
+    raw = scoreLinear(min, 25, 0);
+    baseFormula = `${25 - min} min below 25-min daily allotment`;
+  } else if (min > 240) {
+    raw = Math.min(5, (min - 240) * 0.05);
+    baseFormula = `${min - 240} min above 240-min ceiling`;
+  }
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'sun',
-    name: BENCHMARKS.sun.itemName,
-    code: BENCHMARKS.sun.code,
-    inputText: `${min} min sun`,
-    formula,
-    units,
-  };
+  return { key: 'sun', name: BENCHMARKS.sun.itemName, code: BENCHMARKS.sun.code,
+    inputText: `${min} min sun`, formula, units };
 }
 
 function computeCalled(days) {
-  const b = BENCHMARKS.called.benchmark;
-  const excess = Math.max(0, days - b);
-  let raw = excess * 14;
-  if (days > 30) raw += (days - 30) * 18;
-  if (days > 90) raw += (days - 90) * 22;
-  const baseFormula = days > 90
-    ? `${excess}d × 14, +escalation 30+ and 90+`
-    : days > 30
-      ? `${excess}d × 14, +escalation 30+`
-      : excess > 0
-        ? `${excess}d past 7-day benchmark × 14`
-        : 'filial contact current';
+  const raw = scoreLinear(days, 7, 50);
+  const baseFormula = days > 7
+    ? `${days - 7}d past 7-day benchmark`
+    : 'filial contact current';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'called',
-    name: BENCHMARKS.called.itemName,
-    code: BENCHMARKS.called.code,
-    inputText: `${days} day${days === 1 ? '' : 's'} since calling`,
-    formula,
-    units,
-  };
+  return { key: 'called', name: BENCHMARKS.called.itemName, code: BENCHMARKS.called.code,
+    inputText: `${days} day${days === 1 ? '' : 's'} since calling`, formula, units };
 }
 
 function computeWater(hrs) {
-  const b = BENCHMARKS.water.benchmark;
-  const excess = Math.max(0, hrs - b);
-  // 38 units per hour past 2-hour reach window.
-  const raw = excess * 38;
-  const baseFormula = excess > 0
-    ? `${stripZeros(excess)}h past 2-hour reach window × 38`
+  const raw = scoreLinear(hrs, 2, 10);
+  const baseFormula = hrs > 2
+    ? `${stripZeros(hrs - 2)}h past 2-hour reach window`
     : 'hydration current';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'water',
-    name: BENCHMARKS.water.itemName,
-    code: BENCHMARKS.water.code,
-    inputText: `${stripZeros(hrs)}h since glass`,
-    formula,
-    units,
-  };
+  return { key: 'water', name: BENCHMARKS.water.itemName, code: BENCHMARKS.water.code,
+    inputText: `${stripZeros(hrs)}h since glass`, formula, units };
 }
 
 function computeSit(min) {
-  const b = BENCHMARKS.sit.benchmark;
-  const excess = Math.max(0, min - b);
-  let raw = excess * 1.6;
-  if (min > 120) raw += (min - 120) * 1.2;
-  const baseFormula = excess > 0
-    ? min > 120
-      ? `${excess} min past 60 × 1.6, +escalation 120+`
-      : `${excess} min past 60 × 1.6`
+  const raw = scoreLinear(min, 60, 300);
+  const baseFormula = min > 60
+    ? `${min - 60} min past 60-min posture allotment`
     : 'posture rotation acceptable';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'sit',
-    name: BENCHMARKS.sit.itemName,
-    code: BENCHMARKS.sit.code,
-    inputText: `${min} min unbroken sit`,
-    formula,
-    units,
-  };
+  return { key: 'sit', name: BENCHMARKS.sit.itemName, code: BENCHMARKS.sit.code,
+    inputText: `${min} min unbroken sit`, formula, units };
 }
 
 function computeQuiet(min) {
-  // Reverse — fewer minutes of silence = more regret.
-  const deficit = Math.max(0, BENCHMARKS.quiet.benchmark - min);
-  const raw = deficit * 8;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 15-min daily quiet allotment × 8`
+  const raw = scoreLinear(min, 15, 0);
+  const baseFormula = min < 15
+    ? `${15 - min} min below 15-min daily quiet allotment`
     : 'sufficient ambient quiet logged';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'quiet',
-    name: BENCHMARKS.quiet.itemName,
-    code: BENCHMARKS.quiet.code,
-    inputText: `${min} min silence`,
-    formula,
-    units,
-  };
+  return { key: 'quiet', name: BENCHMARKS.quiet.itemName, code: BENCHMARKS.quiet.code,
+    inputText: `${min} min silence`, formula, units };
 }
 
 function computeBed(nights) {
-  // Each phone-at-pillow night: 26 units, +12 escalation past 3 nights.
-  let raw = nights * 26;
-  if (nights > 3) raw += (nights - 3) * 12;
-  const baseFormula = nights > 3
-    ? `${nights} × 26, +escalation past 3 nights`
-    : nights > 0
-      ? `${nights} × 26`
-      : 'bedside device-free';
+  const raw = scoreLinear(nights, 0, 7);
+  const baseFormula = nights > 0
+    ? `${nights} night${nights === 1 ? '' : 's'} phone-at-pillow`
+    : 'bedside device-free';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'bed',
-    name: BENCHMARKS.bed.itemName,
-    code: BENCHMARKS.bed.code,
-    inputText: `${nights} night${nights === 1 ? '' : 's'} phone-at-pillow`,
-    formula,
-    units,
-  };
+  return { key: 'bed', name: BENCHMARKS.bed.itemName, code: BENCHMARKS.bed.code,
+    inputText: `${nights} night${nights === 1 ? '' : 's'} phone-at-pillow`, formula, units };
 }
 
 function computeMeal(n) {
-  // Each distracted meal: 35 units flat.
-  const raw = n * 35;
+  const raw = scoreLinear(n, 0, 3);
   const baseFormula = n > 0
-    ? `${n} meal${n === 1 ? '' : 's'} eaten distracted × 35`
+    ? `${n} meal${n === 1 ? '' : 's'} eaten distracted`
     : 'mealtime attention undivided';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'meal',
-    name: BENCHMARKS.meal.itemName,
-    code: BENCHMARKS.meal.code,
-    inputText: `${n} distracted meal${n === 1 ? '' : 's'}`,
-    formula,
-    units,
-  };
+  return { key: 'meal', name: BENCHMARKS.meal.itemName, code: BENCHMARKS.meal.code,
+    inputText: `${n} distracted meal${n === 1 ? '' : 's'}`, formula, units };
 }
 
 function computeOutside(days) {
-  const b = BENCHMARKS.outside.benchmark;
-  const excess = Math.max(0, days - b);
-  let raw = excess * 22;
-  if (days > 7) raw += (days - 7) * 16;
-  const baseFormula = days > 7
-    ? `${excess}d past 1-day allowance × 22, +escalation 7+`
-    : excess > 0
-      ? `${excess}d past 1-day allowance × 22`
-      : 'outdoor exposure current';
+  const raw = scoreLinear(days, 1, 14);
+  const baseFormula = days > 1
+    ? `${days - 1}d past 1-day allowance`
+    : 'outdoor exposure current';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'outside',
-    name: BENCHMARKS.outside.itemName,
-    code: BENCHMARKS.outside.code,
-    inputText: `${days} day${days === 1 ? '' : 's'} unmediated air`,
-    formula,
-    units,
-  };
+  return { key: 'outside', name: BENCHMARKS.outside.itemName, code: BENCHMARKS.outside.code,
+    inputText: `${days} day${days === 1 ? '' : 's'} unmediated air`, formula, units };
 }
 
 function computeLaugh(n) {
-  // Reverse — fewer laughs = more regret. Benchmark 5.
-  const deficit = Math.max(0, BENCHMARKS.laugh.benchmark - n);
-  const raw = deficit * 24;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 5-laugh daily allotment × 24`
+  const raw = scoreLinear(n, 5, 0);
+  const baseFormula = n < 5
+    ? `${5 - n} short of 5-laugh daily allotment`
     : 'mirth allotment current';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'laugh',
-    name: BENCHMARKS.laugh.itemName,
-    code: BENCHMARKS.laugh.code,
-    inputText: `${n} laugh${n === 1 ? '' : 's'}`,
-    formula,
-    units,
-  };
+  return { key: 'laugh', name: BENCHMARKS.laugh.itemName, code: BENCHMARKS.laugh.code,
+    inputText: `${n} laugh${n === 1 ? '' : 's'}`, formula, units };
 }
 
 function computeHugs(n) {
-  // Reverse — fewer hugs = more regret. Benchmark 4.
-  const deficit = Math.max(0, BENCHMARKS.hugs.benchmark - n);
-  const raw = deficit * 28;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 4-hug daily allotment × 28`
+  const raw = scoreLinear(n, 4, 0);
+  const baseFormula = n < 4
+    ? `${4 - n} short of 4-hug daily allotment`
     : 'tactile quota satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
-  return {
-    key: 'hugs',
-    name: BENCHMARKS.hugs.itemName,
-    code: BENCHMARKS.hugs.code,
-    inputText: `${n} hug${n === 1 ? '' : 's'}`,
-    formula,
-    units,
-  };
+  return { key: 'hugs', name: BENCHMARKS.hugs.itemName, code: BENCHMARKS.hugs.code,
+    inputText: `${n} hug${n === 1 ? '' : 's'}`, formula, units };
 }
 
 function computeScreens(hrs) {
-  const b = BENCHMARKS.screens.benchmark; // 6
-  const excess = Math.max(0, hrs - b);
-  let raw = excess * 24;
-  if (hrs > 10) raw += (hrs - 10) * 16;
-  const baseFormula = hrs > 10
-    ? `${stripZeros(excess)}h past 6-hr screen allotment × 24, +escalation 10+`
-    : excess > 0
-      ? `${stripZeros(excess)}h past 6-hr screen allotment × 24`
-      : 'screen exposure within tolerance';
+  const raw = scoreLinear(hrs, 6, 16);
+  const baseFormula = hrs > 6
+    ? `${stripZeros(hrs - 6)}h past 6-hr screen allotment`
+    : 'screen exposure within tolerance';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'screens', name: BENCHMARKS.screens.itemName, code: BENCHMARKS.screens.code,
     inputText: `${stripZeros(hrs)}h on screens`, formula, units };
 }
 
 function computeCaffeine(n) {
-  const excess = Math.max(0, n - BENCHMARKS.caffeine.benchmark);
-  let raw = excess * 32;
-  if (n > 5) raw += (n - 5) * 22;
-  const baseFormula = n > 5
-    ? `${excess} past 3-cup allotment × 32, +escalation 5+`
-    : excess > 0
-      ? `${excess} past 3-cup daily allotment × 32`
-      : 'caffeine quota observed';
+  const raw = scoreLinear(n, 3, 8);
+  const baseFormula = n > 3
+    ? `${n - 3} past 3-cup daily allotment`
+    : 'caffeine quota observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'caffeine', name: BENCHMARKS.caffeine.itemName, code: BENCHMARKS.caffeine.code,
     inputText: `${n} caffeinated drink${n === 1 ? '' : 's'}`, formula, units };
 }
 
 function computeGround(days) {
-  const excess = Math.max(0, days - BENCHMARKS.ground.benchmark);
-  let raw = excess * 14;
-  if (days > 30) raw += (days - 30) * 16;
-  const baseFormula = days > 30
-    ? `${excess}d past 7-day grounding allowance × 14, +escalation 30+`
-    : excess > 0
-      ? `${excess}d past 7-day grounding allowance × 14`
-      : 'grounding contact current';
+  const raw = scoreLinear(days, 7, 90);
+  const baseFormula = days > 7
+    ? `${days - 7}d past 7-day grounding allowance`
+    : 'grounding contact current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'ground', name: BENCHMARKS.ground.itemName, code: BENCHMARKS.ground.code,
     inputText: `${days} day${days === 1 ? '' : 's'} unbarefoot`, formula, units };
 }
 
 function computeCompliment(hrs) {
-  const excess = Math.max(0, hrs - BENCHMARKS.compliment.benchmark);
-  const raw = excess * 12;
-  const baseFormula = excess > 0
-    ? `${stripZeros(excess)}h past 12-hr compliment allotment × 12`
+  const raw = scoreLinear(hrs, 12, 48);
+  const baseFormula = hrs > 12
+    ? `${stripZeros(hrs - 12)}h past 12-hr compliment allotment`
     : 'compliment register current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'compliment', name: BENCHMARKS.compliment.itemName, code: BENCHMARKS.compliment.code,
@@ -600,11 +510,9 @@ function computeCompliment(hrs) {
 }
 
 function computeThanks(n) {
-  // Reverse — fewer thanks = more regret. Benchmark 5.
-  const deficit = Math.max(0, BENCHMARKS.thanks.benchmark - n);
-  const raw = deficit * 22;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 5-thanks daily allotment × 22`
+  const raw = scoreLinear(n, 5, 0);
+  const baseFormula = n < 5
+    ? `${5 - n} short of 5-thanks daily allotment`
     : 'gratitude utterances current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'thanks', name: BENCHMARKS.thanks.itemName, code: BENCHMARKS.thanks.code,
@@ -612,10 +520,9 @@ function computeThanks(n) {
 }
 
 function computeWrite(min) {
-  const deficit = Math.max(0, BENCHMARKS.write.benchmark - min);
-  const raw = deficit * 18;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 5-min handwriting allotment × 18`
+  const raw = scoreLinear(min, 5, 0);
+  const baseFormula = min < 5
+    ? `${5 - min} min below 5-min handwriting allotment`
     : 'manual longhand observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'write', name: BENCHMARKS.write.itemName, code: BENCHMARKS.write.code,
@@ -623,10 +530,9 @@ function computeWrite(min) {
 }
 
 function computeCarry(min) {
-  const deficit = Math.max(0, BENCHMARKS.carry.benchmark - min);
-  const raw = deficit * 16;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 10-min haulage allotment × 16`
+  const raw = scoreLinear(min, 10, 0);
+  const baseFormula = min < 10
+    ? `${10 - min} min below 10-min haulage allotment`
     : 'physical haulage logged';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'carry', name: BENCHMARKS.carry.itemName, code: BENCHMARKS.carry.code,
@@ -634,10 +540,9 @@ function computeCarry(min) {
 }
 
 function computeRead(min) {
-  const deficit = Math.max(0, BENCHMARKS.read.benchmark - min);
-  const raw = deficit * 18;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 10-min printed-page allotment × 18`
+  const raw = scoreLinear(min, 10, 0);
+  const baseFormula = min < 10
+    ? `${10 - min} min below 10-min printed-page allotment`
     : 'paper-page reading observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'read', name: BENCHMARKS.read.itemName, code: BENCHMARKS.read.code,
@@ -645,38 +550,29 @@ function computeRead(min) {
 }
 
 function computeEyes(hrs) {
-  const excess = Math.max(0, hrs - BENCHMARKS.eyes.benchmark);
-  let raw = excess * 22;
-  if (hrs > 12) raw += (hrs - 12) * 14;
-  const baseFormula = hrs > 12
-    ? `${stripZeros(excess)}h past 4-hr distance-focus allotment × 22, +escalation 12+`
-    : excess > 0
-      ? `${stripZeros(excess)}h past 4-hr distance-focus allotment × 22`
-      : 'long-focus exposure current';
+  const raw = scoreLinear(hrs, 4, 16);
+  const baseFormula = hrs > 4
+    ? `${stripZeros(hrs - 4)}h past 4-hr distance-focus allotment`
+    : 'long-focus exposure current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'eyes', name: BENCHMARKS.eyes.itemName, code: BENCHMARKS.eyes.code,
-    inputText: `${stripZeros(hrs)}h since 50ft+ glance`, formula, units };
+    inputText: `${stripZeros(hrs)}h since long glance`, formula, units };
 }
 
 function computeSleep(hrs) {
-  const deficit = Math.max(0, BENCHMARKS.sleep.benchmark - hrs);
-  let raw = deficit * 30;
-  if (hrs < 5) raw += (5 - hrs) * 24;
-  const baseFormula = hrs < 5
-    ? `${stripZeros(deficit)}h below 7-hr sleep allotment × 30, +escalation under 5h`
-    : deficit > 0
-      ? `${stripZeros(deficit)}h below 7-hr sleep allotment × 30`
-      : 'sleep allotment satisfied';
+  const raw = scoreLinear(hrs, 7, 2);
+  const baseFormula = hrs < 7
+    ? `${stripZeros(7 - hrs)}h below 7-hr sleep allotment`
+    : 'sleep allotment satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'sleep', name: BENCHMARKS.sleep.itemName, code: BENCHMARKS.sleep.code,
     inputText: `${stripZeros(hrs)}h slept`, formula, units };
 }
 
 function computePrep(min) {
-  const deficit = Math.max(0, BENCHMARKS.prep.benchmark - min);
-  const raw = deficit * 14;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 15-min hand-prep allotment × 14`
+  const raw = scoreLinear(min, 15, 0);
+  const baseFormula = min < 15
+    ? `${15 - min} min below 15-min hand-prep allotment`
     : 'hand-prepared meal logged';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'prep', name: BENCHMARKS.prep.itemName, code: BENCHMARKS.prep.code,
@@ -684,10 +580,9 @@ function computePrep(min) {
 }
 
 function computeRefuse(n) {
-  const deficit = Math.max(0, BENCHMARKS.refuse.benchmark - n);
-  const raw = deficit * 24;
-  const baseFormula = deficit > 0
-    ? '0 declined today; minimum is 1 daily refusal × 24'
+  const raw = scoreLinear(n, 1, 0);
+  const baseFormula = n < 1
+    ? '0 declined today; minimum is 1 daily refusal'
     : 'volitional refusals exercised';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'refuse', name: BENCHMARKS.refuse.itemName, code: BENCHMARKS.refuse.code,
@@ -695,24 +590,19 @@ function computeRefuse(n) {
 }
 
 function computeSteps(n) {
-  const deficit = Math.max(0, 7500 - n);
-  let raw = deficit * 0.025;
-  if (n < 3000) raw += (3000 - n) * 0.02;
-  const baseFormula = n < 3000
-    ? `${deficit} steps below 7,500 × 0.025, +escalation under 3,000`
-    : deficit > 0
-      ? `${deficit} steps below 7,500 daily allotment × 0.025`
-      : 'ambulation quota satisfied';
+  const raw = scoreLinear(n, 7500, 0);
+  const baseFormula = n < 7500
+    ? `${(7500 - n).toLocaleString('en-US')} steps below 7,500 daily allotment`
+    : 'ambulation quota satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'steps', name: BENCHMARKS.steps.itemName, code: BENCHMARKS.steps.code,
     inputText: `${n.toLocaleString('en-US')} steps`, formula, units };
 }
 
 function computeStairs(n) {
-  const deficit = Math.max(0, BENCHMARKS.stairs.benchmark - n);
-  const raw = deficit * 25;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 4-flight daily allotment × 25`
+  const raw = scoreLinear(n, 4, 0);
+  const baseFormula = n < 4
+    ? `${4 - n} short of 4-flight daily allotment`
     : 'vertical-travel quota satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'stairs', name: BENCHMARKS.stairs.itemName, code: BENCHMARKS.stairs.code,
@@ -720,38 +610,29 @@ function computeStairs(n) {
 }
 
 function computeFloss(d) {
-  const excess = Math.max(0, d - BENCHMARKS.floss.benchmark);
-  let raw = excess * 30;
-  if (d > 3) raw += (d - 3) * 14;
-  const baseFormula = d > 3
-    ? `${excess}d past 1-day floss allotment × 30, +escalation 3+`
-    : excess > 0
-      ? `${excess}d past 1-day floss allotment × 30`
-      : 'interdental maintenance current';
+  const raw = scoreLinear(d, 1, 14);
+  const baseFormula = d > 1
+    ? `${d - 1}d past 1-day floss allotment`
+    : 'interdental maintenance current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'floss', name: BENCHMARKS.floss.itemName, code: BENCHMARKS.floss.code,
     inputText: `${d} day${d === 1 ? '' : 's'} since flossing`, formula, units };
 }
 
 function computeLift(d) {
-  const excess = Math.max(0, d - BENCHMARKS.lift.benchmark);
-  let raw = excess * 18;
-  if (d > 14) raw += (d - 14) * 12;
-  const baseFormula = d > 14
-    ? `${excess}d past 3-day load-bearing allowance × 18, +escalation 14+`
-    : excess > 0
-      ? `${excess}d past 3-day load-bearing allowance × 18`
-      : 'load-bearing observed';
+  const raw = scoreLinear(d, 3, 30);
+  const baseFormula = d > 3
+    ? `${d - 3}d past 3-day load-bearing allowance`
+    : 'load-bearing observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'lift', name: BENCHMARKS.lift.itemName, code: BENCHMARKS.lift.code,
     inputText: `${d} day${d === 1 ? '' : 's'} since lifting`, formula, units };
 }
 
 function computeMorningSun(min) {
-  const deficit = Math.max(0, BENCHMARKS.morning_sun.benchmark - min);
-  const raw = deficit * 14;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 10-min circadian-anchor allotment × 14`
+  const raw = scoreLinear(min, 10, 0);
+  const baseFormula = min < 10
+    ? `${10 - min} min below 10-min circadian-anchor allotment`
     : 'circadian anchor secured';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'morning_sun', name: BENCHMARKS.morning_sun.itemName, code: BENCHMARKS.morning_sun.code,
@@ -759,10 +640,9 @@ function computeMorningSun(min) {
 }
 
 function computePhoneFirst(min) {
-  const deficit = Math.max(0, BENCHMARKS.phone_first.benchmark - min);
-  const raw = deficit * 5;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 30-min wake-buffer allotment × 5`
+  const raw = scoreLinear(min, 30, 0);
+  const baseFormula = min < 30
+    ? `${30 - min} min below 30-min wake-buffer allotment`
     : 'pre-cognitive buffer observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'phone_first', name: BENCHMARKS.phone_first.itemName, code: BENCHMARKS.phone_first.code,
@@ -770,10 +650,9 @@ function computePhoneFirst(min) {
 }
 
 function computeVeg(n) {
-  const deficit = Math.max(0, BENCHMARKS.veg.benchmark - n);
-  const raw = deficit * 36;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 3-serving vegetable allotment × 36`
+  const raw = scoreLinear(n, 3, 0);
+  const baseFormula = n < 3
+    ? `${3 - n} short of 3-serving vegetable allotment`
     : 'vegetal quota satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'veg', name: BENCHMARKS.veg.itemName, code: BENCHMARKS.veg.code,
@@ -781,10 +660,9 @@ function computeVeg(n) {
 }
 
 function computeFruit(n) {
-  const deficit = Math.max(0, BENCHMARKS.fruit.benchmark - n);
-  const raw = deficit * 32;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 2-piece fruit allotment × 32`
+  const raw = scoreLinear(n, 2, 0);
+  const baseFormula = n < 2
+    ? `${2 - n} short of 2-piece fruit allotment`
     : 'fruit allotment satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'fruit', name: BENCHMARKS.fruit.itemName, code: BENCHMARKS.fruit.code,
@@ -792,38 +670,29 @@ function computeFruit(n) {
 }
 
 function computeProcessed(n) {
-  const excess = Math.max(0, n - BENCHMARKS.processed.benchmark);
-  let raw = excess * 28;
-  if (n > 5) raw += (n - 5) * 18;
-  const baseFormula = n > 5
-    ? `${excess} past 2-snack allotment × 28, +escalation 5+`
-    : excess > 0
-      ? `${excess} past 2-snack daily allotment × 28`
-      : 'industrial-snack tolerance observed';
+  const raw = scoreLinear(n, 2, 10);
+  const baseFormula = n > 2
+    ? `${n - 2} past 2-snack daily allotment`
+    : 'industrial-snack tolerance observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'processed', name: BENCHMARKS.processed.itemName, code: BENCHMARKS.processed.code,
     inputText: `${n} ultra-processed snack${n === 1 ? '' : 's'}`, formula, units };
 }
 
 function computeDrinks(n) {
-  const excess = Math.max(0, n - BENCHMARKS.drinks.benchmark);
-  let raw = excess * 32;
-  if (n > 4) raw += (n - 4) * 22;
-  const baseFormula = n > 4
-    ? `${excess} past 1-drink allotment × 32, +escalation 4+`
-    : excess > 0
-      ? `${excess} past 1-drink allotment × 32`
-      : 'spirituous tolerance observed';
+  const raw = scoreLinear(n, 1, 6);
+  const baseFormula = n > 1
+    ? `${n - 1} past 1-drink allotment`
+    : 'spirituous tolerance observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'drinks', name: BENCHMARKS.drinks.itemName, code: BENCHMARKS.drinks.code,
     inputText: `${n} drink${n === 1 ? '' : 's'} last night`, formula, units };
 }
 
 function computeMealPace(min) {
-  const deficit = Math.max(0, BENCHMARKS.meal_pace.benchmark - min);
-  const raw = deficit * 8;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 20-min mealtime allotment × 8`
+  const raw = scoreLinear(min, 20, 0);
+  const baseFormula = min < 20
+    ? `${20 - min} min below 20-min mealtime allotment`
     : 'mealtime tempo observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'meal_pace', name: BENCHMARKS.meal_pace.itemName, code: BENCHMARKS.meal_pace.code,
@@ -831,10 +700,9 @@ function computeMealPace(min) {
 }
 
 function computeBreath(n) {
-  const deficit = Math.max(0, BENCHMARKS.breath.benchmark - n);
-  const raw = deficit * 28;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 3 daily conscious-breath sessions × 28`
+  const raw = scoreLinear(n, 3, 0);
+  const baseFormula = n < 3
+    ? `${3 - n} short of 3 daily conscious-breath sessions`
     : 'respiratory mindfulness observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'breath', name: BENCHMARKS.breath.itemName, code: BENCHMARKS.breath.code,
@@ -842,10 +710,9 @@ function computeBreath(n) {
 }
 
 function computeAwe(n) {
-  const deficit = Math.max(0, BENCHMARKS.awe.benchmark - n);
-  const raw = deficit * 80;
-  const baseFormula = deficit > 0
-    ? '0 wonderments declared; minimum is 1 daily × 80'
+  const raw = scoreLinear(n, 1, 0);
+  const baseFormula = n < 1
+    ? '0 wonderments declared; minimum is 1 daily'
     : 'wonderment quota satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'awe', name: BENCHMARKS.awe.itemName, code: BENCHMARKS.awe.code,
@@ -853,10 +720,9 @@ function computeAwe(n) {
 }
 
 function computeMeditate(min) {
-  const deficit = Math.max(0, BENCHMARKS.meditate.benchmark - min);
-  const raw = deficit * 12;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 10-min stillness allotment × 12`
+  const raw = scoreLinear(min, 10, 0);
+  const baseFormula = min < 10
+    ? `${10 - min} min below 10-min stillness allotment`
     : 'stillness allotment satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'meditate', name: BENCHMARKS.meditate.itemName, code: BENCHMARKS.meditate.code,
@@ -864,10 +730,9 @@ function computeMeditate(min) {
 }
 
 function computeSingle(min) {
-  const deficit = Math.max(0, BENCHMARKS.single.benchmark - min);
-  const raw = deficit * 5;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 30-min mono-task allotment × 5`
+  const raw = scoreLinear(min, 30, 0);
+  const baseFormula = min < 30
+    ? `${30 - min} min below 30-min mono-task allotment`
     : 'mono-task allotment observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'single', name: BENCHMARKS.single.itemName, code: BENCHMARKS.single.code,
@@ -875,10 +740,9 @@ function computeSingle(min) {
 }
 
 function computeStranger(n) {
-  const deficit = Math.max(0, BENCHMARKS.stranger.benchmark - n);
-  const raw = deficit * 60;
-  const baseFormula = deficit > 0
-    ? '0 weak-tie hellos exchanged; minimum is 1 daily × 60'
+  const raw = scoreLinear(n, 1, 0);
+  const baseFormula = n < 1
+    ? '0 weak-tie hellos exchanged; minimum is 1 daily'
     : 'weak-tie contact registered';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'stranger', name: BENCHMARKS.stranger.itemName, code: BENCHMARKS.stranger.code,
@@ -886,10 +750,9 @@ function computeStranger(n) {
 }
 
 function computeFaceTime(min) {
-  const deficit = Math.max(0, BENCHMARKS.face_time.benchmark - min);
-  const raw = deficit * 5;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 30-min in-person allotment × 5`
+  const raw = scoreLinear(min, 30, 0);
+  const baseFormula = min < 30
+    ? `${30 - min} min below 30-min in-person allotment`
     : 'in-person discourse observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'face_time', name: BENCHMARKS.face_time.itemName, code: BENCHMARKS.face_time.code,
@@ -897,38 +760,29 @@ function computeFaceTime(min) {
 }
 
 function computeCheckin(d) {
-  const excess = Math.max(0, d - BENCHMARKS.checkin.benchmark);
-  let raw = excess * 14;
-  if (d > 14) raw += (d - 14) * 10;
-  const baseFormula = d > 14
-    ? `${excess}d past 2-day outreach allotment × 14, +escalation 14+`
-    : excess > 0
-      ? `${excess}d past 2-day outreach allotment × 14`
-      : 'outreach current';
+  const raw = scoreLinear(d, 2, 14);
+  const baseFormula = d > 2
+    ? `${d - 2}d past 2-day outreach allotment`
+    : 'outreach current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'checkin', name: BENCHMARKS.checkin.itemName, code: BENCHMARKS.checkin.code,
     inputText: `${d} day${d === 1 ? '' : 's'} since unprompted text`, formula, units };
 }
 
 function computeSeenFriend(d) {
-  const excess = Math.max(0, d - BENCHMARKS.seen_friend.benchmark);
-  let raw = excess * 12;
-  if (d > 30) raw += (d - 30) * 14;
-  const baseFormula = d > 30
-    ? `${excess}d past 7-day in-person allowance × 12, +escalation 30+`
-    : excess > 0
-      ? `${excess}d past 7-day in-person allowance × 12`
-      : 'embodied friendship current';
+  const raw = scoreLinear(d, 7, 45);
+  const baseFormula = d > 7
+    ? `${d - 7}d past 7-day in-person allowance`
+    : 'embodied friendship current';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'seen_friend', name: BENCHMARKS.seen_friend.itemName, code: BENCHMARKS.seen_friend.code,
     inputText: `${d} day${d === 1 ? '' : 's'} since seeing a friend`, formula, units };
 }
 
 function computePlay(min) {
-  const deficit = Math.max(0, BENCHMARKS.play.benchmark - min);
-  const raw = deficit * 8;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 15-min play allotment × 8`
+  const raw = scoreLinear(min, 15, 0);
+  const baseFormula = min < 15
+    ? `${15 - min} min below 15-min play allotment`
     : 'play allotment observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'play', name: BENCHMARKS.play.itemName, code: BENCHMARKS.play.code,
@@ -936,10 +790,9 @@ function computePlay(min) {
 }
 
 function computeLearn(n) {
-  const deficit = Math.max(0, BENCHMARKS.learn.benchmark - n);
-  const raw = deficit * 70;
-  const baseFormula = deficit > 0
-    ? '0 surprises declared; minimum is 1 daily × 70'
+  const raw = scoreLinear(n, 1, 0);
+  const baseFormula = n < 1
+    ? '0 surprises declared; minimum is 1 daily'
     : 'curiosity quota satisfied';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'learn', name: BENCHMARKS.learn.itemName, code: BENCHMARKS.learn.code,
@@ -947,10 +800,9 @@ function computeLearn(n) {
 }
 
 function computeCreative(min) {
-  const deficit = Math.max(0, BENCHMARKS.creative.benchmark - min);
-  const raw = deficit * 8;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 15-min making allotment × 8`
+  const raw = scoreLinear(min, 15, 0);
+  const baseFormula = min < 15
+    ? `${15 - min} min below 15-min making allotment`
     : 'creative output observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'creative', name: BENCHMARKS.creative.itemName, code: BENCHMARKS.creative.code,
@@ -958,10 +810,9 @@ function computeCreative(min) {
 }
 
 function computeDeepWork(min) {
-  const deficit = Math.max(0, BENCHMARKS.deep_work.benchmark - min);
-  const raw = deficit * 2.5;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 60-min sustained-attention allotment × 2.5`
+  const raw = scoreLinear(min, 60, 0);
+  const baseFormula = min < 60
+    ? `${60 - min} min below 60-min sustained-attention allotment`
     : 'sustained-attention allotment observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'deep_work', name: BENCHMARKS.deep_work.itemName, code: BENCHMARKS.deep_work.code,
@@ -969,10 +820,9 @@ function computeDeepWork(min) {
 }
 
 function computePages(n) {
-  const deficit = Math.max(0, BENCHMARKS.pages.benchmark - n);
-  const raw = deficit * 12;
-  const baseFormula = deficit > 0
-    ? `${deficit} short of 10-page reading allotment × 12`
+  const raw = scoreLinear(n, 10, 0);
+  const baseFormula = n < 10
+    ? `${10 - n} short of 10-page reading allotment`
     : 'page-turning observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'pages', name: BENCHMARKS.pages.itemName, code: BENCHMARKS.pages.code,
@@ -980,10 +830,9 @@ function computePages(n) {
 }
 
 function computeForself(min) {
-  const deficit = Math.max(0, BENCHMARKS.forself.benchmark - min);
-  const raw = deficit * 5;
-  const baseFormula = deficit > 0
-    ? `${deficit} min below 30-min self-stewardship allotment × 5`
+  const raw = scoreLinear(min, 30, 0);
+  const baseFormula = min < 30
+    ? `${30 - min} min below 30-min self-stewardship allotment`
     : 'self-stewardship allotment observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'forself', name: BENCHMARKS.forself.itemName, code: BENCHMARKS.forself.code,
@@ -991,24 +840,19 @@ function computeForself(min) {
 }
 
 function computeDayoff(d) {
-  const excess = Math.max(0, d - BENCHMARKS.dayoff.benchmark);
-  let raw = excess * 8;
-  if (d > 30) raw += (d - 30) * 8;
-  const baseFormula = d > 30
-    ? `${excess}d past 14-day day-off allowance × 8, +escalation 30+`
-    : excess > 0
-      ? `${excess}d past 14-day day-off allowance × 8`
-      : 'rest allotment honored';
+  const raw = scoreLinear(d, 14, 60);
+  const baseFormula = d > 14
+    ? `${d - 14}d past 14-day day-off allowance`
+    : 'rest allotment honored';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'dayoff', name: BENCHMARKS.dayoff.itemName, code: BENCHMARKS.dayoff.code,
     inputText: `${d} day${d === 1 ? '' : 's'} since day off`, formula, units };
 }
 
 function computeAskedhelp(d) {
-  const excess = Math.max(0, d - BENCHMARKS.askedhelp.benchmark);
-  const raw = excess * 10;
-  const baseFormula = excess > 0
-    ? `${excess}d past 7-day help-request allowance × 10`
+  const raw = scoreLinear(d, 7, 60);
+  const baseFormula = d > 7
+    ? `${d - 7}d past 7-day help-request allowance`
     : 'request for assistance observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'askedhelp', name: BENCHMARKS.askedhelp.itemName, code: BENCHMARKS.askedhelp.code,
@@ -1016,14 +860,10 @@ function computeAskedhelp(d) {
 }
 
 function computeDoomscroll(min) {
-  const excess = Math.max(0, min - BENCHMARKS.doomscroll.benchmark);
-  let raw = excess * 2;
-  if (min > 60) raw += (min - 60) * 1.5;
-  const baseFormula = min > 60
-    ? `${excess} min past 10-min algorithmic-drift allotment × 2, +escalation 60+`
-    : excess > 0
-      ? `${excess} min past 10-min algorithmic-drift allotment × 2`
-      : 'feed exposure within tolerance';
+  const raw = scoreLinear(min, 10, 90);
+  const baseFormula = min > 10
+    ? `${min - 10} min past 10-min algorithmic-drift allotment`
+    : 'feed exposure within tolerance';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'doomscroll', name: BENCHMARKS.doomscroll.itemName, code: BENCHMARKS.doomscroll.code,
     inputText: `${min} min on feeds`, formula, units };
@@ -1709,8 +1549,8 @@ function renderReceipt(inputs, items, archetype, total, signatureText) {
     </section>
 
     <div class="r-total">
-      <div>TOTAL REGRET UNITS</div>
-      <div>${total.toLocaleString('en-US')}</div>
+      <div>TOTAL REGRET POINTS</div>
+      <div>${total.toLocaleString('en-US')} / ${PER_RUN_STEPS * LINE_CAP}</div>
     </div>
 
     <div class="r-archetype">
@@ -1905,10 +1745,11 @@ function refreshCumulative() {
   }
   const el = document.getElementById('cumulative');
   if (!el) return;
+  const cap = PER_RUN_STEPS * LINE_CAP;
   el.textContent = filled === 0
-    ? 'RUNNING TOTAL: 0 REGRET'
-    : `RUNNING TOTAL: ${total.toLocaleString('en-US')} REGRET (${filled}/${STEPS.length} declared)`;
-  el.classList.toggle('hot', total >= 400);
+    ? `RUNNING TOTAL: 0 / ${cap}`
+    : `RUNNING TOTAL: ${total.toLocaleString('en-US')} / ${cap} REGRET (${filled}/${STEPS.length} declared)`;
+  el.classList.toggle('hot', total >= cap * 0.4);
 }
 
 function nextStep() {
