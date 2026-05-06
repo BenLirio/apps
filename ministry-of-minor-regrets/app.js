@@ -21,35 +21,63 @@ function capUnits(raw, formula) {
 // ---------- Ministry benchmarks & per-line metadata ----------
 
 const BENCHMARKS = {
-  sun:        { benchmark: 60, unitLabel: 'min',     code: 'SUN-038', itemName: 'Solar Deficit Citation' },
-  called:     { benchmark: 7,  unitLabel: 'days',    code: 'FAM-027', itemName: 'Filial Delay Assessment' },
-  water:      { benchmark: 2,  unitLabel: 'hrs',     code: 'HYD-440', itemName: 'Hydration Lapse Penalty' },
-  sit:        { benchmark: 60, unitLabel: 'min',     code: 'POS-510', itemName: 'Sedentary Stretch Surcharge' },
-  quiet:      { benchmark: 15, unitLabel: 'min',     code: 'QTE-303', itemName: 'Unmet Quiet Allotment' },
-  bed:        { benchmark: 0,  unitLabel: 'night',   code: 'SLP-309', itemName: 'Bedside Device Encroachment Fee' },
-  meal:       { benchmark: 0,  unitLabel: 'meal',    code: 'NUT-180', itemName: 'Distracted Mastication Surcharge' },
-  outside:    { benchmark: 1,  unitLabel: 'days',    code: 'OUT-444', itemName: 'Unmediated Air Deficit' },
-  laugh:      { benchmark: 4,  unitLabel: 'hrs',     code: 'MTH-211', itemName: 'Mirth Deficit Citation' },
-  hugs:       { benchmark: 4,  unitLabel: 'hug',     code: 'TCH-808', itemName: 'Touch-Quota Shortfall' },
-  screens:    { benchmark: 4,  unitLabel: 'hrs',     code: 'SCN-621', itemName: 'Glow-Surface Overrun Surcharge' },
-  caffeine:   { benchmark: 1,  unitLabel: 'drink',   code: 'STM-115', itemName: 'Stimulant Excess Citation' },
-  ground:     { benchmark: 7,  unitLabel: 'days',    code: 'GRD-401', itemName: 'Grounding Contact Lapse' },
-  compliment: { benchmark: 12, unitLabel: 'hrs',     code: 'CMP-242', itemName: 'Unspoken Compliment Backlog' },
-  thanks:     { benchmark: 5,  unitLabel: 'thanks',  code: 'GRT-091', itemName: 'Gratitude Quota Shortfall' },
-  write:      { benchmark: 5,  unitLabel: 'min',     code: 'PEN-330', itemName: 'Manual Inscription Deficit' },
-  carry:      { benchmark: 10, unitLabel: 'min',     code: 'HAU-216', itemName: 'Haulage Allotment Deficit' },
-  read:       { benchmark: 10, unitLabel: 'min',     code: 'PRT-512', itemName: 'Printed-Page Deficit' },
-  eyes:       { benchmark: 4,  unitLabel: 'hrs',     code: 'OPT-074', itemName: 'Long-Focus Lapse Penalty' },
-  sleep:      { benchmark: 7,  unitLabel: 'hrs',     code: 'SLP-007', itemName: 'Sleep Allotment Deficit' },
-  prep:       { benchmark: 15, unitLabel: 'min',     code: 'CKR-330', itemName: 'Hand-Prepared Meal Deficit' },
-  refuse:     { benchmark: 1,  unitLabel: 'refusal', code: 'REF-101', itemName: 'Volitional Refusal Deficit' },
+  sun:        { benchmark: 25,    unitLabel: 'min',     code: 'SUN-038', itemName: 'Solar Deficit Citation' },
+  called:     { benchmark: 7,     unitLabel: 'days',    code: 'FAM-027', itemName: 'Filial Delay Assessment' },
+  water:      { benchmark: 2,     unitLabel: 'hrs',     code: 'HYD-440', itemName: 'Hydration Lapse Penalty' },
+  sit:        { benchmark: 60,    unitLabel: 'min',     code: 'POS-510', itemName: 'Sedentary Stretch Surcharge' },
+  quiet:      { benchmark: 15,    unitLabel: 'min',     code: 'QTE-303', itemName: 'Unmet Quiet Allotment' },
+  bed:        { benchmark: 0,     unitLabel: 'night',   code: 'SLP-309', itemName: 'Bedside Device Encroachment Fee' },
+  meal:       { benchmark: 0,     unitLabel: 'meal',    code: 'NUT-180', itemName: 'Distracted Mastication Surcharge' },
+  outside:    { benchmark: 1,     unitLabel: 'days',    code: 'OUT-444', itemName: 'Unmediated Air Deficit' },
+  laugh:      { benchmark: 5,     unitLabel: 'laugh',   code: 'MTH-211', itemName: 'Mirth Quota Shortfall' },
+  hugs:       { benchmark: 4,     unitLabel: 'hug',     code: 'TCH-808', itemName: 'Touch-Quota Shortfall' },
+  screens:    { benchmark: 6,     unitLabel: 'hrs',     code: 'SCN-621', itemName: 'Glow-Surface Overrun Surcharge' },
+  caffeine:   { benchmark: 3,     unitLabel: 'drink',   code: 'STM-115', itemName: 'Stimulant Excess Citation' },
+  ground:     { benchmark: 7,     unitLabel: 'days',    code: 'GRD-401', itemName: 'Unbarefooted-Ground Lapse' },
+  compliment: { benchmark: 12,    unitLabel: 'hrs',     code: 'CMP-242', itemName: 'Unspoken Compliment Backlog' },
+  thanks:     { benchmark: 5,     unitLabel: 'thanks',  code: 'GRT-091', itemName: 'Gratitude Quota Shortfall' },
+  write:      { benchmark: 5,     unitLabel: 'min',     code: 'PEN-330', itemName: 'Manual Inscription Deficit' },
+  carry:      { benchmark: 10,    unitLabel: 'min',     code: 'HAU-216', itemName: 'Haulage Allotment Deficit' },
+  read:       { benchmark: 10,    unitLabel: 'min',     code: 'PRT-512', itemName: 'Printed-Page Deficit' },
+  eyes:       { benchmark: 4,     unitLabel: 'hrs',     code: 'OPT-074', itemName: 'Long-Focus Lapse Penalty' },
+  sleep:      { benchmark: 7,     unitLabel: 'hrs',     code: 'SLP-007', itemName: 'Sleep Allotment Deficit' },
+  prep:       { benchmark: 15,    unitLabel: 'min',     code: 'CKR-330', itemName: 'Hand-Prepared Meal Deficit' },
+  refuse:     { benchmark: 1,     unitLabel: 'refusal', code: 'REF-101', itemName: 'Volitional Refusal Deficit' },
+  steps:      { benchmark: 7500,  unitLabel: 'steps',   code: 'AMB-750', itemName: 'Ambulation Quota Shortfall' },
+  stairs:     { benchmark: 4,     unitLabel: 'flights', code: 'STR-414', itemName: 'Vertical-Travel Deficit' },
+  floss:      { benchmark: 1,     unitLabel: 'days',    code: 'DNT-505', itemName: 'Interdental Maintenance Lapse' },
+  lift:       { benchmark: 3,     unitLabel: 'days',    code: 'LFT-303', itemName: 'Load-Bearing Allotment Deficit' },
+  morning_sun:{ benchmark: 10,    unitLabel: 'min',     code: 'CRC-101', itemName: 'Circadian Anchor Deficit' },
+  phone_first:{ benchmark: 30,    unitLabel: 'min',     code: 'DAW-022', itemName: 'Pre-Cognitive Glow Encroachment' },
+  veg:        { benchmark: 3,     unitLabel: 'serving', code: 'VEG-555', itemName: 'Vegetal Quota Shortfall' },
+  fruit:      { benchmark: 2,     unitLabel: 'piece',   code: 'FRT-220', itemName: 'Fruitarian Allotment Deficit' },
+  processed:  { benchmark: 2,     unitLabel: 'snack',   code: 'UPF-909', itemName: 'Industrial-Snack Surcharge' },
+  drinks:     { benchmark: 1,     unitLabel: 'drink',   code: 'ETH-101', itemName: 'Spirituous Surcharge' },
+  meal_pace:  { benchmark: 20,    unitLabel: 'min',     code: 'TMP-200', itemName: 'Mealtime Tempo Deficit' },
+  breath:     { benchmark: 3,     unitLabel: 'time',    code: 'RSP-505', itemName: 'Respiratory Mindfulness Deficit' },
+  awe:        { benchmark: 1,     unitLabel: 'time',    code: 'AWE-101', itemName: 'Wonderment Allotment Deficit' },
+  meditate:   { benchmark: 10,    unitLabel: 'min',     code: 'MED-606', itemName: 'Stillness Quota Shortfall' },
+  single:     { benchmark: 30,    unitLabel: 'min',     code: 'TSK-101', itemName: 'Mono-Task Allotment Deficit' },
+  stranger:   { benchmark: 1,     unitLabel: 'hello',   code: 'WTC-101', itemName: 'Weak-Tie Contact Deficit' },
+  face_time:  { benchmark: 30,    unitLabel: 'min',     code: 'DSC-303', itemName: 'In-Person Discourse Deficit' },
+  checkin:    { benchmark: 2,     unitLabel: 'days',    code: 'RCH-330', itemName: 'Unprompted-Outreach Lapse' },
+  seen_friend:{ benchmark: 7,     unitLabel: 'days',    code: 'FRD-707', itemName: 'Embodied-Friendship Lapse' },
+  play:       { benchmark: 15,    unitLabel: 'min',     code: 'PLY-150', itemName: 'Volitional Play Deficit' },
+  learn:      { benchmark: 1,     unitLabel: 'thing',   code: 'CUR-101', itemName: 'Curiosity Quota Shortfall' },
+  creative:   { benchmark: 15,    unitLabel: 'min',     code: 'CRT-150', itemName: 'Creative-Output Deficit' },
+  deep_work:  { benchmark: 60,    unitLabel: 'min',     code: 'ATN-606', itemName: 'Sustained-Attention Deficit' },
+  pages:      { benchmark: 10,    unitLabel: 'page',    code: 'PGE-101', itemName: 'Bookbound Page Deficit' },
+  forself:    { benchmark: 30,    unitLabel: 'min',     code: 'SLF-303', itemName: 'Self-Stewardship Allotment Deficit' },
+  dayoff:     { benchmark: 14,    unitLabel: 'days',    code: 'SAB-141', itemName: 'Sabbath-Equivalent Lapse' },
+  askedhelp:  { benchmark: 7,     unitLabel: 'days',    code: 'ASK-077', itemName: 'Unrequested-Assistance Lapse' },
+  doomscroll: { benchmark: 10,    unitLabel: 'min',     code: 'DRF-101', itemName: 'Algorithmic-Drift Surcharge' },
 };
 
 // ---------- Declaration pool ----------
 //
 // The full menu of declarations the Ministry tracks. Each run picks
 // PER_RUN_STEPS from this pool weighted by community upvotes (see
-// `voteWeights`/`pickStepsFromVotes`), so the ten declarations the user is
+// `voteWeights`/`pickStepsFromVotes`), so the declarations the user is
 // asked to make rotate between sessions and gradually drift toward the
 // declarations real users have voted up.
 
@@ -58,7 +86,7 @@ const PER_RUN_STEPS = 5;
 const ALL_DECLARATIONS = [
   { key: 'sun',
     label: 'Minutes of direct sunlight on your skin today',
-    hint: 'Ministry benchmark: 60 min — circadian & vitamin-D allotment',
+    hint: 'Ministry benchmark: 25 min — circadian & vitamin-D allotment',
     placeholder: 'e.g. 12',
     step: 1, min: 0, max: 1440, inputmode: 'numeric' },
   { key: 'called',
@@ -97,10 +125,10 @@ const ALL_DECLARATIONS = [
     placeholder: 'e.g. 9',
     step: 1, min: 0, max: 9999, inputmode: 'numeric' },
   { key: 'laugh',
-    label: 'Hours since you last laughed out loud',
-    hint: 'Ministry benchmark: 4 hrs — registered mirth allotment',
-    placeholder: 'e.g. 9',
-    step: 0.5, min: 0, max: 168, inputmode: 'decimal' },
+    label: 'Times today you laughed out loud',
+    hint: 'Ministry benchmark: 5 — daily mirth allotment',
+    placeholder: 'e.g. 1',
+    step: 1, min: 0, max: 99, inputmode: 'numeric' },
   { key: 'hugs',
     label: 'Hugs given or received today',
     hint: 'Ministry benchmark: 4',
@@ -108,17 +136,17 @@ const ALL_DECLARATIONS = [
     step: 1, min: 0, max: 99, inputmode: 'numeric' },
   { key: 'screens',
     label: 'Hours of total screen time today (phones, laptops, TVs combined)',
-    hint: 'Ministry benchmark: 4 hrs — daily glow-surface allotment',
+    hint: 'Ministry benchmark: 6 hrs — daily glow-surface allotment',
     placeholder: 'e.g. 9',
     step: 0.5, min: 0, max: 24, inputmode: 'decimal' },
   { key: 'caffeine',
     label: 'Caffeinated drinks consumed today',
-    hint: 'Ministry benchmark: 1 drink — daily stimulant allotment',
-    placeholder: 'e.g. 4',
+    hint: 'Ministry benchmark: 3 drinks — daily stimulant allotment',
+    placeholder: 'e.g. 5',
     step: 1, min: 0, max: 30, inputmode: 'numeric' },
   { key: 'ground',
-    label: 'Days since you stood barefoot on grass, dirt, or sand',
-    hint: 'Ministry benchmark: 7 days — grounding-contact allowance',
+    label: 'Days since you walked on grass, sand, or dirt without shoes',
+    hint: 'Ministry benchmark: 7 days',
     placeholder: 'e.g. 60',
     step: 1, min: 0, max: 9999, inputmode: 'numeric' },
   { key: 'compliment',
@@ -147,7 +175,7 @@ const ALL_DECLARATIONS = [
     placeholder: 'e.g. 0',
     step: 1, min: 0, max: 1440, inputmode: 'numeric' },
   { key: 'eyes',
-    label: 'Hours since you focused on anything at least 50 feet away',
+    label: 'Hours since you last looked at something across a room or further away',
     hint: 'Ministry benchmark: 4 hrs — long-focus allotment',
     placeholder: 'e.g. 11',
     step: 0.5, min: 0, max: 168, inputmode: 'decimal' },
@@ -166,6 +194,146 @@ const ALL_DECLARATIONS = [
     hint: 'Ministry benchmark: 1 — daily volitional minimum',
     placeholder: 'e.g. 0',
     step: 1, min: 0, max: 99, inputmode: 'numeric' },
+  { key: 'steps',
+    label: 'Steps your phone or watch logged today',
+    hint: 'Ministry benchmark: 7,500 steps — ambulation allotment',
+    placeholder: 'e.g. 3200',
+    step: 100, min: 0, max: 100000, inputmode: 'numeric' },
+  { key: 'stairs',
+    label: 'Flights of stairs you climbed under your own power today',
+    hint: 'Ministry benchmark: 4 flights',
+    placeholder: 'e.g. 1',
+    step: 1, min: 0, max: 999, inputmode: 'numeric' },
+  { key: 'floss',
+    label: 'Days since you last flossed',
+    hint: 'Ministry benchmark: 1 day',
+    placeholder: 'e.g. 5',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'lift',
+    label: 'Days since you lifted, pushed, or pulled something genuinely heavy',
+    hint: 'Ministry benchmark: 3 days — load-bearing allotment',
+    placeholder: 'e.g. 10',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'morning_sun',
+    label: 'Minutes of outdoor light within the first hour of waking',
+    hint: 'Ministry benchmark: 10 min — circadian-anchor allotment',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 240, inputmode: 'numeric' },
+  { key: 'phone_first',
+    label: 'Minutes between waking and your first phone check today',
+    hint: 'Ministry benchmark: 30 min',
+    placeholder: 'e.g. 1',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'veg',
+    label: 'Servings of vegetables eaten today',
+    hint: 'Ministry benchmark: 3 servings',
+    placeholder: 'e.g. 1',
+    step: 1, min: 0, max: 30, inputmode: 'numeric' },
+  { key: 'fruit',
+    label: 'Whole pieces of fruit eaten today',
+    hint: 'Ministry benchmark: 2 pieces',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 30, inputmode: 'numeric' },
+  { key: 'processed',
+    label: 'Ultra-processed snacks eaten today (chips, candy, packaged sweets)',
+    hint: 'Ministry benchmark: 2 snacks — industrial-snack allotment',
+    placeholder: 'e.g. 4',
+    step: 1, min: 0, max: 50, inputmode: 'numeric' },
+  { key: 'drinks',
+    label: 'Alcoholic drinks consumed last night',
+    hint: 'Ministry benchmark: 1 drink — spirituous allotment',
+    placeholder: 'e.g. 3',
+    step: 1, min: 0, max: 30, inputmode: 'numeric' },
+  { key: 'meal_pace',
+    label: 'Minutes your last full meal lasted',
+    hint: 'Ministry benchmark: 20 min — mealtime tempo',
+    placeholder: 'e.g. 8',
+    step: 1, min: 0, max: 240, inputmode: 'numeric' },
+  { key: 'breath',
+    label: 'Times today you took at least 5 slow conscious breaths in a row',
+    hint: 'Ministry benchmark: 3',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 99, inputmode: 'numeric' },
+  { key: 'awe',
+    label: 'Times today you stopped to look at something simply because it was beautiful',
+    hint: 'Ministry benchmark: 1 — daily wonderment allotment',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 99, inputmode: 'numeric' },
+  { key: 'meditate',
+    label: 'Minutes of stillness, prayer, or meditation today',
+    hint: 'Ministry benchmark: 10 min',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'single',
+    label: 'Minutes today on your longest single-task stretch',
+    hint: 'Ministry benchmark: 30 min — mono-task allotment',
+    placeholder: 'e.g. 5',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'stranger',
+    label: 'Brief friendly exchanges with strangers or near-strangers today (cashier, neighbor, dog walker)',
+    hint: 'Ministry benchmark: 1 — daily weak-tie allotment',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 99, inputmode: 'numeric' },
+  { key: 'face_time',
+    label: 'Minutes today in face-to-face conversation (not on a screen)',
+    hint: 'Ministry benchmark: 30 min',
+    placeholder: 'e.g. 5',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'checkin',
+    label: 'Days since you texted a friend with no agenda',
+    hint: 'Ministry benchmark: 2 days',
+    placeholder: 'e.g. 9',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'seen_friend',
+    label: 'Days since you saw a friend in person',
+    hint: 'Ministry benchmark: 7 days',
+    placeholder: 'e.g. 21',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'play',
+    label: 'Minutes today on something purely playful (no goal, no output)',
+    hint: 'Ministry benchmark: 15 min',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'learn',
+    label: 'New things you learned today that genuinely surprised you',
+    hint: 'Ministry benchmark: 1',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 99, inputmode: 'numeric' },
+  { key: 'creative',
+    label: 'Minutes today you spent making something with your hands or voice',
+    hint: 'Ministry benchmark: 15 min',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'deep_work',
+    label: 'Minutes in your longest unbroken stretch on one chosen task today',
+    hint: 'Ministry benchmark: 60 min — sustained-attention allotment',
+    placeholder: 'e.g. 12',
+    step: 5, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'pages',
+    label: 'Pages of a book (paper or screen) read today',
+    hint: 'Ministry benchmark: 10 pages',
+    placeholder: 'e.g. 0',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'forself',
+    label: 'Minutes today on something purely for you (not work, not chores, not duty)',
+    hint: 'Ministry benchmark: 30 min',
+    placeholder: 'e.g. 5',
+    step: 1, min: 0, max: 1440, inputmode: 'numeric' },
+  { key: 'dayoff',
+    label: 'Days since you took a true day off (no work, no errands)',
+    hint: 'Ministry benchmark: 14 days',
+    placeholder: 'e.g. 30',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'askedhelp',
+    label: 'Days since you asked another human for help',
+    hint: 'Ministry benchmark: 7 days',
+    placeholder: 'e.g. 14',
+    step: 1, min: 0, max: 9999, inputmode: 'numeric' },
+  { key: 'doomscroll',
+    label: 'Minutes today scrolling a feed without a goal',
+    hint: 'Ministry benchmark: 10 min — algorithmic-drift allotment',
+    placeholder: 'e.g. 45',
+    step: 5, min: 0, max: 1440, inputmode: 'numeric' },
 ];
 
 // Look up declaration metadata by `key`. Used by the fragment hydrator and
@@ -173,7 +341,7 @@ const ALL_DECLARATIONS = [
 const DECLARATION_BY_KEY = {};
 for (const d of ALL_DECLARATIONS) DECLARATION_BY_KEY[d.key] = d;
 
-// The 10 declarations chosen for THIS run. Set during boot from
+// The PER_RUN_STEPS declarations chosen for THIS run. Set during boot from
 // `pickStepsFromVotes(...)` (or restored from a hydrated v=5 fragment).
 // Kept as a `let` so boot can reassign before the stepper renders.
 let STEPS = ALL_DECLARATIONS.slice(0, PER_RUN_STEPS);
@@ -181,12 +349,12 @@ let STEPS = ALL_DECLARATIONS.slice(0, PER_RUN_STEPS);
 // ---------- Deterministic line-item arithmetic ----------
 
 function computeSun(min) {
-  // Below 60 min = solar deficit. Above 240 min = excess (peeling clerk).
-  const deficit = Math.max(0, 60 - min);
+  // Below 25 min = solar deficit. Above 240 min = excess (peeling clerk).
+  const deficit = Math.max(0, 25 - min);
   const excess = Math.max(0, min - 240);
-  const raw = deficit * 0.9 + excess * 0.4;
+  const raw = deficit * 2.0 + excess * 0.4;
   const baseFormula = deficit > 0
-    ? `${deficit} min below 60-min daily allotment × 0.9`
+    ? `${deficit} min below 25-min daily allotment × 2.0`
     : excess > 0
       ? `${excess} min above 240-min ceiling × 0.4`
       : 'within solar tolerance';
@@ -341,24 +509,19 @@ function computeOutside(days) {
   };
 }
 
-function computeLaugh(hrs) {
-  // Hours since last laugh. 18 units per hour past 4-hr benchmark,
-  // +12/hr escalation past the 12-hour mark.
-  const b = BENCHMARKS.laugh.benchmark;
-  const excess = Math.max(0, hrs - b);
-  let raw = excess * 18;
-  if (hrs > 12) raw += (hrs - 12) * 12;
-  const baseFormula = hrs > 12
-    ? `${stripZeros(excess)}h past 4-hr mirth allotment × 18, +escalation 12+`
-    : excess > 0
-      ? `${stripZeros(excess)}h past 4-hr mirth allotment × 18`
-      : 'mirth allotment current';
+function computeLaugh(n) {
+  // Reverse — fewer laughs = more regret. Benchmark 5.
+  const deficit = Math.max(0, BENCHMARKS.laugh.benchmark - n);
+  const raw = deficit * 24;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 5-laugh daily allotment × 24`
+    : 'mirth allotment current';
   const { units, formula } = capUnits(raw, baseFormula);
   return {
     key: 'laugh',
     name: BENCHMARKS.laugh.itemName,
     code: BENCHMARKS.laugh.code,
-    inputText: `${stripZeros(hrs)}h since laughter`,
+    inputText: `${n} laugh${n === 1 ? '' : 's'}`,
     formula,
     units,
   };
@@ -383,14 +546,14 @@ function computeHugs(n) {
 }
 
 function computeScreens(hrs) {
-  const b = BENCHMARKS.screens.benchmark; // 4
+  const b = BENCHMARKS.screens.benchmark; // 6
   const excess = Math.max(0, hrs - b);
-  let raw = excess * 28;
-  if (hrs > 8) raw += (hrs - 8) * 18;
-  const baseFormula = hrs > 8
-    ? `${stripZeros(excess)}h past 4-hr screen allotment × 28, +escalation 8+`
+  let raw = excess * 24;
+  if (hrs > 10) raw += (hrs - 10) * 16;
+  const baseFormula = hrs > 10
+    ? `${stripZeros(excess)}h past 6-hr screen allotment × 24, +escalation 10+`
     : excess > 0
-      ? `${stripZeros(excess)}h past 4-hr screen allotment × 28`
+      ? `${stripZeros(excess)}h past 6-hr screen allotment × 24`
       : 'screen exposure within tolerance';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'screens', name: BENCHMARKS.screens.itemName, code: BENCHMARKS.screens.code,
@@ -400,11 +563,11 @@ function computeScreens(hrs) {
 function computeCaffeine(n) {
   const excess = Math.max(0, n - BENCHMARKS.caffeine.benchmark);
   let raw = excess * 32;
-  if (n > 4) raw += (n - 4) * 22;
-  const baseFormula = n > 4
-    ? `${excess} past 1-cup allotment × 32, +escalation 4+`
+  if (n > 5) raw += (n - 5) * 22;
+  const baseFormula = n > 5
+    ? `${excess} past 3-cup allotment × 32, +escalation 5+`
     : excess > 0
-      ? `${excess} past 1-cup daily allotment × 32`
+      ? `${excess} past 3-cup daily allotment × 32`
       : 'caffeine quota observed';
   const { units, formula } = capUnits(raw, baseFormula);
   return { key: 'caffeine', name: BENCHMARKS.caffeine.itemName, code: BENCHMARKS.caffeine.code,
@@ -531,29 +694,392 @@ function computeRefuse(n) {
     inputText: `${n} refusal${n === 1 ? '' : 's'}`, formula, units };
 }
 
+function computeSteps(n) {
+  const deficit = Math.max(0, 7500 - n);
+  let raw = deficit * 0.025;
+  if (n < 3000) raw += (3000 - n) * 0.02;
+  const baseFormula = n < 3000
+    ? `${deficit} steps below 7,500 × 0.025, +escalation under 3,000`
+    : deficit > 0
+      ? `${deficit} steps below 7,500 daily allotment × 0.025`
+      : 'ambulation quota satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'steps', name: BENCHMARKS.steps.itemName, code: BENCHMARKS.steps.code,
+    inputText: `${n.toLocaleString('en-US')} steps`, formula, units };
+}
+
+function computeStairs(n) {
+  const deficit = Math.max(0, BENCHMARKS.stairs.benchmark - n);
+  const raw = deficit * 25;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 4-flight daily allotment × 25`
+    : 'vertical-travel quota satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'stairs', name: BENCHMARKS.stairs.itemName, code: BENCHMARKS.stairs.code,
+    inputText: `${n} flight${n === 1 ? '' : 's'}`, formula, units };
+}
+
+function computeFloss(d) {
+  const excess = Math.max(0, d - BENCHMARKS.floss.benchmark);
+  let raw = excess * 30;
+  if (d > 3) raw += (d - 3) * 14;
+  const baseFormula = d > 3
+    ? `${excess}d past 1-day floss allotment × 30, +escalation 3+`
+    : excess > 0
+      ? `${excess}d past 1-day floss allotment × 30`
+      : 'interdental maintenance current';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'floss', name: BENCHMARKS.floss.itemName, code: BENCHMARKS.floss.code,
+    inputText: `${d} day${d === 1 ? '' : 's'} since flossing`, formula, units };
+}
+
+function computeLift(d) {
+  const excess = Math.max(0, d - BENCHMARKS.lift.benchmark);
+  let raw = excess * 18;
+  if (d > 14) raw += (d - 14) * 12;
+  const baseFormula = d > 14
+    ? `${excess}d past 3-day load-bearing allowance × 18, +escalation 14+`
+    : excess > 0
+      ? `${excess}d past 3-day load-bearing allowance × 18`
+      : 'load-bearing observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'lift', name: BENCHMARKS.lift.itemName, code: BENCHMARKS.lift.code,
+    inputText: `${d} day${d === 1 ? '' : 's'} since lifting`, formula, units };
+}
+
+function computeMorningSun(min) {
+  const deficit = Math.max(0, BENCHMARKS.morning_sun.benchmark - min);
+  const raw = deficit * 14;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 10-min circadian-anchor allotment × 14`
+    : 'circadian anchor secured';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'morning_sun', name: BENCHMARKS.morning_sun.itemName, code: BENCHMARKS.morning_sun.code,
+    inputText: `${min} min morning light`, formula, units };
+}
+
+function computePhoneFirst(min) {
+  const deficit = Math.max(0, BENCHMARKS.phone_first.benchmark - min);
+  const raw = deficit * 5;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 30-min wake-buffer allotment × 5`
+    : 'pre-cognitive buffer observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'phone_first', name: BENCHMARKS.phone_first.itemName, code: BENCHMARKS.phone_first.code,
+    inputText: `${min} min before first phone check`, formula, units };
+}
+
+function computeVeg(n) {
+  const deficit = Math.max(0, BENCHMARKS.veg.benchmark - n);
+  const raw = deficit * 36;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 3-serving vegetable allotment × 36`
+    : 'vegetal quota satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'veg', name: BENCHMARKS.veg.itemName, code: BENCHMARKS.veg.code,
+    inputText: `${n} vegetable serving${n === 1 ? '' : 's'}`, formula, units };
+}
+
+function computeFruit(n) {
+  const deficit = Math.max(0, BENCHMARKS.fruit.benchmark - n);
+  const raw = deficit * 32;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 2-piece fruit allotment × 32`
+    : 'fruit allotment satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'fruit', name: BENCHMARKS.fruit.itemName, code: BENCHMARKS.fruit.code,
+    inputText: `${n} piece${n === 1 ? '' : 's'} of fruit`, formula, units };
+}
+
+function computeProcessed(n) {
+  const excess = Math.max(0, n - BENCHMARKS.processed.benchmark);
+  let raw = excess * 28;
+  if (n > 5) raw += (n - 5) * 18;
+  const baseFormula = n > 5
+    ? `${excess} past 2-snack allotment × 28, +escalation 5+`
+    : excess > 0
+      ? `${excess} past 2-snack daily allotment × 28`
+      : 'industrial-snack tolerance observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'processed', name: BENCHMARKS.processed.itemName, code: BENCHMARKS.processed.code,
+    inputText: `${n} ultra-processed snack${n === 1 ? '' : 's'}`, formula, units };
+}
+
+function computeDrinks(n) {
+  const excess = Math.max(0, n - BENCHMARKS.drinks.benchmark);
+  let raw = excess * 32;
+  if (n > 4) raw += (n - 4) * 22;
+  const baseFormula = n > 4
+    ? `${excess} past 1-drink allotment × 32, +escalation 4+`
+    : excess > 0
+      ? `${excess} past 1-drink allotment × 32`
+      : 'spirituous tolerance observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'drinks', name: BENCHMARKS.drinks.itemName, code: BENCHMARKS.drinks.code,
+    inputText: `${n} drink${n === 1 ? '' : 's'} last night`, formula, units };
+}
+
+function computeMealPace(min) {
+  const deficit = Math.max(0, BENCHMARKS.meal_pace.benchmark - min);
+  const raw = deficit * 8;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 20-min mealtime allotment × 8`
+    : 'mealtime tempo observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'meal_pace', name: BENCHMARKS.meal_pace.itemName, code: BENCHMARKS.meal_pace.code,
+    inputText: `${min} min last meal`, formula, units };
+}
+
+function computeBreath(n) {
+  const deficit = Math.max(0, BENCHMARKS.breath.benchmark - n);
+  const raw = deficit * 28;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 3 daily conscious-breath sessions × 28`
+    : 'respiratory mindfulness observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'breath', name: BENCHMARKS.breath.itemName, code: BENCHMARKS.breath.code,
+    inputText: `${n} breath session${n === 1 ? '' : 's'}`, formula, units };
+}
+
+function computeAwe(n) {
+  const deficit = Math.max(0, BENCHMARKS.awe.benchmark - n);
+  const raw = deficit * 80;
+  const baseFormula = deficit > 0
+    ? '0 wonderments declared; minimum is 1 daily × 80'
+    : 'wonderment quota satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'awe', name: BENCHMARKS.awe.itemName, code: BENCHMARKS.awe.code,
+    inputText: `${n} wonderment${n === 1 ? '' : 's'}`, formula, units };
+}
+
+function computeMeditate(min) {
+  const deficit = Math.max(0, BENCHMARKS.meditate.benchmark - min);
+  const raw = deficit * 12;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 10-min stillness allotment × 12`
+    : 'stillness allotment satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'meditate', name: BENCHMARKS.meditate.itemName, code: BENCHMARKS.meditate.code,
+    inputText: `${min} min stillness`, formula, units };
+}
+
+function computeSingle(min) {
+  const deficit = Math.max(0, BENCHMARKS.single.benchmark - min);
+  const raw = deficit * 5;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 30-min mono-task allotment × 5`
+    : 'mono-task allotment observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'single', name: BENCHMARKS.single.itemName, code: BENCHMARKS.single.code,
+    inputText: `${min} min single-tasked`, formula, units };
+}
+
+function computeStranger(n) {
+  const deficit = Math.max(0, BENCHMARKS.stranger.benchmark - n);
+  const raw = deficit * 60;
+  const baseFormula = deficit > 0
+    ? '0 weak-tie hellos exchanged; minimum is 1 daily × 60'
+    : 'weak-tie contact registered';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'stranger', name: BENCHMARKS.stranger.itemName, code: BENCHMARKS.stranger.code,
+    inputText: `${n} weak-tie hello${n === 1 ? '' : 's'}`, formula, units };
+}
+
+function computeFaceTime(min) {
+  const deficit = Math.max(0, BENCHMARKS.face_time.benchmark - min);
+  const raw = deficit * 5;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 30-min in-person allotment × 5`
+    : 'in-person discourse observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'face_time', name: BENCHMARKS.face_time.itemName, code: BENCHMARKS.face_time.code,
+    inputText: `${min} min face-to-face`, formula, units };
+}
+
+function computeCheckin(d) {
+  const excess = Math.max(0, d - BENCHMARKS.checkin.benchmark);
+  let raw = excess * 14;
+  if (d > 14) raw += (d - 14) * 10;
+  const baseFormula = d > 14
+    ? `${excess}d past 2-day outreach allotment × 14, +escalation 14+`
+    : excess > 0
+      ? `${excess}d past 2-day outreach allotment × 14`
+      : 'outreach current';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'checkin', name: BENCHMARKS.checkin.itemName, code: BENCHMARKS.checkin.code,
+    inputText: `${d} day${d === 1 ? '' : 's'} since unprompted text`, formula, units };
+}
+
+function computeSeenFriend(d) {
+  const excess = Math.max(0, d - BENCHMARKS.seen_friend.benchmark);
+  let raw = excess * 12;
+  if (d > 30) raw += (d - 30) * 14;
+  const baseFormula = d > 30
+    ? `${excess}d past 7-day in-person allowance × 12, +escalation 30+`
+    : excess > 0
+      ? `${excess}d past 7-day in-person allowance × 12`
+      : 'embodied friendship current';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'seen_friend', name: BENCHMARKS.seen_friend.itemName, code: BENCHMARKS.seen_friend.code,
+    inputText: `${d} day${d === 1 ? '' : 's'} since seeing a friend`, formula, units };
+}
+
+function computePlay(min) {
+  const deficit = Math.max(0, BENCHMARKS.play.benchmark - min);
+  const raw = deficit * 8;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 15-min play allotment × 8`
+    : 'play allotment observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'play', name: BENCHMARKS.play.itemName, code: BENCHMARKS.play.code,
+    inputText: `${min} min playful`, formula, units };
+}
+
+function computeLearn(n) {
+  const deficit = Math.max(0, BENCHMARKS.learn.benchmark - n);
+  const raw = deficit * 70;
+  const baseFormula = deficit > 0
+    ? '0 surprises declared; minimum is 1 daily × 70'
+    : 'curiosity quota satisfied';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'learn', name: BENCHMARKS.learn.itemName, code: BENCHMARKS.learn.code,
+    inputText: `${n} new thing${n === 1 ? '' : 's'} learned`, formula, units };
+}
+
+function computeCreative(min) {
+  const deficit = Math.max(0, BENCHMARKS.creative.benchmark - min);
+  const raw = deficit * 8;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 15-min making allotment × 8`
+    : 'creative output observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'creative', name: BENCHMARKS.creative.itemName, code: BENCHMARKS.creative.code,
+    inputText: `${min} min making`, formula, units };
+}
+
+function computeDeepWork(min) {
+  const deficit = Math.max(0, BENCHMARKS.deep_work.benchmark - min);
+  const raw = deficit * 2.5;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 60-min sustained-attention allotment × 2.5`
+    : 'sustained-attention allotment observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'deep_work', name: BENCHMARKS.deep_work.itemName, code: BENCHMARKS.deep_work.code,
+    inputText: `${min} min unbroken focus`, formula, units };
+}
+
+function computePages(n) {
+  const deficit = Math.max(0, BENCHMARKS.pages.benchmark - n);
+  const raw = deficit * 12;
+  const baseFormula = deficit > 0
+    ? `${deficit} short of 10-page reading allotment × 12`
+    : 'page-turning observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'pages', name: BENCHMARKS.pages.itemName, code: BENCHMARKS.pages.code,
+    inputText: `${n} page${n === 1 ? '' : 's'} read`, formula, units };
+}
+
+function computeForself(min) {
+  const deficit = Math.max(0, BENCHMARKS.forself.benchmark - min);
+  const raw = deficit * 5;
+  const baseFormula = deficit > 0
+    ? `${deficit} min below 30-min self-stewardship allotment × 5`
+    : 'self-stewardship allotment observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'forself', name: BENCHMARKS.forself.itemName, code: BENCHMARKS.forself.code,
+    inputText: `${min} min for yourself`, formula, units };
+}
+
+function computeDayoff(d) {
+  const excess = Math.max(0, d - BENCHMARKS.dayoff.benchmark);
+  let raw = excess * 8;
+  if (d > 30) raw += (d - 30) * 8;
+  const baseFormula = d > 30
+    ? `${excess}d past 14-day day-off allowance × 8, +escalation 30+`
+    : excess > 0
+      ? `${excess}d past 14-day day-off allowance × 8`
+      : 'rest allotment honored';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'dayoff', name: BENCHMARKS.dayoff.itemName, code: BENCHMARKS.dayoff.code,
+    inputText: `${d} day${d === 1 ? '' : 's'} since day off`, formula, units };
+}
+
+function computeAskedhelp(d) {
+  const excess = Math.max(0, d - BENCHMARKS.askedhelp.benchmark);
+  const raw = excess * 10;
+  const baseFormula = excess > 0
+    ? `${excess}d past 7-day help-request allowance × 10`
+    : 'request for assistance observed';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'askedhelp', name: BENCHMARKS.askedhelp.itemName, code: BENCHMARKS.askedhelp.code,
+    inputText: `${d} day${d === 1 ? '' : 's'} since asking for help`, formula, units };
+}
+
+function computeDoomscroll(min) {
+  const excess = Math.max(0, min - BENCHMARKS.doomscroll.benchmark);
+  let raw = excess * 2;
+  if (min > 60) raw += (min - 60) * 1.5;
+  const baseFormula = min > 60
+    ? `${excess} min past 10-min algorithmic-drift allotment × 2, +escalation 60+`
+    : excess > 0
+      ? `${excess} min past 10-min algorithmic-drift allotment × 2`
+      : 'feed exposure within tolerance';
+  const { units, formula } = capUnits(raw, baseFormula);
+  return { key: 'doomscroll', name: BENCHMARKS.doomscroll.itemName, code: BENCHMARKS.doomscroll.code,
+    inputText: `${min} min on feeds`, formula, units };
+}
+
 const FIELD_COMPUTE = {
-  sun:        computeSun,
-  called:     computeCalled,
-  water:      computeWater,
-  sit:        computeSit,
-  quiet:      computeQuiet,
-  bed:        computeBed,
-  meal:       computeMeal,
-  outside:    computeOutside,
-  laugh:      computeLaugh,
-  hugs:       computeHugs,
-  screens:    computeScreens,
-  caffeine:   computeCaffeine,
-  ground:     computeGround,
-  compliment: computeCompliment,
-  thanks:     computeThanks,
-  write:      computeWrite,
-  carry:      computeCarry,
-  read:       computeRead,
-  eyes:       computeEyes,
-  sleep:      computeSleep,
-  prep:       computePrep,
-  refuse:     computeRefuse,
+  sun:         computeSun,
+  called:      computeCalled,
+  water:       computeWater,
+  sit:         computeSit,
+  quiet:       computeQuiet,
+  bed:         computeBed,
+  meal:        computeMeal,
+  outside:     computeOutside,
+  laugh:       computeLaugh,
+  hugs:        computeHugs,
+  screens:     computeScreens,
+  caffeine:    computeCaffeine,
+  ground:      computeGround,
+  compliment:  computeCompliment,
+  thanks:      computeThanks,
+  write:       computeWrite,
+  carry:       computeCarry,
+  read:        computeRead,
+  eyes:        computeEyes,
+  sleep:       computeSleep,
+  prep:        computePrep,
+  refuse:      computeRefuse,
+  steps:       computeSteps,
+  stairs:      computeStairs,
+  floss:       computeFloss,
+  lift:        computeLift,
+  morning_sun: computeMorningSun,
+  phone_first: computePhoneFirst,
+  veg:         computeVeg,
+  fruit:       computeFruit,
+  processed:   computeProcessed,
+  drinks:      computeDrinks,
+  meal_pace:   computeMealPace,
+  breath:      computeBreath,
+  awe:         computeAwe,
+  meditate:    computeMeditate,
+  single:      computeSingle,
+  stranger:    computeStranger,
+  face_time:   computeFaceTime,
+  checkin:     computeCheckin,
+  seen_friend: computeSeenFriend,
+  play:        computePlay,
+  learn:       computeLearn,
+  creative:    computeCreative,
+  deep_work:   computeDeepWork,
+  pages:       computePages,
+  forself:     computeForself,
+  dayoff:      computeDayoff,
+  askedhelp:   computeAskedhelp,
+  doomscroll:  computeDoomscroll,
 };
 
 function computeAll(inputs) {
@@ -693,6 +1219,146 @@ function pickArchetype(items) {
       'The Over-Committed Diplomat of the Reluctant Sigh',
       'The Compliant Notary of the Unrefused Request',
     ],
+    steps: [
+      'The Sedentary Notary of the Adjacent Carpet',
+      'The Stationary Pilgrim of the Door-to-Desk Commute',
+      'The Step-Counter Refugee of the Three-Hundred Block',
+    ],
+    stairs: [
+      'The Elevator-Bound Magistrate of the Single Floor',
+      'The Vertical-Avoidant Custodian of the Ground Tier',
+      'The Escalator-Reliant Diplomat of the Lobby',
+    ],
+    floss: [
+      'The Thread-Forsaken Steward of the Back Molar',
+      'The Interdental Refugee of the Once-a-Week Reminder',
+      'The Dental Diplomat to a Lonely Floss Pick',
+    ],
+    lift: [
+      'The Resistance-Free Steward of the Unloaded Hour',
+      'The Sarcopenia-Adjacent Notary of the Empty Gym Bag',
+      'The Muscle-Forsaken Custodian of the Cushioned Chair',
+    ],
+    morning_sun: [
+      'The Dawn-Avoidant Custodian of the Closed Blind',
+      'The Sunless Magistrate of the Late Wake',
+      'The Pale Notary of the Pre-Coffee Hour',
+    ],
+    phone_first: [
+      'The Pre-Coffee Refresh-Tapper of the Bedside Glow',
+      'The Inbox-Bound Diplomat of the First Conscious Minute',
+      'The Glow-Greeted Magistrate of the Unrisen Sun',
+    ],
+    veg: [
+      'The Salad-Forsaken Steward of the Beige Plate',
+      'The Greens-Avoidant Notary of the Lunchtime Tray',
+      'The Vegetable Refugee of the Convenience Aisle',
+    ],
+    fruit: [
+      'The Fruit-Avoidant Custodian of the Empty Bowl',
+      'The Apple-Forsaken Diplomat of the Snack Drawer',
+      'The Pectin-Deficient Magistrate of the Beige Day',
+    ],
+    processed: [
+      'The Foil-Packet Notary of the Late-Afternoon Vending',
+      'The Snack-Saturated Diplomat of the Office Drawer',
+      'The Industrially-Inclined Custodian of the Crinkly Wrapper',
+    ],
+    drinks: [
+      'The Spirits-Saturated Magistrate of the Tuesday Pour',
+      'The Glass-Reaching Notary of the One More Round',
+      'The Cork-Pulling Diplomat of the After-Work Window',
+    ],
+    meal_pace: [
+      'The Hasty Forkkeeper of the Five-Minute Lunch',
+      'The Inhaled-Calorie Magistrate of the Standing Meal',
+      'The Tempo-Stricken Diplomat of the Working Bowl',
+    ],
+    breath: [
+      'The Shallow-Inhalation Magistrate of the Held-In Sigh',
+      'The Autopilot Custodian of the Unconscious Lung',
+      'The Breath-Forgetting Steward of the Tense Shoulder',
+    ],
+    awe: [
+      'The Wonder-Forsaken Magistrate of the Unraised Eye',
+      'The Sky-Avoidant Notary of the Phone-First Walk',
+      'The Marvel-Deficient Custodian of the Standard Tuesday',
+    ],
+    meditate: [
+      'The Stillness-Forsaken Magistrate of the Always-Buzzing Mind',
+      'The Cushion-Avoidant Notary of the Restless Hour',
+      'The Quiet-Hour Refugee of the Open Tab',
+    ],
+    single: [
+      'The Many-Tabbed Magistrate of the Sliced Attention',
+      'The Multi-Channel Diplomat of the Adjacent Notification',
+      'The Fragment-Stricken Custodian of the Half-Started Hour',
+    ],
+    stranger: [
+      'The Hood-Pulled Pilgrim of the Wordless Errand',
+      'The Earbudded Custodian of the Silent Cashier',
+      'The Eye-Avoidant Diplomat of the Shared Sidewalk',
+    ],
+    face_time: [
+      'The Screen-Mediated Magistrate of the Glowing Conversation',
+      'The In-Person Refugee of the Telephone Era',
+      'The Pixel-Bound Diplomat of the Paragraph Reply',
+    ],
+    checkin: [
+      'The Unprompted-Outreach Notary of the Quiet Inbox',
+      'The Hello-Forsaken Custodian of the Last-Read Receipt',
+      'The Backlog Diplomat of Unsent Affection',
+    ],
+    seen_friend: [
+      'The In-Person Pilgrim of the Postponed Coffee',
+      'The Calendar-Avoidant Magistrate of the Friendly Plan',
+      'The Embodiment-Refugee of the Group Chat',
+    ],
+    play: [
+      'The Goal-Bound Magistrate of the Unwasted Minute',
+      'The Productivity-Saturated Custodian of the Optimized Tuesday',
+      'The Frivolity-Avoidant Diplomat of the Scheduled Hour',
+    ],
+    learn: [
+      'The Unsurprised Magistrate of the Familiar Tuesday',
+      'The Curiosity-Forsaken Notary of the Settled Opinion',
+      'The Information-Saturated Custodian of the Already-Known',
+    ],
+    creative: [
+      'The Output-Forsaken Magistrate of the Empty Hand',
+      'The Make-Avoidant Custodian of the Idle Implement',
+      'The Consumption-Bound Diplomat of the Watched Tab',
+    ],
+    deep_work: [
+      'The Five-Minute Magistrate of the Sliced Hour',
+      'The Notification-Bound Custodian of the Half-Begun Task',
+      'The Tab-Switching Diplomat of the Unfinished Page',
+    ],
+    pages: [
+      'The Page-Forsaken Pilgrim of the Spineless Day',
+      'The Bookmark-Bound Magistrate of the Frozen Chapter',
+      'The Volume-Avoidant Custodian of the Half-Read Stack',
+    ],
+    forself: [
+      'The Self-Forsaken Magistrate of the Other-Bound Tuesday',
+      'The Allotment-Skipping Custodian of the Borrowed Hour',
+      'The Self-Stewardship Refugee of the Pleased Calendar',
+    ],
+    dayoff: [
+      'The Sabbath-Forsaken Magistrate of the Eternal Tuesday',
+      'The Day-Off-Avoidant Custodian of the Continuous Inbox',
+      'The Rest-Refugee of the Overstuffed Calendar',
+    ],
+    askedhelp: [
+      'The Self-Sufficient Magistrate of the Silent Question',
+      'The Help-Forsaken Custodian of the Solo Lift',
+      'The Aid-Avoidant Diplomat of the Quiet Struggle',
+    ],
+    doomscroll: [
+      'The Algorithmically-Anchored Magistrate of the Glowing Feed',
+      'The Scroll-Bound Custodian of the Bottomless Tab',
+      'The Feed-Saturated Diplomat of the Lost Half-Hour',
+    ],
   };
 
   const PAIR_OVERRIDES = {
@@ -776,28 +1442,56 @@ function decodeFragment(frag) {
 // ---------- Deterministic signatures (one per heaviest-line key) ----------
 
 const SIGNATURES = {
-  sun:        'A small portion of light has been requisitioned in your name today, and the Ministry has filed the deficit on parchment.',
-  called:     'Somewhere a phone rings in a kitchen you used to know the smell of, and nobody has logged the silence.',
-  water:      'The Ministry observed your throat and finds it dry; a memo to the kitchen has been issued in triplicate.',
-  sit:        'The chair has begun to mistake you for furniture, and the Ministry will not contradict the chair.',
-  quiet:      'The Ministry has registered a backlog of unmet quiet, and recommends one (1) unaccompanied minute before bed.',
-  bed:        'Your phone slept beside you again, and now both of you are tired in slightly different ways.',
-  meal:       'A meal occurred, the Ministry confirms, but no one in the room can describe the flavor.',
-  outside:    'The doorway has filed a missing-person report on your behalf; please respond to the open air at your earliest.',
-  laugh:      'A registered laugh has not crossed your lips in some time, and the Ministry has formally noted the silence.',
-  hugs:       'A small backlog of unembraced hellos has accumulated; the Ministry recommends gentle correction.',
-  screens:    'A great deal of light has crossed your face today and very little of it was the sun; the Ministry has noted the discrepancy.',
-  caffeine:   'Your bloodstream submits a request for a moment of stillness; the Ministry has forwarded it to the appropriate desk.',
-  ground:     'The earth files a polite reminder that it is still down there, and remains willing to be stood upon at your convenience.',
-  compliment: 'A compliment, fully drafted, sits unsent in the outbox of your throat; the Ministry recommends transmission before close of business.',
-  thanks:     'Several quiet thanks went unspoken today, and the Ministry has logged each one against the daily allotment.',
-  write:      'A pen, somewhere on your desk, awaits its formal commission; the Ministry believes its appointment is overdue.',
-  carry:      'You moved nothing of consequence today, and the Ministry observes that the world remained in roughly the same place.',
-  read:       'A page of plain paper has not turned beneath your hand in some time; the Ministry has been keeping count.',
-  eyes:       'Your gaze has settled at arm’s length for the better part of the day; the Ministry suggests a horizon, gently.',
-  sleep:      'Sleep was rationed last night and the Ministry has filed a complaint on your behalf with the appropriate hour.',
-  prep:       'No food passed under your own knife today, and the Ministry has discreetly noted the absence of crumbs.',
-  refuse:     'You declined nothing today, and the Ministry observes that the calendar therefore continues to fill.',
+  sun:         'A small portion of light has been requisitioned in your name today, and the Ministry has filed the deficit on parchment.',
+  called:      'Somewhere a phone rings in a kitchen you used to know the smell of, and nobody has logged the silence.',
+  water:       'The Ministry observed your throat and finds it dry; a memo to the kitchen has been issued in triplicate.',
+  sit:         'The chair has begun to mistake you for furniture, and the Ministry will not contradict the chair.',
+  quiet:       'The Ministry has registered a backlog of unmet quiet, and recommends one (1) unaccompanied minute before bed.',
+  bed:         'Your phone slept beside you again, and now both of you are tired in slightly different ways.',
+  meal:        'A meal occurred, the Ministry confirms, but no one in the room can describe the flavor.',
+  outside:     'The doorway has filed a missing-person report on your behalf; please respond to the open air at your earliest.',
+  laugh:       'The mirth ledger remained shamefully thin today, and the Ministry has noted each unthrown laugh against the daily allotment.',
+  hugs:        'A small backlog of unembraced hellos has accumulated; the Ministry recommends gentle correction.',
+  screens:     'A great deal of light has crossed your face today and very little of it was the sun; the Ministry has noted the discrepancy.',
+  caffeine:    'Your bloodstream submits a request for a moment of stillness; the Ministry has forwarded it to the appropriate desk.',
+  ground:      'The earth files a polite reminder that it is still down there, and remains willing to be stood upon at your convenience.',
+  compliment:  'A compliment, fully drafted, sits unsent in the outbox of your throat; the Ministry recommends transmission before close of business.',
+  thanks:      'Several quiet thanks went unspoken today, and the Ministry has logged each one against the daily allotment.',
+  write:       'A pen, somewhere on your desk, awaits its formal commission; the Ministry believes its appointment is overdue.',
+  carry:       'You moved nothing of consequence today, and the Ministry observes that the world remained in roughly the same place.',
+  read:        'A page of plain paper has not turned beneath your hand in some time; the Ministry has been keeping count.',
+  eyes:        'Your gaze has settled at arm’s length for the better part of the day; the Ministry suggests a horizon, gently.',
+  sleep:       'Sleep was rationed last night and the Ministry has filed a complaint on your behalf with the appropriate hour.',
+  prep:        'No food passed under your own knife today, and the Ministry has discreetly noted the absence of crumbs.',
+  refuse:      'You declined nothing today, and the Ministry observes that the calendar therefore continues to fill.',
+  steps:       'The Ministry’s pedometer rounded down on your behalf today; a memo has been issued reminding you that legs are, in principle, ambulatory.',
+  stairs:      'You have moved chiefly on the horizontal plane today; the Ministry observes that vertical travel remains, technically, an option.',
+  floss:       'A small diplomatic incident has been brewing in the back molars; the Ministry recommends a thread-based intervention before nightfall.',
+  lift:        'You moved nothing of muscular consequence today, and the Ministry notes that the world remained where you left it.',
+  morning_sun: 'The dawn was conducted without you; the Ministry has filed a polite suggestion that tomorrow you arrive in person.',
+  phone_first: 'The first cognitive transmission of your day arrived from a glowing rectangle, and the Ministry has noted the priority order.',
+  veg:         'No green of consequence has crossed your plate today, and the Ministry has discreetly logged the leafy absence.',
+  fruit:       'The fruit register remains unmoved today, and the Ministry awaits the arrival of an apple, a banana, or a representative thereof.',
+  processed:   'A small fleet of foil packets passed through you today, and the Ministry has noted the industrial provenance of each.',
+  drinks:      'Last night you toasted in excess of the Ministry-approved allotment, and a gentle reminder has been forwarded to your liver.',
+  meal_pace:   'Your last meal concluded with unseemly haste, and the Ministry has filed a note recommending a more deliberate fork.',
+  breath:      'Your respiratory practice was conducted on autopilot today; the Ministry suggests a deliberate inhalation before close of business.',
+  awe:         'Nothing struck you as quietly miraculous today, and the Ministry has filed the wonderment quota in arrears.',
+  meditate:    'No registered stillness was logged today, and the Ministry’s quiet-hours register remains, regrettably, blank.',
+  single:      'Your attention was sliced rather thin today, and the Ministry has declined to certify any uninterrupted minute.',
+  stranger:    'No casual hellos were exchanged with the world at large today, and the Ministry has noted the conspicuous social silence.',
+  face_time:   'Today’s conversations were conducted exclusively through screens, and the Ministry has formally registered the absence of vowels in shared air.',
+  checkin:     'A small constellation of friends remains untexted, and the Ministry has logged each unsent hello in good standing.',
+  seen_friend: 'You have not occupied the same room as a friend in some time, and the Ministry has been keeping a respectful tally.',
+  play:        'No purposeless minutes were declared today, and the Ministry has noted the absence of any activity undertaken for its own sake.',
+  learn:       'No new information of consequence was acquired today, and the Ministry has filed the curiosity quota in arrears.',
+  creative:    'Nothing was made by your hand today, and the Ministry observes the surrounding silence of unbuilt things.',
+  deep_work:   'Your attention was rented in five-minute increments to several tabs, and the Ministry has declined to consolidate.',
+  pages:       'Few pages were turned today under your supervision, and the Ministry has logged the unread chapters in a sealed envelope.',
+  forself:     'No portion of the day was reserved exclusively for your own person, and the Ministry has filed the omission with sympathy.',
+  dayoff:      'No genuine day of rest has been observed in some while, and the Ministry recommends one (1) before the next equinox.',
+  askedhelp:   'You have transacted today entirely under your own steam; the Ministry has noted the conspicuous absence of any request for assistance.',
+  doomscroll:  'A great deal of feed was consumed today, and the Ministry confirms that none of it was, in any meaningful sense, nourishing.',
 };
 
 function buildSignature(heaviest) {
