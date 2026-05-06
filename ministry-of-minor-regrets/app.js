@@ -985,7 +985,7 @@ function castVote(key, btn) {
   voteCounts[key] = (voteCounts[key] || 0) + 1;
   btn.disabled = true;
   btn.classList.add('voted');
-  btn.innerHTML = `COMMENDATION FILED ✓ <span class="vote-count">(${voteCounts[key].toLocaleString('en-US')})</span>`;
+  btn.innerHTML = `RECOMMENDED ✓ <span class="vote-count">(${voteCounts[key].toLocaleString('en-US')})</span>`;
   postVote(key);
 }
 
@@ -1084,7 +1084,7 @@ function renderStep(idx) {
 
   const votes = voteCountFor(step.key);
   const voted = votedThisRun.has(step.key);
-  const voteLabel = voted ? 'COMMENDATION FILED ✓' : 'FILE COMMENDATION';
+  const voteLabel = voted ? 'RECOMMENDED ✓' : '+ RECOMMEND THIS QUESTION';
 
   card.innerHTML = `
     <div class="step-num">DECLARATION ${String(idx + 1).padStart(2, '0')} OF ${String(total).padStart(2, '0')}</div>
@@ -1111,7 +1111,7 @@ function renderStep(idx) {
         data-key="${escapeHTML(step.key)}"
         ${voted ? 'disabled' : ''}
       >${voteLabel} <span class="vote-count">(${votes.toLocaleString('en-US')})</span></button>
-      <span class="step-vote-hint">Endorse this declaration; popular ones surface more in future audits.</span>
+      <span class="step-vote-hint">Optional · biases this question to appear more often in future audits.</span>
     </div>
   `;
 
