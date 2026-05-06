@@ -149,14 +149,22 @@ function startPull(x, y) {
     snapStartT: 0,
     sustainT: 0,
     bornAt: performance.now(),
+    startLengthPx: 0,
   };
+  // Record length at touchdown so we can score "elongation" (delta), not the
+  // absolute strand length. A bare tap without a drag = 0 elongation, which
+  // app.js's `<0.4cm` noise filter then discards. Without this, tapping
+  // anywhere creates a strand of length=tap-distance-from-top and burns one
+  // of the user's three pulls instantly.
+  strand.startLengthPx = currentLengthPx(strand);
   pulling = true;
 }
 
 function endPull(snapped) {
   if (!strand) return;
   const lenPx = currentLengthPx(strand);
-  const cm = pxToCm(lenPx);
+  const elongPx = Math.max(0, lenPx - (strand.startLengthPx || 0));
+  const cm = pxToCm(elongPx);
   pulling = false;
 
   if (snapped) {
@@ -307,9 +315,12 @@ function tick(now) {
   if (ghost) drawGhostStrands(ctx, ghost, cssW, cssH, now, PX_PER_CM);
   if (strand) drawStrand(ctx, strand, cssW, { maxStrain: maxStrainOf(strand) });
 
-  // Push readout (cm) to app.
+  // Push readout (cm) to app — elongation from touchdown, not absolute strand
+  // length, so the readout matches what gets recorded as the pull score.
   if (cb.onTickReadout && strand && !strand.recoiling) {
-    const cm = pxToCm(currentLengthPx(strand));
+    const lenPx = currentLengthPx(strand);
+    const elongPx = Math.max(0, lenPx - (strand.startLengthPx || 0));
+    const cm = pxToCm(elongPx);
     const snapping = strand.snapStartT > 0 && !strand.snapped;
     cb.onTickReadout(cm, snapping);
   }
