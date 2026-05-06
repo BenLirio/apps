@@ -9,7 +9,7 @@
 
 import { connect, setHandlers, tap, decodeBoard } from './net.js';
 import {
-  initBoard, setBoard, setPixel, getPixel, getTarget, clearTarget, PALETTE
+  initBoard, setBoard, setPixel, getPixel, getTarget, setTarget, clearTarget, PALETTE
 } from './loop.js';
 
 // ── Session state ──────────────────────────────────────────────
@@ -184,6 +184,23 @@ function bindUI() {
   $('steward-close').addEventListener('click', () => {
     $('steward-modal').hidden = true;
   });
+  // Nudge dpad — lets the user fine-tune the target pixel by ±1 cell after a
+  // rough tap. At scale=1 each cell is only a few pixels wide so a fingertip
+  // can't always land on the exact one.
+  const nudgeMap = {
+    'nudge-up':    [0, -1],
+    'nudge-down':  [0,  1],
+    'nudge-left':  [-1, 0],
+    'nudge-right': [ 1, 0],
+  };
+  for (const id in nudgeMap) {
+    $(id).addEventListener('click', () => {
+      const t = getTarget(); if (!t) return;
+      const [dx, dy] = nudgeMap[id];
+      setTarget(t.x + dx, t.y + dy);
+      refreshCommitRow();
+    });
+  }
 }
 
 function onTargetSelected(t) {
@@ -194,14 +211,19 @@ function refreshCommitRow() {
   const t = getTarget();
   const btn = $('commit-btn');
   const cancel = $('cancel-btn');
+  const nudgeRow = $('nudge-row');
+  const nudgeCoord = $('nudge-coord');
   const cooling = Date.now() < cooldownEndsAt;
   if (!t) {
     btn.disabled = true;
     btn.textContent = 'tap a pixel to pick a target';
     cancel.hidden = true;
+    nudgeRow.hidden = true;
     return;
   }
   cancel.hidden = false;
+  nudgeRow.hidden = false;
+  nudgeCoord.textContent = `${t.x},${t.y}`;
   if (cooling) {
     btn.disabled = true;
     const s = Math.ceil((cooldownEndsAt - Date.now()) / 1000);

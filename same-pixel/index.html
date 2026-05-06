@@ -68,8 +68,16 @@
       </div>
     </div>
     <div class="board-help" id="board-help">
-      drag to pan · pinch or double-tap to zoom · tap a pixel to claim it
+      tap a pixel · nudge with arrows to fine-tune · pinch or double-tap to zoom
     </div>
+  </section>
+
+  <section class="nudge" id="nudge-row" hidden aria-label="fine-tune target">
+    <button class="nudge-btn nudge-up" id="nudge-up" aria-label="nudge target up">↑</button>
+    <button class="nudge-btn nudge-left" id="nudge-left" aria-label="nudge target left">←</button>
+    <span class="nudge-coord" id="nudge-coord">—</span>
+    <button class="nudge-btn nudge-right" id="nudge-right" aria-label="nudge target right">→</button>
+    <button class="nudge-btn nudge-down" id="nudge-down" aria-label="nudge target down">↓</button>
   </section>
 
   <section class="commit" id="commit-row">

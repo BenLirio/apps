@@ -184,6 +184,50 @@ body {
   font-style: italic;
 }
 
+/* —— nudge dpad ——————————————————————————————————— */
+
+.nudge {
+  display: grid;
+  grid-template-columns: 48px 48px 48px;
+  grid-template-rows: 48px 48px 48px;
+  gap: 4px;
+  justify-content: center;
+  margin: 0 auto 14px;
+  width: max-content;
+}
+.nudge[hidden] { display: none; }
+.nudge-btn {
+  border: 2px solid var(--ink);
+  background: var(--paper-2);
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 0;
+  color: var(--ink);
+}
+.nudge-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.nudge-up    { grid-column: 2; grid-row: 1; }
+.nudge-left  { grid-column: 1; grid-row: 2; }
+.nudge-coord {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  background: var(--ink);
+  color: var(--paper);
+  letter-spacing: 0.05em;
+}
+.nudge-right { grid-column: 3; grid-row: 2; }
+.nudge-down  { grid-column: 2; grid-row: 3; }
+
 /* —— commit row ——————————————————————————————————— */
 
 .commit {

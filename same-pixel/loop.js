@@ -107,6 +107,17 @@ export function getTarget() {
   return target;
 }
 
+// Set the target programmatically (used by the nudge dpad in app.js so users
+// can fine-tune the exact pixel after a rough tap — at scale=1 each cell is
+// only ~2.8px wide, smaller than a fingertip).
+export function setTarget(x, y) {
+  const cx = Math.max(0, Math.min(N - 1, x));
+  const cy = Math.max(0, Math.min(N - 1, y));
+  target = { x: cx, y: cy };
+  onTarget(target);
+  updateCrosshair();
+}
+
 // — Render —
 
 function drawBoard() {

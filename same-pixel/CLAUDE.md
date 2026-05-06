@@ -7,9 +7,9 @@ A 200×200 shared wall. One tap a minute, server-enforced. The board never reset
 - `index.html` — DOM + share-preview meta + ES module entry
 - `base.css` — DO NOT EDIT. Byte-copied from `infrastructure/styles/base.css`.
 - `style.css` — aesthetic: **risograph zine print, cursed pastels, hand-stamped chrome (Special Elite + VT323)**. Owns palette CSS vars `--c0..--c7` (must match `loop.js` PALETTE array index-for-index).
-- `app.js` — entry point: imports `net.js` + `loop.js`, manages session state (myColor, myPixels, longestHold, nemesis counts), wires palette / chips / commit / steward modal, exposes `window.share`.
+- `app.js` — entry point: imports `net.js` + `loop.js`, manages session state (myColor, myPixels, longestHold, nemesis counts), wires palette / chips / commit / nudge dpad / steward modal, exposes `window.share`.
 - `net.js` — WebSocket protocol: `pixel_join` / `pixel_tap` / `pixel_update` / `pixel_snapshot` / `pixel_cooldown_ack`. Server (`infrastructure/aws-multiplayer/message.js`) is authoritative for cooldown and pixel state.
-- `loop.js` — board mirror (Uint8Array(40000)), canvas render via `putImageData`, pan/pinch/double-tap zoom, target-pick (sets crosshair + emits to app.js).
+- `loop.js` — board mirror (Uint8Array(40000)), canvas render via `putImageData`, pan/pinch/double-tap zoom, target-pick (sets crosshair + emits to app.js). Exports `setTarget(x,y)` for the nudge dpad to fine-tune the active target by ±1 cell.
 - `feedback.js` — DO NOT EDIT. Byte-copied.
 - `og.jpg` — share-preview riso mosaic.
 
