@@ -620,72 +620,18 @@ body {
 #story-so-far::before { content: '“'; opacity: 0.6; }
 #story-so-far::after  { content: '”'; opacity: 0.6; }
 
-#crises-instructions {
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 14px;
-  color: var(--ink);
-  text-align: center;
-  padding: 0 8px;
-}
-
-/* ── CRISIS CARDS ─────────────────────────────────────────────────── */
-#crises-list {
+/* ── CRISIS CARD ───────────────────────────────────────────────────── */
+#crisis-stage {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .crisis-card {
   position: relative;
-  background: var(--parchment-2);
-  border: 1px solid var(--rule);
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.15s, opacity 0.15s, box-shadow 0.15s;
-}
-
-@media (hover: hover) {
-  .crisis-card:hover {
-    background: var(--parchment-3);
-  }
-}
-
-.crisis-card.selected {
   background: var(--parchment-1);
-  border-color: var(--ink);
+  border: 1px solid var(--ink);
+  padding: 12px 14px;
   box-shadow: 0 0 0 1px var(--gold-soft) inset, 0 4px 12px var(--shadow);
-  cursor: default;
-}
-
-.crisis-card.faded {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.crisis-card.brewing {
-  border-color: var(--illum-red);
-}
-
-.crisis-card.brewing::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(168,48,48,0.05) 8px 12px);
-  pointer-events: none;
-}
-
-.crisis-age-badge {
-  position: absolute;
-  top: -10px;
-  right: 10px;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  background: var(--illum-red);
-  color: var(--parchment-1);
-  padding: 3px 8px;
-  border: 1px solid var(--illum-red-2);
 }
 
 .crisis-title {
@@ -783,25 +729,6 @@ body {
 
 .cost-row .pos { color: #2d7a3a; }
 .cost-row .neg { color: var(--illum-red); }
-
-.crisis-back-btn {
-  grid-column: 1 / -1;
-  font-family: 'EB Garamond', Georgia, serif;
-  font-style: italic;
-  font-size: 12px;
-  background: transparent;
-  color: var(--ink-soft);
-  border: none;
-  padding: 4px 0;
-  cursor: pointer;
-  margin-top: 2px;
-  text-decoration: underline;
-  text-decoration-color: rgba(138, 111, 72, 0.4);
-}
-
-.crisis-back-btn:hover {
-  color: var(--ink);
-}
 
 #resolution-line {
   font-family: 'EB Garamond', Georgia, serif;

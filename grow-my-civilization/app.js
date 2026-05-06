@@ -1,7 +1,6 @@
-// Grow My Civilization — turn-based saga with Eurogame mechanics:
+// Grow My Civilization — turn-based saga.
 // (M1) Two-resource economy: every choice trades Stability ↔ Ambition.
-// (M2) Three-crisis draft per chapter: pick one to engage; the others age and
-//      auto-consume into a stability hit if left festering.
+// (M2) One scenario per chapter: see what happened, pick how to deal with it.
 // (M5) Player-chosen Legacy Goal at start: Long Dynasty / Pinnacle / Glorious Pyre.
 //      Verdict is judged against the chosen goal, not generic "how long".
 
@@ -116,7 +115,7 @@ function generateCivName() {
 
 // ── Game State ────────────────────────────────────────────────────────────────
 let civName = '';
-let phase = 'setup'; // setup | thinking | crisis_select | resolving | verdict
+let phase = 'setup'; // setup | thinking | choosing | resolving | verdict
 let legacyGoal = 'long_dynasty';
 
 let stats = {
@@ -131,9 +130,8 @@ let peakAmbition = 40;
 let peakEra = 0;
 
 let chapter = 0;
-let chronicle = [];                // [{ crisisTitle, crisisDescription, choiceLabel, narrative, chapter, era, engaged, statDelta }]
-let activeCrises = [];             // up to 3 face-up crisis objects
-let selectedCrisisIdx = null;      // which crisis card is currently expanded
+let chronicle = [];                // [{ crisisTitle, crisisDescription, choiceLabel, narrative, chapter, era, statDelta, legendary, twist }]
+let currentCrisis = null;          // the single active scenario for this chapter
 
 let gameOver = false;
 let collapseReason = '';
@@ -232,22 +230,17 @@ function renderGoalPicker() {
 }
 
 // ── AI: Crisis Generation ─────────────────────────────────────────────────────
-async function fetchCrises(n) {
+async function fetchCrisis() {
   const recent = chronicle.slice(-3).map(c => {
-    if (!c.engaged) return `'${c.crisisTitle}' — left untended`;
     const verb = String(c.choiceLabel || '').toLowerCase();
     return `'${c.crisisTitle}' → they ${verb}`;
   }).join('; ') || 'this is the first chapter';
-
-  const pending = activeCrises.length
-    ? activeCrises.map(c => `'${c.title}'${c.age ? ' (brewing)' : ''}`).join(', ')
-    : 'none';
 
   const eraName = ERAS[stats.era].name;
 
   const sys = `You write crisis cards for a silly civilization-building game. The civilization is "${civName}", currently in the ${eraName}. Output ONLY valid JSON.
 
-Generate ${n} crisis card(s). The vibe is STUPID SIMPLE, HILARIOUS, AND FUN. Plainspoken modern English. Absurd situations, dumb-funny choices. Think SpongeBob meets history class — not folk-saga, not literary.
+Generate 1 crisis card. The vibe is STUPID SIMPLE, HILARIOUS, AND FUN. Plainspoken modern English. Absurd situations, dumb-funny choices. Think SpongeBob meets history class — not folk-saga, not literary.
 
 Each crisis has:
 - title: 2-6 words, Title Case. Plain and weirdly specific ("A Cow Won't Stop Staring At The King" / "Everyone's Hat Is Wrong Now"). NO archaic words. NO "Of Velm" or other made-up proper nouns. NO solemn reckonings.
@@ -280,20 +273,17 @@ Voice rules — STRICT:
   const user = `Stability: ${stats.stability}/100. Ambition: ${stats.ambition}/100. Era: ${eraName}. Chapter ${chapter + 1}.
 
 Recent chapters: ${recent}.
-Crises already brewing on the board (do NOT repeat these — generate fresh ones): ${pending}.
 
-Generate ${n} new crisis(es). Respond with JSON exactly matching:
+Generate 1 new crisis (do NOT repeat any of the recent ones). Respond with JSON exactly matching:
 {
-  "crises": [
-    {
-      "title": "...",
-      "description": "...",
-      "choices": [
-        { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "...", "legendary": false, "twist": "" },
-        { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "...", "legendary": false, "twist": "" }
-      ]
-    }
-  ]
+  "crisis": {
+    "title": "...",
+    "description": "...",
+    "choices": [
+      { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "...", "legendary": false, "twist": "" },
+      { "label": "...", "stability": <int -25..25>, "ambition": <int -25..25>, "narrative": "...", "legendary": false, "twist": "" }
+    ]
+  }
 }`;
 
   const body = {
@@ -316,10 +306,10 @@ Generate ${n} new crisis(es). Respond with JSON exactly matching:
   if (!resp.ok) throw new Error('ai_http_' + resp.status);
   const data = await resp.json();
   const parsed = JSON.parse(data.content);
-  if (!parsed || !Array.isArray(parsed.crises)) throw new Error('ai_bad_shape');
+  if (!parsed || !parsed.crisis) throw new Error('ai_bad_shape');
 
-  const sanitized = parsed.crises.map(sanitizeCrisis).filter(Boolean);
-  if (sanitized.length === 0) throw new Error('ai_empty');
+  const sanitized = sanitizeCrisis(parsed.crisis);
+  if (!sanitized) throw new Error('ai_empty');
   return sanitized;
 }
 
@@ -341,7 +331,6 @@ function sanitizeCrisis(raw) {
     id: 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
     title: titleCaseClip(String(raw.title || 'A Reckoning'), 50),
     description: clipSentence(String(raw.description || 'A choice is upon you.'), 160),
-    age: 0,
     choices
   };
 }
@@ -477,21 +466,14 @@ const FALLBACK_POOL = [
   }
 ];
 
-function fallbackCrises(n) {
-  const out = [];
-  const pool = FALLBACK_POOL.slice();
-  for (let i = 0; i < n; i++) {
-    const pick = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-    if (!pick) break;
-    out.push({
-      id: 'fc' + Date.now().toString(36) + i,
-      title: pick.title,
-      description: pick.description,
-      age: 0,
-      choices: pick.choices.map(c => ({ ...c }))
-    });
-  }
-  return out;
+function fallbackCrisis() {
+  const pick = FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)];
+  return {
+    id: 'fc' + Date.now().toString(36),
+    title: pick.title,
+    description: pick.description,
+    choices: pick.choices.map(c => ({ ...c }))
+  };
 }
 
 // ── Start Game ────────────────────────────────────────────────────────────────
@@ -507,8 +489,7 @@ function startGame() {
   peakStability = 60; peakAmbition = 40; peakEra = 0;
   chapter = 0;
   chronicle = [];
-  activeCrises = [];
-  selectedCrisisIdx = null;
+  currentCrisis = null;
   gameOver = false;
   collapseReason = '';
   goalMetAt = null;
@@ -535,9 +516,9 @@ function setHeader() {
 
   const recapEl = document.getElementById('story-so-far');
   if (recapEl) {
-    const lastEngaged = [...chronicle].reverse().find(c => c.engaged);
-    if (lastEngaged) {
-      recapEl.textContent = lastEngaged.narrative;
+    const last = chronicle[chronicle.length - 1];
+    if (last) {
+      recapEl.textContent = last.narrative;
       recapEl.style.display = 'block';
     } else {
       recapEl.textContent = '';
@@ -557,19 +538,13 @@ async function nextChapter() {
   setHeader();
   showThinking();
 
-  // Refill activeCrises to 3.
-  const need = 3 - activeCrises.length;
-  if (need > 0) {
-    let fresh;
-    try {
-      fresh = await fetchCrises(need);
-    } catch (e) {
-      fresh = fallbackCrises(need);
-    }
-    activeCrises.push(...fresh);
+  try {
+    currentCrisis = await fetchCrisis();
+  } catch (e) {
+    currentCrisis = fallbackCrisis();
   }
 
-  presentCrises();
+  presentCrisis();
 }
 
 function showThinking() {
@@ -578,81 +553,47 @@ function showThinking() {
   document.getElementById('decision-thinking').style.display = 'flex';
 }
 
-function presentCrises() {
-  phase = 'crisis_select';
-  selectedCrisisIdx = null;
+function presentCrisis() {
+  phase = 'choosing';
   document.getElementById('decision-thinking').style.display = 'none';
   document.getElementById('decision-ready').style.display = 'flex';
   setHeader();
-  renderCrisesList();
+  renderCrisisStage();
   renderResolutionLine('');
 }
 
-function renderCrisesList() {
-  const wrap = document.getElementById('crises-list');
+function renderCrisisStage() {
+  const wrap = document.getElementById('crisis-stage');
   wrap.innerHTML = '';
-  activeCrises.forEach((c, idx) => {
-    const card = document.createElement('div');
-    const isSelected = selectedCrisisIdx === idx;
-    const isFaded = selectedCrisisIdx !== null && !isSelected;
-    card.className = 'crisis-card' +
-      (isSelected ? ' selected' : '') +
-      (isFaded ? ' faded' : '') +
-      (c.age >= 1 ? ' brewing' : '');
-    card.dataset.idx = String(idx);
+  if (!currentCrisis) return;
 
-    const ageBadge = c.age >= 1 ? `<div class="crisis-age-badge">${c.age >= 2 ? 'DIRE' : 'BREWING'}</div>` : '';
+  const card = document.createElement('div');
+  card.className = 'crisis-card';
+  card.innerHTML = `
+    <div class="crisis-title">${escapeHtml(currentCrisis.title)}</div>
+    <div class="crisis-description">${escapeHtml(currentCrisis.description)}</div>
+    <div class="crisis-choices"></div>
+  `;
 
-    card.innerHTML = `
-      ${ageBadge}
-      <div class="crisis-title">${escapeHtml(c.title)}</div>
-      <div class="crisis-description">${escapeHtml(c.description)}</div>
-      <div class="crisis-choices" ${isSelected ? '' : 'style="display:none"'}></div>
+  const cwrap = card.querySelector('.crisis-choices');
+  currentCrisis.choices.forEach((ch, ci) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `
+      <div class="choice-label">${escapeHtml(ch.label)}</div>
+      <div class="choice-cost">
+        <div class="cost-row"><span class="${ch.stability >= 0 ? 'pos' : 'neg'}">${signed(ch.stability)}</span> Stability</div>
+        <div class="cost-row"><span class="${ch.ambition >= 0 ? 'pos' : 'neg'}">${signed(ch.ambition)}</span> Ambition</div>
+      </div>
     `;
-
-    if (selectedCrisisIdx === null) {
-      card.addEventListener('click', () => {
-        if (phase !== 'crisis_select') return;
-        selectedCrisisIdx = idx;
-        renderCrisesList();
-      });
-    }
-
-    if (isSelected) {
-      const cwrap = card.querySelector('.crisis-choices');
-      c.choices.forEach((ch, ci) => {
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn';
-        btn.innerHTML = `
-          <div class="choice-label">${escapeHtml(ch.label)}</div>
-          <div class="choice-cost">
-            <div class="cost-row"><span class="${ch.stability >= 0 ? 'pos' : 'neg'}">${signed(ch.stability)}</span> Stability</div>
-            <div class="cost-row"><span class="${ch.ambition >= 0 ? 'pos' : 'neg'}">${signed(ch.ambition)}</span> Ambition</div>
-          </div>
-        `;
-        btn.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          if (phase !== 'crisis_select') return;
-          resolveChoice(idx, ci);
-        });
-        cwrap.appendChild(btn);
-      });
-
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'crisis-back-btn';
-      back.textContent = '← Choose a different crisis';
-      back.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (phase !== 'crisis_select') return;
-        selectedCrisisIdx = null;
-        renderCrisesList();
-      });
-      cwrap.appendChild(back);
-    }
-
-    wrap.appendChild(card);
+    btn.addEventListener('click', () => {
+      if (phase !== 'choosing') return;
+      resolveChoice(ci);
+    });
+    cwrap.appendChild(btn);
   });
+
+  wrap.appendChild(card);
 }
 
 function signed(n) { return n > 0 ? `+${n}` : `${n}`; }
@@ -705,14 +646,13 @@ function spawnStatDelta(which, delta) {
   setTimeout(() => { try { pill.remove(); } catch (_) {} }, 1600);
 }
 
-function resolveChoice(crisisIdx, choiceIdx) {
-  if (phase !== 'crisis_select') return;
+function resolveChoice(choiceIdx) {
+  if (phase !== 'choosing') return;
   phase = 'resolving';
 
-  const crisis = activeCrises[crisisIdx];
+  const crisis = currentCrisis;
   const choice = crisis.choices[choiceIdx];
 
-  // Apply the engaged choice's deltas.
   const beforeEra = stats.era;
   applyChoiceDeltas(choice);
 
@@ -723,7 +663,6 @@ function resolveChoice(crisisIdx, choiceIdx) {
     narrative: choice.narrative,
     chapter: chapter + 1,
     era: stats.era,
-    engaged: true,
     statDelta: { stability: choice.stability, ambition: choice.ambition },
     legendary: choice.legendary === true,
     twist: choice.twist || ''
@@ -734,36 +673,9 @@ function resolveChoice(crisisIdx, choiceIdx) {
   spawnStatDelta('stability', choice.stability);
   spawnStatDelta('ambition',  choice.ambition);
 
-  // Age the unengaged crises; auto-consume any that hit age 2.
-  const survivors = [];
-  const consumed = [];
-  activeCrises.forEach((c, i) => {
-    if (i === crisisIdx) return;
-    c.age = (c.age || 0) + 1;
-    if (c.age >= 2) {
-      // Festered too long → fixed stability hit.
-      const penalty = 14;
-      stats.stability = clamp(stats.stability - penalty, 0, 100);
-      consumed.push(c);
-      chronicle.push({
-        crisisTitle: c.title,
-        crisisDescription: c.description,
-        choiceLabel: '(left to fester)',
-        narrative: `${c.title} festered untended; the people suffered.`,
-        chapter: chapter + 1,
-        era: stats.era,
-        engaged: false,
-        statDelta: { stability: -penalty, ambition: 0 }
-      });
-    } else {
-      survivors.push(c);
-    }
-  });
-  activeCrises = survivors;
-
+  currentCrisis = null;
   chapter++;
 
-  // Era-up trumpet
   if (stats.era > beforeEra) {
     spawnTriumphs();
   }
@@ -772,11 +684,7 @@ function resolveChoice(crisisIdx, choiceIdx) {
   checkGoalMet();
   updateHUD();
 
-  // Show resolution narrative briefly inside the panel, then advance.
   let resolutionText = `They ${choice.label.toLowerCase()} — ${choice.narrative}`;
-  if (consumed.length) {
-    resolutionText += `  Meanwhile, ${consumed.map(c => `'${c.title.toLowerCase()}' festered untended.`).join(' ')}`;
-  }
   if (stats.era > beforeEra) {
     resolutionText += `  An age turns: the ${ERAS[stats.era].name} begins.`;
   }
@@ -785,7 +693,6 @@ function resolveChoice(crisisIdx, choiceIdx) {
     legendary: choice.legendary === true
   });
 
-  // Twists/legends earn a longer dwell so the user can read them.
   const dwell = (choice.twist || choice.legendary) ? 3600 : 2200;
   setTimeout(() => {
     if (gameOver) return;
@@ -1127,9 +1034,7 @@ function showVerdict() {
       const stripDot = s => String(s || '').trim().replace(/[.?!]+$/, '');
       const title = stripDot(d.crisisTitle);
       const flavor = stripDot(d.narrative);
-      const verb = d.engaged
-        ? `they chose to ${(d.choiceLabel || '').toLowerCase()}`
-        : `the people did nothing`;
+      const verb = `they chose to ${(d.choiceLabel || '').toLowerCase()}`;
       return `${title} — ${verb}; ${flavor}.`;
     });
     const closer = collapseReason
@@ -1139,7 +1044,7 @@ function showVerdict() {
     // Legends Remembered — only the choices the chronicler flagged
     // legendary. Surfaced as the bragging-rights highlight reel for the
     // share card; absent entirely if the run had no legends.
-    const legends = chronicle.filter(d => d.legendary && d.engaged);
+    const legends = chronicle.filter(d => d.legendary);
     if (legends.length) {
       const items = legends.map(d => {
         const title = String(d.crisisTitle || '').trim().replace(/[.?!]+$/, '');
@@ -1153,7 +1058,7 @@ function showVerdict() {
   }
 
   const statsEl = document.getElementById('verdict-stats');
-  const legendCount = chronicle.filter(d => d.legendary && d.engaged).length;
+  const legendCount = chronicle.filter(d => d.legendary).length;
   const rows = [
     ['Chapters told',     chapter],
     ['Reached era',       ERAS[stats.era].name],
@@ -1180,7 +1085,7 @@ function share() {
   const goalMet = goal.isMet();
   const eraName = ERAS[stats.era].name.toLowerCase();
   const verdict = goalMet ? `achieved the ${goal.short.toLowerCase()}` : `fell short of the ${goal.short.toLowerCase()}`;
-  const legendCount = chronicle.filter(d => d.legendary && d.engaged).length;
+  const legendCount = chronicle.filter(d => d.legendary).length;
   const legendTag = legendCount === 0 ? '' : (legendCount === 1 ? ', one legend written' : `, ${legendCount} legends written`);
   const txt = `The saga of ${civName}: ${chapter} chapters, the ${eraName}, ${verdict}${legendTag}. — benlirio.com/apps/grow-my-civilization/`;
   if (navigator.share) {
