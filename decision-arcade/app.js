@@ -150,7 +150,48 @@ function loadRound(idx) {
   });
 
   document.getElementById('hesitate-flash').classList.remove('show');
-  startTimer();
+
+  if (idx === 0) {
+    // Round-1 pre-roll: brief countdown overlay re-stating the mechanic.
+    // Fixes "instructions can be missed → first round is confusing" feedback
+    // by guaranteeing the rules land just-in-time, even if the intro was
+    // tapped through. Subsequent rounds skip this and start immediately.
+    showPreRoll(startTimer);
+  } else {
+    startTimer();
+  }
+}
+
+function showPreRoll(then) {
+  const preroll = document.getElementById('preroll');
+  const cueEl = document.getElementById('preroll-cue');
+  preroll.classList.add('show');
+  preroll.setAttribute('aria-hidden', 'false');
+
+  document.querySelectorAll('.pic-btn').forEach(b => { b.disabled = true; });
+
+  // Pin the timer bar full so the player can see the lane that's about to
+  // run — reinforces "3.5 seconds per round" visually before the clock starts.
+  const bar = document.getElementById('timer-bar');
+  bar.classList.remove('danger');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  document.getElementById('timer-seconds').textContent = '3.5s';
+
+  let n = 3;
+  cueEl.textContent = String(n);
+  const tick = setInterval(() => {
+    n--;
+    if (n > 0) {
+      cueEl.textContent = String(n);
+    } else {
+      clearInterval(tick);
+      preroll.classList.remove('show');
+      preroll.setAttribute('aria-hidden', 'true');
+      document.querySelectorAll('.pic-btn').forEach(b => { b.disabled = false; });
+      then();
+    }
+  }, 600);
 }
 
 function startTimer() {

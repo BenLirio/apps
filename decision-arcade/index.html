@@ -74,6 +74,15 @@
 
     <!-- Game Screen -->
     <div id="screen-game" class="screen">
+      <!-- Round-1 pre-roll: a 1.8s countdown that re-states the mechanic
+           right before play, so users who tap "Begin" without reading the
+           intro instructions still get oriented before the clock starts. -->
+      <div id="preroll" class="preroll" aria-hidden="true">
+        <p class="preroll-eyebrow">Round 1 — get ready</p>
+        <p class="preroll-msg">Tap whichever picture <em>hits</em>.</p>
+        <p class="preroll-sub">3.5 seconds per round · don't think</p>
+        <p class="preroll-cue" id="preroll-cue">3</p>
+      </div>
       <div class="hud">
         <div class="hud-row">
           <div class="round-counter">
