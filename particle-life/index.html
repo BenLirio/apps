@@ -61,73 +61,76 @@
         <div id="ai-status" class="ai-status"></div>
       </div>
 
-      <div id="rules-section">
-        <div id="rules-caption">
-          <span class="caption-line">or tap a cell to flip: <span class="caption-attract">attract</span> / <span class="caption-ignore">ignore</span> / <span class="caption-repel">repel</span></span>
-          <span class="caption-line caption-sub">row colour acts on column colour</span>
-        </div>
-        <div id="rules-grid" aria-label="Force matrix: rows act on columns. Tap a cell to change."></div>
-      </div>
-
-      <div class="panel-row">
-        <label class="panel-label" for="select-spawn">spawn</label>
-        <select id="select-spawn">
-          <option value="scatter">scatter — evenly spread</option>
-          <option value="ball">ball — tight cluster</option>
-          <option value="ring">ring — hollow shell</option>
-          <option value="stripes">stripes — color bands</option>
-          <option value="sectors">sectors — pie slices</option>
-          <option value="clusters">clusters — separate blobs</option>
-        </select>
-      </div>
-
-      <div class="panel-row">
-        <label class="panel-label" for="select-topology">topology</label>
-        <select id="select-topology">
-          <option value="torus">torus — wrap at edges</option>
-          <option value="walls">walls — hard reflect</option>
-          <option value="void">void — drift off forever</option>
-          <option value="arena">arena — circular bounce</option>
-        </select>
-      </div>
-
-      <div class="panel-row">
-        <label class="panel-label" for="select-field">field</label>
-        <select id="select-field">
-          <option value="none">none — pure particle rules</option>
-          <option value="gravity">gravity well — centre pulls</option>
-          <option value="antigravity">anti-gravity — centre pushes</option>
-          <option value="vortex">vortex — tangential swirl</option>
-          <option value="waves">waves — standing ripples</option>
-          <option value="pole">dipole — N attracts, S repels</option>
-        </select>
-      </div>
-
-      <div class="panel-row">
-        <label class="panel-label" for="select-time">time</label>
-        <select id="select-time">
-          <option value="static">static — fixed rules</option>
-          <option value="pulse">pulse — breathes in and out</option>
-          <option value="drift">drift — rules morph slowly</option>
-          <option value="daynight">day/night — slow cycle</option>
-        </select>
-      </div>
-
-      <div class="panel-row">
-        <label class="panel-label" for="select-mouse">mouse</label>
-        <select id="select-mouse">
-          <option value="repel">repel — push away</option>
-          <option value="attract">attract — pull in</option>
-          <option value="spawn">spawn — drop particles</option>
-          <option value="infect">infect — convert type</option>
-          <option value="off">off — no interaction</option>
-        </select>
-      </div>
-
-      <div class="panel-row panel-buttons">
-        <button id="btn-sound-toggle" type="button" aria-pressed="true">sound: on</button>
+      <div class="panel-row panel-buttons quick-actions">
         <button id="btn-reset">respawn</button>
         <button id="btn-screenshot">screenshot</button>
+        <button id="btn-sound-toggle" type="button" aria-pressed="true">sound: on</button>
+      </div>
+
+      <button id="finetune-toggle" type="button" aria-expanded="false">fine-tune rules &amp; world</button>
+      <div id="finetune-body" hidden>
+        <div id="rules-section">
+          <div id="rules-caption">
+            <span class="caption-line">tap a cell to flip: <span class="caption-attract">attract</span> / <span class="caption-ignore">ignore</span> / <span class="caption-repel">repel</span></span>
+            <span class="caption-line caption-sub">row colour acts on column colour</span>
+          </div>
+          <div id="rules-grid" aria-label="Force matrix: rows act on columns. Tap a cell to change."></div>
+        </div>
+
+        <div class="panel-row">
+          <label class="panel-label" for="select-spawn">spawn</label>
+          <select id="select-spawn">
+            <option value="scatter">scatter — evenly spread</option>
+            <option value="ball">ball — tight cluster</option>
+            <option value="ring">ring — hollow shell</option>
+            <option value="stripes">stripes — color bands</option>
+            <option value="sectors">sectors — pie slices</option>
+            <option value="clusters">clusters — separate blobs</option>
+          </select>
+        </div>
+
+        <div class="panel-row">
+          <label class="panel-label" for="select-topology">topology</label>
+          <select id="select-topology">
+            <option value="torus">torus — wrap at edges</option>
+            <option value="walls">walls — hard reflect</option>
+            <option value="void">void — drift off forever</option>
+            <option value="arena">arena — circular bounce</option>
+          </select>
+        </div>
+
+        <div class="panel-row">
+          <label class="panel-label" for="select-field">field</label>
+          <select id="select-field">
+            <option value="none">none — pure particle rules</option>
+            <option value="gravity">gravity well — centre pulls</option>
+            <option value="antigravity">anti-gravity — centre pushes</option>
+            <option value="vortex">vortex — tangential swirl</option>
+            <option value="waves">waves — standing ripples</option>
+            <option value="pole">dipole — N attracts, S repels</option>
+          </select>
+        </div>
+
+        <div class="panel-row">
+          <label class="panel-label" for="select-time">time</label>
+          <select id="select-time">
+            <option value="static">static — fixed rules</option>
+            <option value="pulse">pulse — breathes in and out</option>
+            <option value="drift">drift — rules morph slowly</option>
+            <option value="daynight">day/night — slow cycle</option>
+          </select>
+        </div>
+
+        <div class="panel-row">
+          <label class="panel-label" for="select-mouse">mouse</label>
+          <select id="select-mouse">
+            <option value="repel">repel — push away</option>
+            <option value="attract">attract — pull in</option>
+            <option value="spawn">spawn — drop particles</option>
+            <option value="infect">infect — convert type</option>
+            <option value="off">off — no interaction</option>
+          </select>
+        </div>
       </div>
 
       <button id="advanced-toggle" type="button" aria-expanded="false">advanced</button>

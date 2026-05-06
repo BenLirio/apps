@@ -1115,6 +1115,25 @@
     });
   }
 
+  // Fine-tune block: rules grid + 5 dropdowns. Hidden by default — feedback
+  // round 2026-05-06 said the panel was "confusing and hard to use" with
+  // everything visible at once. AI prompt is the headline interaction;
+  // fine-tune is the optional power-user drawer.
+  const finetuneToggle = document.getElementById('finetune-toggle');
+  const finetuneBody = document.getElementById('finetune-body');
+  if (finetuneToggle && finetuneBody) {
+    finetuneToggle.addEventListener('click', function () {
+      const open = finetuneBody.hasAttribute('hidden') ? true : false;
+      if (open) {
+        finetuneBody.removeAttribute('hidden');
+        finetuneToggle.setAttribute('aria-expanded', 'true');
+      } else {
+        finetuneBody.setAttribute('hidden', '');
+        finetuneToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
   // ── Respawn / randomize ──────────────────────────────────────────────────────
   btnReset.addEventListener('click', function () {
     stopLoop();

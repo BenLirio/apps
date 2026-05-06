@@ -488,7 +488,8 @@ input[type="range"]::-moz-range-thumb {
   background: var(--neon-cyan); color: var(--bg); outline: none;
 }
 
-/* ── Advanced collapsible ── */
+/* ── Fine-tune + Advanced collapsibles (shared visual treatment) ── */
+#finetune-toggle,
 #advanced-toggle {
   display: block;
   width: 100%;
@@ -508,18 +509,26 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 6px;
 }
 
+#finetune-toggle::after,
 #advanced-toggle::after {
   content: ' ▾';
 }
 
+#finetune-toggle[aria-expanded="true"]::after,
 #advanced-toggle[aria-expanded="true"]::after {
   content: ' ▴';
 }
 
+/* Fine-tune is more important than "advanced" — surface it slightly louder
+   so users notice the rules-matrix entry point exists. */
+#finetune-toggle { opacity: 0.75; }
+
+#finetune-body,
 #advanced-body {
   padding-top: 6px;
 }
 
+#finetune-body[hidden],
 #advanced-body[hidden] {
   display: none;
 }
