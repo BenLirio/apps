@@ -288,6 +288,13 @@ body {
   flex-wrap: wrap;
   gap: 4px 10px;
 }
+.step-vote-btns {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+}
 .step-vote-btn {
   align-self: flex-start;
 }
@@ -565,6 +572,26 @@ body {
   opacity: 0.7;
 }
 .vote-btn.voted .vote-count { color: var(--ink-soft); }
+
+/* Downvote — same quiet text-link tier as recommend, just a different
+   verbal/symbol pairing. Active state uses stamp-red so the user
+   visibly registers their dissent without screaming for attention. */
+.vote-btn-down:hover:not(:disabled) {
+  color: var(--stamp-red);
+  border-bottom-color: var(--stamp-red);
+}
+.vote-btn-down.downvoted {
+  color: var(--stamp-red);
+  border-bottom-color: transparent;
+  opacity: 0.85;
+}
+.vote-btn-down.downvoted .vote-count { color: var(--stamp-red); opacity: 0.7; }
+/* When one side fires, the other locks out — keep it visible but inert
+   so the user sees what would have been the alternative. */
+.vote-btn.locked {
+  opacity: 0.4;
+  border-bottom-color: transparent;
+}
 
 .r-total {
   display: grid;

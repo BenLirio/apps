@@ -894,24 +894,35 @@ function hashStr(str) {
 // ---------- Community vote signal (declaration popularity) ----------
 //
 // We piggy-back on the shared `distribution` lambda (a slug-keyed bin
-// counter) under a separate slug so future hold-time histograms for this
-// app can coexist. Each declaration index maps to a unique 5-ms bin
-// (idx * 5), well inside the proxy's [0, 10000] ms range and 5-ms bin
-// width. POSTing a vote increments that bin; GET returns all bins, which
-// we read back into `voteCounts` keyed by declaration key.
+// counter) under TWO slugs — one for upvotes ("recommend"), one for
+// downvotes ("dumb question"). Each declaration index maps to a unique
+// 5-ms bin (idx * 5) within each slug, well inside the proxy's [0, 10000]
+// ms range and 5-ms bin width. POSTing a vote increments that bin; GET
+// returns all bins, which we read back into `voteCounts` / `downCounts`
+// keyed by declaration key.
 //
 // Selection at boot draws PER_RUN_STEPS declarations weighted by
-// (1 + voteCount), Laplace-smoothed so newly-added declarations still get
-// surfaced even at zero votes. Without replacement.
+// max(0.25, 1 + upvotes - downvotes). The 0.25 floor keeps a heavily
+// downvoted question rare but not extinct (so re-votes can still pull it
+// back), while still letting the community visibly punish dumb prompts.
+// Without replacement.
 
 const VOTE_ENDPOINT = 'https://7uhtm126ve.execute-api.us-east-1.amazonaws.com';
-const VOTE_SLUG = 'ministry-of-minor-regrets-votes';
+const VOTE_SLUG_UP = 'ministry-of-minor-regrets-votes';
+const VOTE_SLUG_DOWN = 'ministry-of-minor-regrets-downvotes';
 
 const voteCounts = {};
+const downCounts = {};
 const votedThisRun = new Set();
+// Per-key direction record so re-renders (back/next within the same run)
+// show the correct stamped label without needing to re-derive from DOM.
+const voteDirThisRun = {}; // key -> 'up' | 'down'
 
 function voteCountFor(key) {
   return voteCounts[key] || 0;
+}
+function downCountFor(key) {
+  return downCounts[key] || 0;
 }
 
 function declarationIndex(key) {
@@ -921,26 +932,32 @@ function declarationIndex(key) {
   return -1;
 }
 
-async function fetchVotes() {
+async function fetchOneSlug(slug, target) {
   try {
-    const r = await fetch(`${VOTE_ENDPOINT}/hold/${VOTE_SLUG}`, { method: 'GET' });
+    const r = await fetch(`${VOTE_ENDPOINT}/hold/${slug}`, { method: 'GET' });
     if (!r.ok) return;
     const data = await r.json();
     if (!data || !Array.isArray(data.bins)) return;
     for (const [bin, count] of data.bins) {
       const idx = Math.round(bin / 5);
       if (idx >= 0 && idx < ALL_DECLARATIONS.length) {
-        voteCounts[ALL_DECLARATIONS[idx].key] = count;
+        target[ALL_DECLARATIONS[idx].key] = count;
       }
     }
   } catch (_) {
-    // Proxy unreachable — selection falls back to uniform random and the
-    // receipt shows (0) for every declaration; user votes still POST OK
-    // when the network recovers.
+    // Proxy unreachable — selection falls back to uniform random; user
+    // votes still POST OK when the network recovers.
   }
 }
 
-function postVote(key) {
+async function fetchVotes() {
+  await Promise.all([
+    fetchOneSlug(VOTE_SLUG_UP, voteCounts),
+    fetchOneSlug(VOTE_SLUG_DOWN, downCounts),
+  ]);
+}
+
+function postVoteRaw(slug, key) {
   const idx = declarationIndex(key);
   if (idx < 0) return;
   const dur = idx * 5;
@@ -948,18 +965,21 @@ function postVote(key) {
     fetch(`${VOTE_ENDPOINT}/hold`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: VOTE_SLUG, durationMs: dur })
+      body: JSON.stringify({ slug, durationMs: dur })
     }).catch(() => {});
   } catch (_) { /* fire-and-forget */ }
 }
 
 // Weighted-without-replacement draw of PER_RUN_STEPS declarations.
-// weights[i] = 1 + voteCount[i] gives uniform random when all counts are
-// zero, and progressively biases toward popular declarations as community
-// votes accumulate.
+// weight = max(0.25, 1 + upvotes - downvotes). Uniform when all counts
+// are zero; biased toward popular declarations and away from
+// downvoted-as-dumb ones as votes accumulate. The 0.25 floor keeps a
+// heavily downvoted question rare but recoverable.
 function pickStepsFromVotes() {
   const candidates = ALL_DECLARATIONS.slice();
-  const weights = candidates.map(d => 1 + (voteCounts[d.key] || 0));
+  const weights = candidates.map(d =>
+    Math.max(0.25, 1 + (voteCounts[d.key] || 0) - (downCounts[d.key] || 0))
+  );
   const picked = [];
   for (let i = 0; i < PER_RUN_STEPS && candidates.length > 0; i++) {
     let total = 0;
@@ -977,16 +997,39 @@ function pickStepsFromVotes() {
   return picked;
 }
 
-// Shared cast-vote helper. Called from the in-flow vote button rendered
-// inside `renderStep`. Local optimistic increment + fire-and-forget POST.
-function castVote(key, btn) {
+// Cast an upvote ("recommend") on the current question. Local optimistic
+// increment + fire-and-forget POST. Recommend and downvote are mutually
+// exclusive within a single run (votedThisRun is shared).
+function castVote(key, upBtn, downBtn) {
   if (!key || votedThisRun.has(key)) return;
   votedThisRun.add(key);
+  voteDirThisRun[key] = 'up';
   voteCounts[key] = (voteCounts[key] || 0) + 1;
-  btn.disabled = true;
-  btn.classList.add('voted');
-  btn.innerHTML = `RECOMMENDED ✓ <span class="vote-count">(${voteCounts[key].toLocaleString('en-US')})</span>`;
-  postVote(key);
+  upBtn.disabled = true;
+  upBtn.classList.add('voted');
+  upBtn.innerHTML = `RECOMMENDED ✓ <span class="vote-count">(${voteCounts[key].toLocaleString('en-US')})</span>`;
+  if (downBtn) {
+    downBtn.disabled = true;
+    downBtn.classList.add('locked');
+  }
+  postVoteRaw(VOTE_SLUG_UP, key);
+}
+
+// Cast a downvote ("dumb question") on the current question. Same
+// optimistic + fire-and-forget pattern. Locks out recommend for this run.
+function castDownvote(key, downBtn, upBtn) {
+  if (!key || votedThisRun.has(key)) return;
+  votedThisRun.add(key);
+  voteDirThisRun[key] = 'down';
+  downCounts[key] = (downCounts[key] || 0) + 1;
+  downBtn.disabled = true;
+  downBtn.classList.add('downvoted');
+  downBtn.innerHTML = `FLAGGED DUMB ✓ <span class="vote-count">(${downCounts[key].toLocaleString('en-US')})</span>`;
+  if (upBtn) {
+    upBtn.disabled = true;
+    upBtn.classList.add('locked');
+  }
+  postVoteRaw(VOTE_SLUG_DOWN, key);
 }
 
 // ---------- Render the receipt ----------
@@ -1083,8 +1126,17 @@ function renderStep(idx) {
     ? `value="${existing}"` : '';
 
   const votes = voteCountFor(step.key);
+  const downs = downCountFor(step.key);
+  const dir = voteDirThisRun[step.key]; // 'up' | 'down' | undefined
   const voted = votedThisRun.has(step.key);
-  const voteLabel = voted ? 'RECOMMENDED ✓' : '+ RECOMMEND THIS QUESTION';
+  const upLabel = dir === 'up' ? 'RECOMMENDED ✓' : '+ RECOMMEND';
+  const downLabel = dir === 'down' ? 'FLAGGED DUMB ✓' : '× FLAG AS DUMB';
+  const upClasses = ['vote-btn', 'step-vote-btn'];
+  if (dir === 'up') upClasses.push('voted');
+  else if (dir === 'down') upClasses.push('locked');
+  const downClasses = ['vote-btn', 'vote-btn-down', 'step-vote-btn'];
+  if (dir === 'down') downClasses.push('downvoted');
+  else if (dir === 'up') downClasses.push('locked');
 
   card.innerHTML = `
     <div class="step-num">DECLARATION ${String(idx + 1).padStart(2, '0')} OF ${String(total).padStart(2, '0')}</div>
@@ -1104,14 +1156,23 @@ function renderStep(idx) {
     >
     <div class="step-stamp" id="step-stamp" aria-live="polite"></div>
     <div class="step-vote-row">
-      <button
-        type="button"
-        id="step-vote-btn"
-        class="vote-btn step-vote-btn${voted ? ' voted' : ''}"
-        data-key="${escapeHTML(step.key)}"
-        ${voted ? 'disabled' : ''}
-      >${voteLabel} <span class="vote-count">(${votes.toLocaleString('en-US')})</span></button>
-      <span class="step-vote-hint">Optional · biases this question to appear more often in future audits.</span>
+      <div class="step-vote-btns">
+        <button
+          type="button"
+          id="step-vote-btn"
+          class="${upClasses.join(' ')}"
+          data-key="${escapeHTML(step.key)}"
+          ${voted ? 'disabled' : ''}
+        >${upLabel} <span class="vote-count">(${votes.toLocaleString('en-US')})</span></button>
+        <button
+          type="button"
+          id="step-down-btn"
+          class="${downClasses.join(' ')}"
+          data-key="${escapeHTML(step.key)}"
+          ${voted ? 'disabled' : ''}
+        >${downLabel} <span class="vote-count">(${downs.toLocaleString('en-US')})</span></button>
+      </div>
+      <span class="step-vote-hint">Optional · biases the question pool for future audits (recommend = more often, dumb = less often).</span>
     </div>
   `;
 
@@ -1146,8 +1207,12 @@ function renderStep(idx) {
   });
 
   const voteBtn = document.getElementById('step-vote-btn');
+  const downBtn = document.getElementById('step-down-btn');
   if (voteBtn) {
-    voteBtn.addEventListener('click', () => castVote(step.key, voteBtn));
+    voteBtn.addEventListener('click', () => castVote(step.key, voteBtn, downBtn));
+  }
+  if (downBtn) {
+    downBtn.addEventListener('click', () => castDownvote(step.key, downBtn, voteBtn));
   }
 
   refreshStepStamp();
@@ -1328,7 +1393,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
     for (const k of Object.keys(answers)) delete answers[k];
     votedThisRun.clear();
-    // Re-pick a fresh 10 from the pool — different each redo.
+    for (const k of Object.keys(voteDirThisRun)) delete voteDirThisRun[k];
+    // Re-pick a fresh PER_RUN_STEPS-sized batch — different each redo.
     STEPS = pickStepsFromVotes();
     showIntake(true);
   });
