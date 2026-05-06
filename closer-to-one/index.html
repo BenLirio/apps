@@ -110,7 +110,10 @@
     <div class="final-best" x-show="averageResult">
       <div class="final-best-duration" x-text="averageResult && averageResult.durationStr"></div>
       <div class="final-best-tier" x-text="averageResult && averageResult.tierLabel"></div>
-      <div class="final-best-pct" x-text="averageResult && (averageResult.beatPct == null ? 'beat —%' : ('beat ' + averageResult.beatPct + '%'))"></div>
+      <div class="final-best-rank" x-show="averageResult && averageResult.rank != null">
+        <span class="rank-hash">#</span><span class="rank-num" x-text="averageResult && averageResult.rank ? averageResult.rank.toLocaleString() : '—'"></span><span class="rank-of"> of </span><span class="rank-total" x-text="averageResult && averageResult.rankTotal ? averageResult.rankTotal.toLocaleString() : '—'"></span>
+      </div>
+      <div class="final-best-pct" x-text="averageResult && (averageResult.beatPct == null ? 'better than —% of players' : ('better than ' + averageResult.beatPct + '% of players'))"></div>
     </div>
 
     <div class="score-track-wrap">

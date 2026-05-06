@@ -383,6 +383,31 @@ body {
   text-transform: uppercase;
   margin-top: 4px;
 }
+.final-best-rank {
+  font-family: 'VT323', monospace;
+  font-size: clamp(28px, 8vw, 38px);
+  color: var(--ink);
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+  font-feature-settings: "tnum";
+  line-height: 1;
+}
+.final-best-rank .rank-hash {
+  color: var(--red-bright);
+  margin-right: 1px;
+}
+.final-best-rank .rank-num {
+  color: var(--red-bright);
+  text-shadow: 0 0 10px rgba(240, 68, 56, 0.35);
+}
+.final-best-rank .rank-of {
+  color: var(--ink-dim, #8a8378);
+  font-size: 0.7em;
+}
+.final-best-rank .rank-total {
+  color: var(--ink);
+  font-size: 0.78em;
+}
 .final-best-pct {
   font-family: 'VT323', monospace;
   font-size: 17px;

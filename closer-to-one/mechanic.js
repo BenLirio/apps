@@ -54,6 +54,23 @@ export function beatPctFromBins(durationMs, bins, total) {
   return Math.max(0, Math.min(99, Math.round(100 * larger / total)));
 }
 
+// Rank among recorded session-averages: how many past averages sit closer
+// to 1.000s than yours, plus 1 (so #1 = the very best ever recorded). Bins
+// store counts so we just count the number of submissions with strictly
+// smaller |delta|. Returns null if the histogram hasn't loaded yet so the
+// UI can render a placeholder; returns 1 when bins exist but no one beats
+// you. Use alongside `total` for a "#42 of 1,234" display.
+export function rankFromBins(durationMs, bins, total) {
+  if (!bins || !total) return null;
+  const myAbs = Math.abs(durationMs - TARGET_MS);
+  let closer = 0;
+  for (const [ms, count] of bins) {
+    const binAbs = Math.abs(ms - TARGET_MS);
+    if (binAbs < myAbs) closer += count;
+  }
+  return closer + 1;
+}
+
 // Bucket every recorded session-average into one of the seven tiers and
 // return [{key, label, count}, ...] in tier order. This is what the final
 // screen renders instead of an SVG histogram — sparse data looks like
@@ -86,21 +103,25 @@ export function pinPctFor(durationMs) {
 export const TARGET_PCT = pinPctFor(TARGET_MS); // 50 — bullseye marker
 
 // the central function. give it a duration in ms plus the live histogram, get
-// back everything the result + final screens need to render. beatPct is null
-// when bins haven't loaded yet — the UI shows "—%" until the network catches
-// up, but duration/delta/tier are already fully determined.
+// back everything the result + final screens need to render. beatPct / rank /
+// rankTotal are null when bins haven't loaded yet — the UI shows "—" until
+// the network catches up, but duration/delta/tier are already fully
+// determined.
 export function computeResult(durationMs, bins, total) {
   durationMs = Math.max(0, Math.round(durationMs));
   const isOutOfRange = durationMs < RANGE_LO || durationMs >= RANGE_HI;
   const signedDelta = durationMs - TARGET_MS;
   const absDelta = Math.abs(signedDelta);
   const tier = tierFor(absDelta);
+  const rank = rankFromBins(durationMs, bins, total);
   return {
     durationMs,
     durationStr: fmtSec(durationMs),
     deltaMs: signedDelta,
     deltaStr: fmtSignedDelta(signedDelta),
     beatPct: beatPctFromBins(durationMs, bins, total),
+    rank,
+    rankTotal: rank == null ? null : (Number(total) || null),
     tierKey: tier.key,
     tierLabel: tier.label,
     pinPct: pinPctFor(durationMs),
