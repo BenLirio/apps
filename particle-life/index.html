@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Particle Life</title>
   <meta property="og:title" content="Particle Life">
-  <meta property="og:description" content="Describe a universe in plain words — AI builds the physics, colors, topology, and living rules. Hundreds of particles breathing by your laws.">
+  <meta property="og:description" content="Pick a universe — galaxy spirals, predator chases, crystal lattices, fireworks, tidepools — and watch hundreds of particles obey its physics. Tap a preset, fine-tune the rules, screenshot the result.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://benlirio.com/apps/particle-life/">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,28 +37,18 @@
     </div>
     <div id="panel-body">
 
-      <!-- AI prompt — primary way to build a universe. Plain English in,
-           full physics spec out (colors, force matrix, topology, fields,
-           time-variance, mutation, traits, spawn, etc.). -->
-      <div id="ai-section">
-        <label id="ai-label" for="ai-prompt">describe a universe</label>
-        <textarea id="ai-prompt" maxlength="280" placeholder="e.g. three colours in a slow gravitational dance, mostly attracting, occasionally chasing each other into spirals"></textarea>
-        <div class="ai-examples" id="ai-examples">
-          <span class="ai-examples-label">try:</span>
-          <button type="button" class="ai-example" data-prompt="four colours behaving like cells — each keeps a membrane around itself, rejects the others, slowly drifts">cells</button>
-          <button type="button" class="ai-example" data-prompt="predator-prey chase: five colours where each hunts the next in a rock-paper-scissors loop, fast, frictionless, with a mutation on contact so species slowly convert">chase loop</button>
-          <button type="button" class="ai-example" data-prompt="crystal lattice trapped against hard walls: six colours snapping into rigid geometric patterns, slow drift, very high friction">crystal</button>
-          <button type="button" class="ai-example" data-prompt="galactic swirl: three pastel colours orbiting a central gravity well, slow, graceful, heavy cores with long trails">galaxy</button>
-          <button type="button" class="ai-example" data-prompt="chaotic fireworks: seven vivid colours exploding outward from an anti-gravity well, low friction, fast speed, short trails">fireworks</button>
-          <button type="button" class="ai-example" data-prompt="tidepool: five muted colours drifting on waves with pulsing force strengths, each colour breathes in and out, very gentle">tidepool</button>
-          <button type="button" class="ai-example" data-prompt="viral outbreak: four colours where contact converts one into the other, on a tangential vortex field, asymmetric rules drive a slow takeover">outbreak</button>
-          <button type="button" class="ai-example" data-prompt="migrating flocks with morphing rules: three colours whose force matrix slowly drifts over time so the behaviour keeps evolving">migration</button>
+      <!-- Preset gallery — primary way to build a universe. Each preset is
+           a fully-specified spec (colors, force matrix, topology, fields,
+           time-variance, mutation). Tap one to load it; tweak via the
+           fine-tune drawer below. -->
+      <div id="presets-section">
+        <label id="presets-label">pick a universe</label>
+        <div class="presets-grid" id="presets-grid">
+          <!-- Buttons rendered by app.js from the PRESETS array -->
         </div>
-        <div class="ai-row">
-          <button id="btn-ai-run" type="button" class="primary">build universe</button>
-          <button id="btn-ai-surprise" type="button">surprise me</button>
+        <div class="presets-row">
+          <button id="btn-preset-surprise" type="button" class="primary">surprise me</button>
         </div>
-        <div id="ai-status" class="ai-status"></div>
       </div>
 
       <div class="panel-row panel-buttons quick-actions">

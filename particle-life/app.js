@@ -1,4 +1,4 @@
-// Particle Life — an AI-driven universe builder.
+// Particle Life — a curated-preset universe sandbox.
 //
 // A universe here is more than a force matrix. It's a *world*:
 //   - N coloured species (3..7), each with its own mass and trail length.
@@ -13,9 +13,9 @@
 //     another, so species can spread through the world.
 //   - A spawn shape controlling the t=0 layout.
 //
-// The AI prompt IS the preset engine: type a description, the LLM returns
-// a full spec for every dimension above. You can still edit everything by
-// hand — tap a force cell, change topology, field, time mode, mutation.
+// Pick a preset to load a fully-specified universe. Tweak via the
+// fine-tune drawer (force matrix, topology, field, time mode, mutation).
+// Hit "surprise me" to load a random preset.
 //
 // Sound: a light Web-Audio ambient pad tuned to kinetic energy, plus short
 // pings on user interactions. No external libraries. Pure Canvas 2D + Web
@@ -24,11 +24,7 @@
 (function () {
   'use strict';
 
-  // ── Endpoints / constants ───────────────────────────────────────────────────
-  const AI_ENDPOINT = 'https://uy3l6suz07.execute-api.us-east-1.amazonaws.com/ai';
-  const SLUG = 'particle-life';
-  const AI_MODEL = 'gpt-5.4';
-
+  // ── Constants ───────────────────────────────────────────────────────────────
   const MIN_COLORS = 3;
   const MAX_COLORS = 7;
   const DEFAULT_MIN_DIST = 20;
@@ -88,6 +84,186 @@
   }
 
   const DEFAULT_COLORS = ['#ff2244', '#00ffee', '#ffdd00', '#39ff14', '#ff00cc'];
+
+  // ── Curated presets ─────────────────────────────────────────────────────────
+  // Each preset is a fully-specified universe: numColors, palette, topology,
+  // field, time mode, world knobs, and (optionally) a hand-tuned matrix.
+  // Presets without a `matrix` get a seed-derived random one — variety on
+  // each load while still respecting the rest of the spec. Presets with a
+  // `matrix` reproduce the same characteristic behaviour every time
+  // (galaxies look like galaxies, cells stay membraned, chase keeps chasing).
+  const PRESETS = [
+    {
+      key: 'galaxy', name: 'galaxy', tag: 'gravity · arena',
+      numColors: 3,
+      colors: ['#ffd28a', '#7ec1ff', '#ff7e9e'],
+      masses: [1.7, 1.0, 0.7],
+      // attractive everywhere, with a graceful gradient toward the heavy core
+      matrix: [
+        [ 0.55,  0.45,  0.30],
+        [ 0.25,  0.50,  0.40],
+        [ 0.10,  0.30,  0.45],
+      ],
+      topology: 'arena', field: 'gravity', timeMode: 'static',
+      spawnShape: 'ring', mouseMode: 'attract',
+      fieldStrength: 0.55, friction: 0.965, speed: 0.75,
+      particleCount: 320, maxDist: 180, mutationRate: 0, trailFade: 0.10,
+    },
+    {
+      key: 'fireworks', name: 'fireworks', tag: 'antigrav · ball',
+      numColors: 6,
+      colors: ['#ff2244','#ffaa00','#ffdd00','#39ff14','#00ffee','#ff00cc'],
+      masses: null,
+      matrix: null,
+      topology: 'walls', field: 'antigravity', timeMode: 'static',
+      spawnShape: 'ball', mouseMode: 'repel',
+      fieldStrength: 0.7, friction: 0.92, speed: 1.4,
+      particleCount: 380, maxDist: 110, mutationRate: 0, trailFade: 0.12,
+    },
+    {
+      key: 'cells', name: 'cells', tag: 'membrane · drift',
+      numColors: 4,
+      colors: ['#7e85ff', '#ff7e9e', '#7eff9e', '#ffdb7e'],
+      masses: null,
+      // strong self-attraction + repulsion of others = membraned blobs
+      matrix: [
+        [ 0.65, -0.45, -0.45, -0.45],
+        [-0.45,  0.65, -0.45, -0.45],
+        [-0.45, -0.45,  0.65, -0.45],
+        [-0.45, -0.45, -0.45,  0.65],
+      ],
+      topology: 'torus', field: 'none', timeMode: 'static',
+      spawnShape: 'clusters', mouseMode: 'repel',
+      fieldStrength: 0, friction: 0.94, speed: 1.0,
+      particleCount: 320, maxDist: 130, mutationRate: 0, trailFade: 0.30,
+    },
+    {
+      key: 'chase', name: 'chase', tag: 'rock-paper · 5',
+      numColors: 5,
+      colors: ['#ff2244', '#ffaa00', '#39ff14', '#00ffee', '#ff00cc'],
+      masses: null,
+      // Each row attracts the NEXT row strongly (chase target) and is
+      // mildly repelled by the row that hunts it. Diagonal mildly negative
+      // so packs of the same colour don't clump into pure mass.
+      matrix: [
+        [-0.20,  0.85,  0.05, -0.25,  0.05],
+        [ 0.05, -0.20,  0.85,  0.05, -0.25],
+        [-0.25,  0.05, -0.20,  0.85,  0.05],
+        [ 0.05, -0.25,  0.05, -0.20,  0.85],
+        [ 0.85,  0.05, -0.25,  0.05, -0.20],
+      ],
+      topology: 'torus', field: 'none', timeMode: 'static',
+      spawnShape: 'scatter', mouseMode: 'repel',
+      fieldStrength: 0, friction: 0.91, speed: 1.3,
+      particleCount: 360, maxDist: 130, mutationRate: 0, trailFade: 0.20,
+    },
+    {
+      key: 'crystal', name: 'crystal', tag: 'walls · lattice',
+      numColors: 4,
+      colors: ['#a3d3ff', '#ffd8a3', '#d3ffa3', '#ffa3d3'],
+      masses: null,
+      // mostly mild repulsion; particles space out into geometric arrangements
+      // when the world is bounded by walls and friction is very high.
+      matrix: [
+        [-0.15, -0.30, -0.20, -0.30],
+        [-0.30, -0.15, -0.30, -0.20],
+        [-0.20, -0.30, -0.15, -0.30],
+        [-0.30, -0.20, -0.30, -0.15],
+      ],
+      topology: 'walls', field: 'none', timeMode: 'static',
+      spawnShape: 'scatter', mouseMode: 'repel',
+      fieldStrength: 0, friction: 0.985, speed: 0.5,
+      particleCount: 280, maxDist: 90, mutationRate: 0, trailFade: 0.45,
+    },
+    {
+      key: 'tidepool', name: 'tidepool', tag: 'waves · pulse',
+      numColors: 5,
+      colors: ['#5a8c8c', '#7aa6a6', '#9bb6a8', '#b9c9b9', '#c8b29a'],
+      masses: null,
+      matrix: null,
+      topology: 'torus', field: 'waves', timeMode: 'pulse',
+      spawnShape: 'scatter', mouseMode: 'attract',
+      fieldStrength: 0.35, friction: 0.97, speed: 0.6,
+      particleCount: 300, maxDist: 140, mutationRate: 0, trailFade: 0.20,
+    },
+    {
+      key: 'vortex', name: 'vortex', tag: 'spiral · dense',
+      numColors: 6,
+      colors: ['#ff5ea0', '#ff8a5e', '#ffd35e', '#5effb6', '#5ed1ff', '#a05eff'],
+      masses: null,
+      matrix: null,
+      topology: 'arena', field: 'vortex', timeMode: 'static',
+      spawnShape: 'ring', mouseMode: 'repel',
+      fieldStrength: 0.6, friction: 0.94, speed: 1.1,
+      particleCount: 420, maxDist: 130, mutationRate: 0, trailFade: 0.16,
+    },
+    {
+      key: 'binary', name: 'binary stars', tag: 'long trails',
+      numColors: 3,
+      colors: ['#ffe0a3', '#a3c5ff', '#ff9da3'],
+      masses: [2.4, 2.4, 0.6],
+      // two heavy attractors + light dust; the dust orbits between them.
+      matrix: [
+        [ 0.6,  0.5,  0.7],
+        [ 0.5,  0.6,  0.7],
+        [ 0.2,  0.2,  0.1],
+      ],
+      topology: 'arena', field: 'gravity', timeMode: 'static',
+      spawnShape: 'sectors', mouseMode: 'attract',
+      fieldStrength: 0.4, friction: 0.97, speed: 0.7,
+      particleCount: 260, maxDist: 200, mutationRate: 0, trailFade: 0.07,
+    },
+    {
+      key: 'outbreak', name: 'outbreak', tag: 'mutating · vortex',
+      numColors: 4,
+      colors: ['#5effb6', '#ff5e5e', '#ffe05e', '#7a5eff'],
+      masses: null,
+      // chase-like with conversion on contact
+      matrix: [
+        [ 0.10,  0.80, -0.20, -0.20],
+        [-0.20,  0.10,  0.80, -0.20],
+        [-0.20, -0.20,  0.10,  0.80],
+        [ 0.80, -0.20, -0.20,  0.10],
+      ],
+      topology: 'torus', field: 'vortex', timeMode: 'static',
+      spawnShape: 'clusters', mouseMode: 'infect',
+      fieldStrength: 0.45, friction: 0.93, speed: 1.1,
+      particleCount: 340, maxDist: 110, mutationRate: 0.012, trailFade: 0.24,
+    },
+    {
+      key: 'migration', name: 'migration', tag: 'drift · morph',
+      numColors: 3,
+      colors: ['#ffb96e', '#6effc1', '#6ec6ff'],
+      masses: null,
+      matrix: null,
+      topology: 'torus', field: 'none', timeMode: 'drift',
+      spawnShape: 'stripes', mouseMode: 'attract',
+      fieldStrength: 0, friction: 0.95, speed: 0.95,
+      particleCount: 320, maxDist: 140, mutationRate: 0, trailFade: 0.22,
+    },
+    {
+      key: 'aurora', name: 'aurora', tag: 'daynight · cool',
+      numColors: 5,
+      colors: ['#7eecff', '#8a7eff', '#7effaa', '#a87eff', '#7ec3ff'],
+      masses: null,
+      matrix: null,
+      topology: 'torus', field: 'vortex', timeMode: 'daynight',
+      spawnShape: 'scatter', mouseMode: 'attract',
+      fieldStrength: 0.3, friction: 0.96, speed: 0.9,
+      particleCount: 340, maxDist: 150, mutationRate: 0, trailFade: 0.14,
+    },
+    {
+      key: 'dust', name: 'dust', tag: 'void · sparse',
+      numColors: 3,
+      colors: ['#cfcfcf', '#a59a8a', '#7a8aa5'],
+      masses: null,
+      matrix: null,
+      topology: 'void', field: 'none', timeMode: 'drift',
+      spawnShape: 'scatter', mouseMode: 'attract',
+      fieldStrength: 0, friction: 0.985, speed: 0.5,
+      particleCount: 200, maxDist: 100, mutationRate: 0, trailFade: 0.50,
+    },
+  ];
 
   // ── Universe state ──────────────────────────────────────────────────────────
   let seed = hash('' + Date.now());
@@ -627,7 +803,7 @@
   function playRespawn()   { playPing(180, 0.18, 'sawtooth'); }
   function playError()     { playPing(180, 0.22, 'square');   setTimeout(() => playPing(120, 0.18, 'square'), 80); }
 
-  // ── Apply an AI spec (or a manual randomize) ───────────────────────────────
+  // ── Apply a universe spec (preset or shared-link decode) ───────────────────
   function applySpec(spec, srcSeed) {
     const rng = makeSeedRNG(srcSeed || seed);
 
@@ -794,101 +970,25 @@
     try { history.replaceState(null, '', url); } catch (e) { location.hash = params.toString(); }
   }
 
-  // ── AI call ────────────────────────────────────────────────────────────────
-  async function generateUniverse(prompt) {
-    const SYSTEM_PROMPT = [
-      'You design universes for a "Particle Life" simulation. The user describes one in plain English; you return a strict JSON object describing the full world.',
-      '',
-      'A universe has N types of coloured particles (N = 3..7). Each type exerts a force on every other type given by an NxN matrix of numbers from -1..+1. Positive = attracted, negative = repelled, near 0 = ignores. The matrix is NOT symmetric — asymmetry is where chase behaviour and spirals come from.',
-      '',
-      'But a universe is MORE than a force matrix. You also design:',
-      '- its spatial TOPOLOGY (how space wraps/bounds),',
-      '- an ambient environmental FIELD (e.g. gravity, vortex, waves),',
-      '- a TIME mode (is the matrix static, breathing, drifting, or cycling?),',
-      '- per-type MASSES and TRAILS (some species are heavier/lighter, some leave long trails),',
-      '- a MUTATION rate (on close contact, one particle may convert to the other\'s type — lets species spread).',
-      '',
-      'Output ONE strict JSON object. No prose, no code fence, no explanation.',
-      '',
-      'Schema (all fields required unless marked optional):',
-      '{',
-      '  "name": "short evocative name, 2-5 words, no quotes",',
-      '  "numColors": integer 3-7,',
-      '  "colors": array of `numColors` hex strings like "#aabbcc" — VIVID, readable on near-black (#0a0a0a). Avoid #000 or very dark. Avoid low-contrast pastels unless asked.',
-      '  "matrix": `numColors` x `numColors` numbers in -1..+1. Row acts on column. Asymmetric is good.',
-      '  "masses": array of `numColors` numbers in 0.3..3.0. Default 1 for each. Heavier = slower, looks bigger. Use varied masses for predator/prey, planets/moons, heavy cores, etc.',
-      '  "trails": array of `numColors` numbers in 0..1. Advisory — the renderer uses trailFade globally.',
-      '  "particleCount": integer 50-800. Default 300. Calm: 150-250. Dense/chaotic: 400-600.',
-      '  "speed": number 0.2-2. Default 1.',
-      '  "friction": number 0.8-0.99. Default 0.95. Calm/viscous: 0.90-0.94. Frictionless/energetic: 0.96-0.99.',
-      '  "maxDist": number 60-220. Default 120. Interaction reach.',
-      '  "minDist": number 8-40. Default 20. Close-range repulsion floor.',
-      '  "spawnShape": one of "scatter" | "ball" | "ring" | "stripes" | "sectors" | "clusters". Pick whichever frames this universe best at t=0.',
-      '  "mouseMode": one of "repel" | "attract" | "spawn" | "infect" | "off". Default "repel".',
-      '  "topology": one of "torus" | "walls" | "void" | "arena".',
-      '     - torus: edges wrap (classic).',
-      '     - walls: hard rectangular walls, particles bounce.',
-      '     - void: no walls, no wrap — particles drift off forever (use for isolated blooms, breathing cells).',
-      '     - arena: circular hard wall centered on screen, particles bounce off.',
-      '  "field": one of "none" | "gravity" | "antigravity" | "vortex" | "waves" | "pole".',
-      '     - none: pure particle rules.',
-      '     - gravity: centre pulls — good for planets, solar systems, tight swirls.',
-      '     - antigravity: centre pushes — good for explosions, fireworks, blooms.',
-      '     - vortex: tangential swirl — good for spirals, whirlpools, galaxies.',
-      '     - waves: gentle standing ripples — good for tidepools, oceans, breathing dust.',
-      '     - pole: dipole: top drifts down, bottom drifts up (or vice versa) — good for layered tides.',
-      '  "fieldStrength": number 0..1 — how strongly the field affects particles. Default 0.35.',
-      '  "timeMode": one of "static" | "pulse" | "drift" | "daynight".',
-      '     - static: rules don\'t change.',
-      '     - pulse: the whole matrix amplitude breathes (stronger, weaker, stronger...) on ~6s period. Good for organisms that feel alive, heartbeats.',
-      '     - drift: each cell slowly morphs on its own phase — behaviour keeps evolving. Good for "universe that never settles".',
-      '     - daynight: the whole matrix slowly inverts sign across ~30s — attractions become repulsions and back. Good for ecosystems with day/night rhythms.',
-      '  "mutationRate": number 0..0.02. 0 = no mutation (stable species). Higher = species can convert on contact, so populations spread like infections. Use 0.003-0.008 for "viral" feels, 0.01-0.02 for rapid takeover.',
-      '  "trailFade": number 0.05..0.6. Lower = longer visible motion trails. 0.1 = streaky comet trails; 0.25 = balanced; 0.5 = clean dots.',
-      '}',
-      '',
-      'DESIGN GUIDANCE:',
-      '- Think about what KIND of world the user is asking for, then pick topology/field/timeMode that frames it.',
-      '  - "galaxy/solar system/orbits" → topology arena or torus; field vortex or gravity; trailFade low (0.10-0.15); heavy central-species mass.',
-      '  - "crystal/lattice" → topology walls; field none; timeMode static; friction 0.96+; spawnShape ball.',
-      '  - "cells/membranes/blobs" → strong diagonal self-attract; maybe mutationRate 0 to keep species stable.',
-      '  - "predator/prey/chase" → cyclic matrix (i attracts i+1, i+1 repels i); often mutationRate 0.005-0.01 so populations shift.',
-      '  - "viral/outbreak/infection" → high mutationRate (0.01+), cyclic matrix, fast speed.',
-      '  - "tidepool/ocean/calm" → field waves; low speed; high friction; scatter spawn; pulse or drift timeMode.',
-      '  - "fireworks/explosion" → field antigravity; low friction; spawnShape ball; trailFade 0.10.',
-      '  - "dust/drift/gentle" → field none or waves low strength; high friction; low particle count; scatter.',
-      '  - "flocks/swarms/schools" → moderate positive diagonal + mild positive off-diag; drift timeMode keeps them flowing.',
-      '  - "evolving/alive/changing" → timeMode drift or daynight + low mutationRate; keeps the eye returning.',
-      '- If the user mentions a colour scheme, use it; otherwise vivid neon on near-black.',
-      '- ASYMMETRY TIP: symmetric matrices settle to boring equilibria. Always include at least one asymmetric pair.',
-      '',
-      'CLAMP all values to the ranges above. Respond with ONLY the JSON object.',
-    ].join('\n');
-
-    const body = {
-      slug: SLUG,
-      model: AI_MODEL,
-      temperature: 0.85,
-      max_tokens: 1200,
-      response_format: 'json_object',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user',   content: prompt },
-      ],
-    };
-
-    const res = await fetch(AI_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error('http_' + res.status);
-    const data = await res.json();
-    if (!data || typeof data.content !== 'string') throw new Error('bad_shape');
-    let parsed;
-    try { parsed = JSON.parse(data.content); } catch (e) { throw new Error('bad_json'); }
-    if (!parsed || typeof parsed !== 'object') throw new Error('bad_obj');
-    return parsed;
+  // ── Apply a preset ─────────────────────────────────────────────────────────
+  // Stop the loop, apply the preset's spec, repaint, and restart. Used by
+  // the preset grid buttons and the surprise-me button.
+  function applyPreset(preset) {
+    if (!preset) return;
+    stopLoop();
+    worldClock = 0;
+    const newSeed = hash(preset.key + ':' + Date.now());
+    seed = newSeed;
+    applySpec(preset, newSeed);
+    universeName = preset.name;
+    renderRulesGrid();
+    updateNameDisplay();
+    writeRulesetToHash();
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    startLoop();
+    setActivePresetKey(preset.key);
+    playSuccess();
   }
 
   // ── Game loop ────────────────────────────────────────────────────────────────
@@ -942,10 +1042,8 @@
   const btnRandomRules = document.getElementById('btn-random-rules');
   const advancedToggle = document.getElementById('advanced-toggle');
   const advancedBody = document.getElementById('advanced-body');
-  const aiPrompt = document.getElementById('ai-prompt');
-  const btnAiRun = document.getElementById('btn-ai-run');
-  const btnAiSurprise = document.getElementById('btn-ai-surprise');
-  const aiStatus = document.getElementById('ai-status');
+  const presetsGrid = document.getElementById('presets-grid');
+  const btnPresetSurprise = document.getElementById('btn-preset-surprise');
 
   function syncControlsFromState() {
     if (sliderSpeed)    sliderSpeed.value = speedMultiplier;
@@ -1117,7 +1215,7 @@
 
   // Fine-tune block: rules grid + 5 dropdowns. Hidden by default — feedback
   // round 2026-05-06 said the panel was "confusing and hard to use" with
-  // everything visible at once. AI prompt is the headline interaction;
+  // everything visible at once. Preset gallery is the headline interaction;
   // fine-tune is the optional power-user drawer.
   const finetuneToggle = document.getElementById('finetune-toggle');
   const finetuneBody = document.getElementById('finetune-body');
@@ -1289,114 +1387,49 @@
     });
   }
 
-  // ── AI prompt wiring ────────────────────────────────────────────────────────
-  const SURPRISE_PROMPTS = [
-    'four colours in a rock-paper-scissors chase, each hunting the next, with mutation on contact so species slowly take each other over',
-    'crystalline lattice trapped inside hard walls — snaps into geometric patterns',
-    'gentle dust motes drifting in warm golden sunlight over a standing wave field',
-    'chaotic fireworks exploding from an anti-gravity centre',
-    'binary-star orbits inside a circular arena, two heavy colours locked in a gravitational dance with long comet trails',
-    'predator-prey ecosystem with a day/night cycle, rules slowly flip and species stalk through the dark',
-    'slime membranes drifting in the void — self-contained orbs that ignore each other',
-    'a cold still ocean with faint tidal movements, drifting rules, mostly empty space',
-    'psychedelic neon swarm in a vortex, dense, fast, breathing between attraction and repulsion',
-    'ant trails — long thin moving chains of colour migrating across a toroidal plane',
-    'galactic swirl: three pastel colours orbiting a central gravity well, slow, graceful, heavy cores with long trails',
-    'viral outbreak where one colour slowly converts all others through contact',
-  ];
-
-  function setAiStatus(msg, isErr) {
-    aiStatus.textContent = msg || '';
-    aiStatus.classList.toggle('err', !!isErr);
-  }
-  function setAiBusy(busy) {
-    btnAiRun.disabled = busy;
-    btnAiSurprise.disabled = busy;
-    btnAiRun.textContent = busy ? 'building…' : 'build universe';
-  }
-
-  async function runAi(promptText) {
-    if (!promptText || !promptText.trim()) {
-      setAiStatus('describe a universe first.', true);
-      playError();
-      return;
-    }
-    setAiBusy(true);
-    setAiStatus('asking the AI for physics…', false);
-    try {
-      stopLoop();
-      worldClock = 0;
-      const newSeed = hash('' + Date.now() + promptText);
-      seed = newSeed;
-      const spec = await generateUniverse(promptText.trim());
-      applySpec(spec, newSeed);
-      renderRulesGrid();
-      updateNameDisplay();
-      writeRulesetToHash();
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      startLoop();
-      setAiStatus('universe built: ' + universeName, false);
-      playSuccess();
-    } catch (e) {
-      console.log('ai_err', e.message);
-      setAiStatus('AI failed — randomised for you instead.', true);
-      // Graceful fallback: random matrix, palette, leave world knobs alone
-      // so the user's current setup stays.
-      const newSeed = hash('' + Date.now() + Math.random());
-      seed = newSeed;
-      const rng = makeSeedRNG(newSeed);
-      numTypes = 3 + Math.floor(rng() * 4);
-      colors = generateColorPalette(rng, numTypes);
-      masses = new Array(numTypes).fill(1);
-      trailTypes = new Array(numTypes).fill(0.5);
-      forceMatrix = buildForceMatrix(rng, numTypes);
-      liveMatrix = cloneMatrix(forceMatrix);
-      universeName = universeNameFromSeed(newSeed);
-      particles = spawnParticles(rng, particleCount, spawnShape);
-      renderRulesGrid();
-      updateNameDisplay();
-      writeRulesetToHash();
-      ctx.fillStyle = '#0a0a0a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      startLoop();
-      playError();
-    } finally {
-      setAiBusy(false);
-    }
-  }
-
-  if (btnAiRun) {
-    btnAiRun.addEventListener('click', function () {
-      resumeAudioIfNeeded();
-      runAi(aiPrompt.value);
-    });
-  }
-  if (btnAiSurprise) {
-    btnAiSurprise.addEventListener('click', function () {
-      resumeAudioIfNeeded();
-      const rnd = SURPRISE_PROMPTS[Math.floor(Math.random() * SURPRISE_PROMPTS.length)];
-      aiPrompt.value = rnd;
-      runAi(rnd);
-    });
-  }
-  if (aiPrompt) {
-    aiPrompt.addEventListener('keydown', function (e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        resumeAudioIfNeeded();
-        runAi(aiPrompt.value);
+  // ── Preset grid wiring ──────────────────────────────────────────────────────
+  function renderPresetsGrid() {
+    if (!presetsGrid) return;
+    presetsGrid.innerHTML = '';
+    PRESETS.forEach(function (p) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'preset-btn';
+      btn.dataset.key = p.key;
+      const nameEl = document.createElement('span');
+      nameEl.className = 'preset-name';
+      nameEl.textContent = p.name;
+      btn.appendChild(nameEl);
+      if (p.tag) {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'preset-tag';
+        tagEl.textContent = p.tag;
+        btn.appendChild(tagEl);
       }
+      btn.addEventListener('click', function () {
+        resumeAudioIfNeeded();
+        applyPreset(p);
+      });
+      presetsGrid.appendChild(btn);
     });
   }
-  document.querySelectorAll('.ai-example').forEach(btn => {
-    btn.addEventListener('click', function () {
-      const prompt = this.getAttribute('data-prompt') || this.textContent || '';
-      aiPrompt.value = prompt;
-      resumeAudioIfNeeded();
-      runAi(prompt);
+
+  function setActivePresetKey(key) {
+    if (!presetsGrid) return;
+    const btns = presetsGrid.querySelectorAll('.preset-btn');
+    btns.forEach(function (b) {
+      if (b.dataset.key === key) b.classList.add('is-active');
+      else b.classList.remove('is-active');
     });
-  });
+  }
+
+  if (btnPresetSurprise) {
+    btnPresetSurprise.addEventListener('click', function () {
+      resumeAudioIfNeeded();
+      const p = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+      applyPreset(p);
+    });
+  }
 
   // ── Screenshot / share ───────────────────────────────────────────────────────
   function share() {
@@ -1504,6 +1537,8 @@
   setParticleCountDefault();
 
   setTimeout(function () {
+    renderPresetsGrid();
+
     const shared = readSharedUniverse();
     if (shared) {
       numTypes = shared.numColors;
@@ -1523,27 +1558,19 @@
       universeName = 'Shared Universe';
       const rng = makeSeedRNG(seed);
       particles = spawnParticles(rng, particleCount, spawnShape);
+      syncControlsFromState();
+      updateNameDisplay();
+      renderRulesGrid();
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      startLoop();
     } else {
-      // First boot — build an initial random universe with mild default
-      // world knobs so the screen has motion before the user types anything.
-      const rng = makeSeedRNG(seed);
-      numTypes = 4;
-      colors = generateColorPalette(rng, numTypes);
-      masses = new Array(numTypes).fill(1);
-      trailTypes = new Array(numTypes).fill(0.5);
-      forceMatrix = buildForceMatrix(rng, numTypes);
-      liveMatrix = cloneMatrix(forceMatrix);
-      universeName = universeNameFromSeed(seed);
-      particles = spawnParticles(rng, particleCount, spawnShape);
+      // First boot — apply a random preset so the screen has motion right
+      // away, and the user can see what a preset looks like before tapping
+      // around.
+      const p = PRESETS[Math.floor(Math.random() * PRESETS.length)];
+      applyPreset(p);
     }
-
-    syncControlsFromState();
-    updateNameDisplay();
-    renderRulesGrid();
-
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    startLoop();
 
     loadingScreen.style.display = 'none';
   }, 400);
