@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Same Pixel — 40,000 strangers fight over one wall</title>
+<meta name="description" content="A 200×200 grid. Tap one pixel a minute. Watch other people paint over you, live.">
+
+<!-- Share preview -->
+<meta property="og:title" content="Same Pixel">
+<meta property="og:description" content="A 200×200 grid. Tap one pixel a minute. Watch other people paint over you, live. The board never resets.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://benlirio.com/apps/same-pixel/">
+<meta property="og:image" content="https://benlirio.com/apps/same-pixel/og.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Same Pixel">
+<meta name="twitter:description" content="A 200×200 grid. Tap one pixel a minute. Watch other people paint over you, live.">
+<meta name="twitter:image" content="https://benlirio.com/apps/same-pixel/og.jpg">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <header class="masthead">
+    <h1>same pixel</h1>
+    <p class="tagline">forty thousand cells. one tap a minute. nobody wins.</p>
+  </header>
+
+  <section class="palette" aria-label="your color for this session">
+    <div class="palette-label">your shade <span id="palette-name">…</span></div>
+    <div class="palette-swatches" id="palette-swatches"></div>
+  </section>
+
+  <section class="status">
+    <div class="status-row">
+      <span class="chip" id="member-chip">— here right now</span>
+      <span class="chip" id="cooldown-chip">arming the brush…</span>
+    </div>
+    <div class="status-row">
+      <span class="chip mine" id="mine-chip">0 pixels still yours</span>
+      <span class="chip" id="streak-chip">longest streak —</span>
+    </div>
+  </section>
+
+  <section class="board-wrap" aria-label="the wall">
+    <div class="board-frame">
+      <canvas id="board" width="200" height="200"></canvas>
+      <div class="crosshair" id="crosshair" hidden>
+        <span class="crosshair-coord" id="crosshair-coord">0,0</span>
+      </div>
+    </div>
+    <div class="board-help" id="board-help">
+      drag to pan · pinch or double-tap to zoom · tap a pixel to claim it
+    </div>
+  </section>
+
+  <section class="commit" id="commit-row">
+    <button id="commit-btn" disabled>place pixel — pick one first</button>
+    <button class="ghost" id="cancel-btn" hidden>nevermind</button>
+  </section>
+
+  <section class="overwrite-feed" id="overwrite-feed" aria-live="polite">
+    <h2>recent overwrites</h2>
+    <ul id="overwrite-list">
+      <li class="empty">a quiet wall. for now.</li>
+    </ul>
+  </section>
+
+  <!-- Steward notice modal -->
+  <div class="modal" id="steward-modal" hidden>
+    <div class="modal-card result-card">
+      <div class="stamp">PIXEL STEWARD NOTICE</div>
+      <h2 id="steward-headline">— minutes on the wall —</h2>
+      <dl class="ledger">
+        <div class="ledger-row"><dt>still yours</dt><dd id="steward-still"></dd></div>
+        <div class="ledger-row"><dt>longest streak</dt><dd id="steward-streak"></dd></div>
+        <div class="ledger-row"><dt>your nemesis shade</dt><dd id="steward-nemesis"></dd></div>
+      </dl>
+      <p class="verdict" id="steward-verdict">…</p>
+      <div class="share-row">
+        <button onclick="share()" id="steward-share">share the verdict</button>
+        <button class="ghost" id="steward-close">close</button>
+      </div>
+      <div class="modal-foot">the board never resets. you can keep tapping.</div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</body>
+</html>
