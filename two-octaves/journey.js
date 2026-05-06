@@ -19,15 +19,14 @@ import {
 // -------- copy --------
 
 const COPY = Object.freeze({
-  unlockIdle:     "// status: idle",
-  unlockTrying:   "// status: requesting audio context…",
-  unlockTone:     "// status: playing 3 × 360ms @ 440 Hz · A4 — watch dots, listen now",
-  unlockTonePlayed: "// status: tones fired · audio path OK · confirm below",
-  unlockOk:       "// status: unlocked. tap below to begin round 1.",
-  unlockFail:     "// status: audio engine refused. try a different browser or remove silent-mode.",
-  liveListening:  "// status: tone climbing. listen for the doubling.",
-  liveTooEarly:   "// status: too early — tap during the climb, not at the start.",
-  liveAuto:       "// status: tone reached the ceiling. round logged at +25%.",
+  unlockTrying:   "Starting audio…",
+  unlockTone:     "Listen for three short beeps.",
+  unlockTonePlayed: "",
+  unlockOk:       "",
+  unlockFail:     "Audio didn't start — try a different browser or turn off silent mode.",
+  liveListening:  "",
+  liveTooEarly:   "Too early — wait until you actually hear it rise, then tap.",
+  liveAuto:       "You didn't tap in time. We'll log this round as the latest possible tap.",
 });
 
 // -------- state machine --------
@@ -43,6 +42,19 @@ export function startJourney(root) {
     verdict:$("screen-verdict"),
   };
 
+  // Set the unlock-status line. Hides itself when empty so the screen stays
+  // visually quiet — the line is reserved for transient progress / failure.
+  function setStatus(el, text) {
+    if (!el) return;
+    if (text) {
+      el.textContent = text;
+      el.removeAttribute("hidden");
+    } else {
+      el.textContent = "";
+      el.setAttribute("hidden", "");
+    }
+  }
+
   function show(name) {
     for (const k of Object.keys(screens)) {
       const el = screens[k];
@@ -53,13 +65,6 @@ export function startJourney(root) {
     // viewport after a transition (mobile users tap, screen swaps, content
     // appears below the fold otherwise).
     window.scrollTo({ top: 0, behavior: "instant" });
-  }
-
-  // Render the rounds preview list with the actual ROUNDS data.
-  const rl = ROUNDS;
-  for (let i = 0; i < rl.length; i++) {
-    const li = $("rl-" + (i + 1));
-    if (li) li.textContent = rl[i].label + " · " + rl[i].note;
   }
 
   // engine + per-session state
@@ -95,10 +100,10 @@ export function startJourney(root) {
     unlockConfirm.setAttribute("hidden", "");
     pulseRow.removeAttribute("hidden");
     pulseDots.forEach((d) => d.classList.remove("active"));
-    unlockStatus.textContent = COPY.unlockTrying;
+    setStatus(unlockStatus, COPY.unlockTrying);
     try {
       await engine.unlock();
-      unlockStatus.textContent = COPY.unlockTone;
+      setStatus(unlockStatus, COPY.unlockTone);
       // Light the pulse dots in sync with each audio pulse so the user can
       // SEE the audio path fire even if the device is muted — that turns a
       // "the app is broken" report into a "my speaker is muted" diagnosis.
@@ -106,12 +111,12 @@ export function startJourney(root) {
         const dot = pulseDots[idx - 1];
         if (dot) dot.classList.add("active");
       });
-      unlockStatus.textContent = COPY.unlockTonePlayed;
+      setStatus(unlockStatus, COPY.unlockTonePlayed);
       // Reveal the confirmation gate. We do NOT auto-advance — the user
       // must affirm they heard the tone, otherwise they get help.
       unlockConfirm.removeAttribute("hidden");
     } catch (e) {
-      unlockStatus.textContent = COPY.unlockFail;
+      setStatus(unlockStatus, COPY.unlockFail);
       // Treat exceptions as a no-sound case so the user has a path forward.
       unlockHelp.removeAttribute("hidden");
     } finally {
@@ -124,7 +129,7 @@ export function startJourney(root) {
   btnReplayTone.addEventListener("click", runUnlockAndTone);
 
   btnHeardYes.addEventListener("click", () => {
-    unlockStatus.textContent = COPY.unlockOk;
+    setStatus(unlockStatus, COPY.unlockOk);
     show("ready");
     $("begin-round").textContent = String(session.roundIdx + 1);
     $("round-pill").textContent = `ROUND ${session.roundIdx + 1} / 3`;
@@ -154,7 +159,7 @@ export function startJourney(root) {
     const round = ROUNDS[session.roundIdx];
     liveRoundPill.textContent = `ROUND ${session.roundIdx + 1} / 3`;
     liveFreq.textContent = `${Math.round(round.baseline)} Hz`;
-    liveStatus.textContent = COPY.liveListening;
+    setStatus(liveStatus, COPY.liveListening);
     meterFill.style.width = "0%";
     session.tapped = false;
     show("listen");
@@ -178,7 +183,7 @@ export function startJourney(root) {
       liveFreq.textContent = `${Math.round(fNow)} Hz`;
       if (ratio >= 1) {
         // auto-fail: tone reached the ceiling without a tap.
-        liveStatus.textContent = COPY.liveAuto;
+        setStatus(liveStatus, COPY.liveAuto);
         autoEndRound();
         return;
       }
@@ -199,7 +204,7 @@ export function startJourney(root) {
     // and let them keep going. This is the "tap-too-early" misfire.
     if (elapsed < 0.15) {
       session.tapped = false;
-      liveStatus.textContent = COPY.liveTooEarly;
+      setStatus(liveStatus, COPY.liveTooEarly);
       return;
     }
 
@@ -273,7 +278,6 @@ export function startJourney(root) {
   const cardSub      = $("card-sub");
   const cardRounds   = $("card-rounds");
   const wave         = $("wave");
-  const sidEl        = $("sid");
 
   function renderVerdict() {
     const total = session.rounds.reduce((a, r) => a + r.absCents, 0);
@@ -282,7 +286,6 @@ export function startJourney(root) {
     const v = verdictFor(avg);
     const sid = subjectId(session.rounds);
 
-    sidEl.textContent = sid;
     cardPct.textContent = `${pct}th percentile`;
     cardVerdict.textContent = v.name;
     cardSub.textContent = v.sub.replace("subject_*", `subject_${sid}`);

@@ -49,19 +49,23 @@ body {
 .brief { color: var(--ink-dim); margin: 0 0 14px; max-width: 38ch; font-size: 15px; }
 .brief em { color: var(--accent); font-style: normal; }
 
-.specs {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  column-gap: 14px;
-  row-gap: 4px;
-  margin: 0;
-  padding: 10px 0 0;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 12px;
+/* Big, clear goal statement on the header — replaces the dimmer .brief
+   so the user sees what to do without parsing the chrome. */
+.goal {
+  color: var(--ink);
+  margin: 0 0 8px;
+  max-width: 42ch;
+  font-size: 17px;
+  line-height: 1.45;
 }
-.specs dt { color: var(--ink-faint); }
-.specs dd { margin: 0; color: var(--ink-dim); }
-.specs dd #sid { color: var(--accent-2); }
+.goal strong { color: var(--accent); font-weight: 700; }
+.goal em { color: var(--accent); font-style: normal; font-weight: 600; }
+.goal-sub {
+  color: var(--ink-dim);
+  margin: 0 0 4px;
+  max-width: 42ch;
+  font-size: 14px;
+}
 
 /* =========================== SCREENS =========================== */
 
@@ -105,10 +109,25 @@ body {
   border-color: rgba(241,196,106,0.35);
 }
 
-.lede { color: var(--ink); margin: 4px 0 14px; font-size: 16px; }
+.lede { color: var(--ink); margin: 4px 0 10px; font-size: 16px; }
+.lede strong { color: var(--accent); }
 .lede em { color: var(--accent); font-style: normal; font-weight: 600; }
+.lede-sub { color: var(--ink-dim); margin: 0 0 14px; font-size: 14px; }
 .check { color: var(--ink-dim); margin: 8px 0 14px; font-size: 14px; }
 .check.small { margin-top: 14px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; }
+
+/* Big, single-line instruction for the live screen — the user must always
+   know what to do mid-tone, and small helper copy gets lost when their
+   attention is on the climbing pitch. */
+.big-instruction {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 4px 0 14px;
+  text-align: center;
+}
+.big-instruction em { color: var(--accent); font-style: normal; font-weight: 700; }
 
 /* =========================== BUTTONS =========================== */
 
@@ -216,34 +235,45 @@ button.ghost:hover { border-color: var(--ink-dim); color: var(--accent); }
 
 /* =========================== ROUND RESULT =========================== */
 
-.rr-readout {
+/* Big "off by N cents" headline replaces the buried "// deviation" row —
+   it's the answer the user actually wants to see first. */
+.rr-headline {
+  text-align: center;
+  margin: 14px 0 10px;
+  padding: 14px 0;
   border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
-  padding: 8px 0;
-  margin: 12px 0 14px;
+}
+.rr-cents-big {
+  font-size: clamp(40px, 13vw, 56px);
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.rr-cents-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+}
+
+.rr-readout {
+  padding: 4px 0;
+  margin: 0 0 14px;
 }
 .rr-row {
   display: flex; justify-content: space-between; align-items: baseline;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 .rr-row .rr-k {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 12px;
-  color: var(--ink-faint);
+  font-size: 13px;
+  color: var(--ink-dim);
 }
 .rr-row .rr-v {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--ink);
-}
-.rr-row.big {
-  border-top: 1px dashed var(--rule);
-  margin-top: 4px;
-  padding-top: 12px;
-}
-.rr-row.big .rr-v {
-  font-size: 28px;
-  color: var(--accent);
-  font-weight: 700;
 }
 
 /* =========================== VERDICT CARD =========================== */

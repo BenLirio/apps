@@ -41,60 +41,45 @@
 <div class="app">
 
   <header class="hdr">
-    <div class="hdr-line">// PSYCHOACOUSTIC FIELD TEST · v1</div>
     <h1 class="title">TWO<br>OCTAVES</h1>
-    <p class="brief">A sine tone climbs upward. Tap when you think it has risen <em>exactly one octave</em> from where it started. Three rounds. We measure your deviation in cents and tell you what kind of ear you have.</p>
-    <dl class="specs">
-      <dt>// SUBJECT</dt><dd id="subject-id">subject_<span id="sid">—</span></dd>
-      <dt>// ROUNDS</dt><dd>3</dd>
-      <dt>// METRIC</dt><dd>|Δ| cents from f×2</dd>
-    </dl>
+    <p class="goal"><strong>The goal:</strong> A tone slowly rises in pitch. Tap when you think it has risen <em>exactly one octave</em> (doubled in pitch).</p>
+    <p class="goal-sub">Three rounds. We tell you how close you got.</p>
   </header>
 
   <!-- Audio unlock screen — shown first; required for iOS silent-switch / Web Audio gesture rule -->
   <section id="screen-unlock" class="screen">
     <div class="instrument">
-      <div class="dial-row">
-        <span class="pill"># AUDIO LOCK</span>
-        <span class="pill">PENDING</span>
-      </div>
-      <p class="lede">This test is sound-only. Before you tap, do one of these — otherwise you will hear nothing:</p>
-      <div class="silent-warn">
-        <p><strong>iPhone:</strong> flip the silent switch <em>off</em> (small toggle on the left edge — orange = silent = NO sound).</p>
-        <p><strong>Headphones / AirPods / Bluetooth:</strong> these always work — connect a pair if you can't toggle the switch.</p>
-        <p><strong>Volume:</strong> turn media volume up. Ringer volume is separate.</p>
-      </div>
-      <p class="check">Tap below to unlock the audio engine and play three short calibration tones.</p>
-      <button id="btn-unlock" class="primary">UNLOCK &amp; PLAY TEST TONE</button>
+      <p class="lede"><strong>Sound on.</strong> This test is sound-only — turn your volume up and unmute your phone.</p>
+      <button id="btn-unlock" class="primary">START AUDIO</button>
       <div id="pulse-row" class="pulse-row" hidden>
         <div class="pulse-dot" data-idx="1"></div>
         <div class="pulse-dot" data-idx="2"></div>
         <div class="pulse-dot" data-idx="3"></div>
-        <span class="pulse-label mono">// 440 Hz · A4 — listen now</span>
+        <span class="pulse-label mono">listen for three short beeps</span>
       </div>
-      <p class="check small" id="unlock-status">// status: idle</p>
+      <p class="check small" id="unlock-status" hidden></p>
 
       <!-- Confirmation gate — shown only after the test tone finishes playing.
            Without this, an iPhone with the silent switch on (or any other audio
            failure) silently advances into a sound-only test. -->
       <div id="unlock-confirm" class="confirm-row" hidden>
-        <p class="check"><strong>Did you hear the tone?</strong></p>
+        <p class="check"><strong>Did you hear three beeps?</strong></p>
         <div class="confirm-btns">
-          <button id="btn-heard-yes" class="primary">YES — BEGIN TEST</button>
+          <button id="btn-heard-yes" class="primary">YES — START</button>
           <button id="btn-heard-no" class="ghost">NO SOUND</button>
         </div>
       </div>
 
       <!-- Troubleshooting block — revealed when user reports no sound. -->
       <div id="unlock-help" class="help-block" hidden>
-        <p class="check small mono">// no-sound checklist</p>
+        <p class="check small">No sound? Try one of these, then play the tone again:</p>
         <ul class="help-list">
-          <li><strong>iPhone:</strong> flip the silent switch off (small toggle on the left edge of the phone). Web Audio respects it.</li>
-          <li><strong>Volume:</strong> turn media volume up — not just ringer.</li>
-          <li><strong>Headphones:</strong> AirPods / wired / Bluetooth all bypass the silent switch — connect a pair if you can't toggle it.</li>
-          <li><strong>Browser:</strong> if you're in an in-app browser (Instagram, Twitter), tap the share menu and open in Safari / Chrome.</li>
+          <li><strong>iPhone:</strong> flip the silent switch off (the small toggle on the left edge — orange means silent).</li>
+          <li><strong>Volume:</strong> turn media volume up — ringer volume is separate.</li>
+          <li><strong>Headphones / AirPods:</strong> connect a pair — they bypass the silent switch.</li>
+          <li><strong>In-app browser?</strong> Tap the share icon and open in Safari or Chrome.</li>
         </ul>
-        <button id="btn-replay-tone" class="primary">PLAY TEST TONE AGAIN</button>
+        <button id="btn-replay-tone" class="primary">PLAY TONE AGAIN</button>
       </div>
     </div>
   </section>
@@ -103,15 +88,10 @@
   <section id="screen-ready" class="screen" hidden>
     <div class="instrument">
       <div class="dial-row">
-        <span class="pill"># READY</span>
         <span class="pill" id="round-pill">ROUND 1 / 3</span>
       </div>
-      <p class="lede">When you press <em>BEGIN</em>, a tone starts at the baseline frequency and climbs continuously upward. Tap <em>OCTAVE</em> the instant you think it has doubled. Listen for the <em>relationship</em>, not the loudness.</p>
-      <ul class="rounds-list" id="rounds-preview">
-        <li><span class="rk">R1</span><span class="rv" id="rl-1">low baseline · easy glide</span></li>
-        <li><span class="rk">R2</span><span class="rv" id="rl-2">mid baseline · medium glide</span></li>
-        <li><span class="rk">R3</span><span class="rv" id="rl-3">high baseline · fast glide</span></li>
-      </ul>
+      <p class="lede"><strong>How to play:</strong> Press BEGIN. A tone starts and slowly climbs in pitch. Tap the big <em>OCTAVE</em> button the moment you think it has doubled.</p>
+      <p class="lede-sub">You get three rounds — each one starts at a different pitch.</p>
       <button id="btn-begin" class="primary">BEGIN ROUND <span id="begin-round">1</span></button>
     </div>
   </section>
@@ -121,19 +101,19 @@
     <div class="instrument live">
       <div class="dial-row">
         <span class="pill" id="live-round-pill">ROUND 1 / 3</span>
-        <span class="pill mono" id="live-freq">— Hz</span>
       </div>
+      <p class="big-instruction">Tap when the pitch has <em>doubled</em>.</p>
       <div class="meter" aria-hidden="true">
         <div class="meter-track"></div>
         <div class="meter-fill" id="meter-fill"></div>
         <div class="meter-tick start"></div>
         <div class="meter-tick octave"></div>
-        <div class="meter-label start-label">f</div>
-        <div class="meter-label octave-label">2f</div>
+        <div class="meter-label start-label">start</div>
+        <div class="meter-label octave-label">octave</div>
       </div>
-      <p class="check">Listen. The tone is climbing. Tap when you think you've heard exactly one octave of rise.</p>
       <button id="btn-tap" class="primary big">OCTAVE.</button>
-      <p class="check small" id="live-status">// status: tone climbing</p>
+      <p class="check small mono" id="live-freq">— Hz</p>
+      <p class="check small" id="live-status" hidden></p>
     </div>
   </section>
 
@@ -144,10 +124,13 @@
         <span class="pill" id="rr-round-pill">ROUND 1 / 3</span>
         <span class="pill" id="rr-tag">— OCTAVE</span>
       </div>
+      <div class="rr-headline">
+        <div class="rr-cents-big mono" id="rr-cents">— ¢</div>
+        <div class="rr-cents-label">off the octave</div>
+      </div>
       <div class="rr-readout">
-        <div class="rr-row"><span class="rr-k">// you tapped</span><span class="rr-v mono" id="rr-tap-hz">— Hz</span></div>
-        <div class="rr-row"><span class="rr-k">// true octave</span><span class="rr-v mono" id="rr-true-hz">— Hz</span></div>
-        <div class="rr-row big"><span class="rr-k">// deviation</span><span class="rr-v mono" id="rr-cents">— ¢</span></div>
+        <div class="rr-row"><span class="rr-k">you tapped at</span><span class="rr-v mono" id="rr-tap-hz">— Hz</span></div>
+        <div class="rr-row"><span class="rr-k">octave was at</span><span class="rr-v mono" id="rr-true-hz">— Hz</span></div>
       </div>
       <p class="check" id="rr-flavor">—</p>
       <button id="btn-next" class="primary">NEXT ROUND</button>
