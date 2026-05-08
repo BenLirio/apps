@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Lagrange Lullaby — orbital capture trial</title>
+<meta name="description" content="A binary star system spins. Place one moon. 60 seconds of real Newtonian gravity decides your tier.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lagrange Lullaby">
+<meta property="og:description" content="A binary star system spins. Place one moon. 60 seconds of real Newtonian gravity decides your tier.">
+<meta property="og:url" content="https://benlirio.com/apps/lagrange-lullaby/">
+<meta property="og:image" content="https://benlirio.com/apps/lagrange-lullaby/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lagrange Lullaby">
+<meta name="twitter:description" content="A binary star system spins. Place one moon. 60 seconds of real Newtonian gravity decides your tier.">
+<meta name="twitter:image" content="https://benlirio.com/apps/lagrange-lullaby/og.jpg">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-DZ37BB6T3L"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-DZ37BB6T3L');
+</script>
+
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+<script src="feedback.js" defer></script>
+</head>
+<body>
+<main class="app">
+  <header class="hud">
+    <div class="line">// LAGRANGE LULLABY · v1.0 · trial 001</div>
+    <h1 class="title">orbital capture trial</h1>
+    <div class="meta" id="binary-meta">// initializing system…</div>
+  </header>
+
+  <section class="stage">
+    <canvas id="sky" width="400" height="400" aria-label="Binary star system field. Tap to place a moon."></canvas>
+    <div class="state-badge" id="badge">// MISSION: PLACEMENT</div>
+  </section>
+
+  <p class="brief" id="brief">> tap anywhere on the field. your moon is released with zero velocity. real Newtonian gravity decides what happens next — 60 seconds, one verdict.</p>
+
+  <section class="verdict result-card" id="verdict" hidden>
+    <div class="verdict-line">// VERDICT LOGGED</div>
+    <div class="tier-name" id="tier-name">—</div>
+    <div class="tier-desc" id="tier-desc">—</div>
+    <pre class="telemetry" id="telemetry">—</pre>
+    <div class="share-row">
+      <button class="btn primary" id="share-btn" onclick="share()">share verdict</button>
+      <button class="btn ghost" id="again-btn">place another moon</button>
+    </div>
+  </section>
+
+  <footer class="legend">
+    <div class="legend-line">// TIER GUIDE</div>
+    <ul class="legend-list">
+      <li><span class="dot stable"></span><strong>stable orbit</strong> — bound 60s, low eccentricity</li>
+      <li><span class="dot resonance"></span><strong>resonance hugger</strong> — bound 60s, locked tight to one star</li>
+      <li><span class="dot wanderer"></span><strong>captured wanderer</strong> — bound 60s, restless path</li>
+      <li><span class="dot doomed"></span><strong>doomed comet</strong> — crashed, or slung past the edge</li>
+    </ul>
+  </footer>
+</main>
+</body>
+</html>
