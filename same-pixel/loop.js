@@ -1,7 +1,7 @@
 // loop.js — board state + canvas render + pan / zoom / target-pick input.
 //
 // Owns:
-//   - The 64x64 Uint8Array board mirror (mutated by net.js callbacks).
+//   - The 32x32 Uint8Array board mirror (mutated by net.js callbacks).
 //   - The off-screen draw of board → canvas via ImageData.
 //   - Pan / pinch / double-tap zoom on the canvas.
 //   - Tracking the user's "target" pixel (set by tap; cleared by commit).
@@ -11,8 +11,8 @@
 //   - Network calls (net.js).
 //   - Steward-notice math (app.js).
 
-const N = 64;           // grid side
-const TOTAL = N * N;    // 4096
+const N = 32;           // grid side
+const TOTAL = N * N;    // 1024
 
 // 8 cursed-pastel hues, in colorIdx order. Must match style.css :root --c0..7.
 export const PALETTE = [

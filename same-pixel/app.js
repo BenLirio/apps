@@ -31,7 +31,7 @@ const SESSION_LENGTH_MS = 5 * 60 * 1000;
 // Server is authoritative — see infrastructure/aws-multiplayer/message.js.
 // Keep this constant equal to the server's COOLDOWN_MS.
 const COOLDOWN_MS = 2 * 1000;
-const N = 64;
+const N = 32;
 
 // ── Voice copy banks ───────────────────────────────────────────
 const COOLDOWN_PHRASES = [
@@ -359,7 +359,7 @@ function share() {
   } else if (myPixels.size > 0 && longestHoldCoord) {
     text = `${myPixels.size} pixels still answer to me on the same-pixel wall (longest hold ${myPixels.get(longestHoldCoord) ? 'still going' : formatHeld(longestHoldMs)}). ${location.href}`;
   } else {
-    text = `the same-pixel wall: 64×64 cells, shared with strangers, board never resets. ${location.href}`;
+    text = `the same-pixel wall: 32×32 cells, shared with strangers, board never resets. ${location.href}`;
   }
   if (navigator.share) {
     navigator.share({ title: 'Same Pixel', text, url: location.href }).catch(() => {});

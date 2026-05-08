@@ -55,9 +55,9 @@ function send(obj) {
   }
 }
 
-// Decode a base64 board string into a Uint8Array of length 4096 (one byte per
+// Decode a base64 board string into a Uint8Array of length 1024 (one byte per
 // pixel: 0..7 = colorIdx, 0xFF = unowned).
-const TOTAL = 64 * 64;
+const TOTAL = 32 * 32;
 export function decodeBoard(b64) {
   const bin = atob(b64 || '');
   const arr = new Uint8Array(bin.length);
